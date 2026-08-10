@@ -1,0 +1,38 @@
+package com.guiapplications.resources;
+
+import java.util.List;
+
+import com.guiapplications.entities.Family;
+import com.guiapplications.services.FamilyService;
+
+import jakarta.inject.Inject;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+
+@Path("/families")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+public class FamilyResource {
+	
+	@Inject
+	FamilyService familyService;
+	
+	// get all families
+	@GET
+    public Response getAll() {
+        return Response.ok(familyService.listAll()).build();
+    }
+	
+	// get family by name
+	@GET
+	@Path("/search")
+	public Response search(@QueryParam("name") String name) {
+	    List<Family> families = Family.findByName(name);
+	    return Response.ok(families).build();
+	}
+}

@@ -11,11 +11,22 @@ import com.guiapplications.entities.Product;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
 @ApplicationScoped
 public class DatabaseSeeder {
 
+	@Inject
+    EntityManager em;
+
+    @Transactional
+    public void initExtension(@Observes StartupEvent event) {
+        // Enables unaccent in database
+        em.createNativeQuery("CREATE EXTENSION IF NOT EXISTS unaccent;").executeUpdate();
+    }
+	
     @Transactional
     public void runSeeder(@Observes StartupEvent event) {
         // if products are registered

@@ -1,6 +1,8 @@
 package com.guiapplications.entities;
 
+import java.text.Normalizer;
 import java.util.List;
+import java.util.Map;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.Entity;
@@ -11,7 +13,19 @@ public class Brand extends PanacheEntity {
 	public String name;
 	
 	// search brands by name
-	public static List<Brand> findByName(String name) {
-        return list("LOWER(name) LIKE LOWER(?1)", "%" + name + "%");
+    public static List<Brand> findByName(String name) {
+        if (name == null || name.isBlank()) {
+            return listAll();
+        }
+
+        String hql = "FROM Brand b WHERE CAST(unaccent(LOWER(b.name)) AS String) LIKE :name";
+        return list(hql, Map.of("name", "%" + normalizeText(name) + "%"));
+    }
+    
+    // remove accents from words
+    private static String normalizeText(String input) {
+        if (input == null || input.isBlank()) return "";
+        String normalized = Normalizer.normalize(input.trim().toLowerCase(), Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{M}", "");
     }
 }
