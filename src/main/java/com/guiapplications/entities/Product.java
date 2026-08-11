@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -18,6 +19,7 @@ public class Product extends PanacheEntity {
 	public String name;
 	public Integer quantity;
 	public LocalDate expirationDate;
+	@Column(nullable = true)
 	public BigDecimal purchasePrice;
 	public BigDecimal sellingPrice;
 	
