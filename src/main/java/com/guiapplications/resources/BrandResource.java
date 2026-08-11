@@ -7,8 +7,10 @@ import com.guiapplications.services.BrandService;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
@@ -34,5 +36,13 @@ public class BrandResource {
 	public Response search(@QueryParam("name") String name) {
 	    List<Brand> brands = Brand.findByName(name);
 	    return Response.ok(brands).build();
+	}
+	
+	// delete brand by id
+	@DELETE
+	@Path("/{id}")
+	public Response delete(@PathParam("id") Long id) {
+		brandService.delete(id);
+		return Response.noContent().build();
 	}
 }

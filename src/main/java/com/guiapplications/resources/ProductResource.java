@@ -9,8 +9,10 @@ import com.guiapplications.services.ProductService;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
@@ -24,12 +26,13 @@ public class ProductResource {
 	@Inject
 	ProductService productService;
 	
-	// search all products
+	// get all products
 	@GET
     public Response getAll() {
         return Response.ok(productService.listAll()).build();
     }
 	
+	// search products by any criterion below
 	@GET
     @Path("/search")
     public Response search(
@@ -51,5 +54,13 @@ public class ProductResource {
         );
         
         return Response.ok(result).build();
+    }
+	
+	// delete product by id
+	@DELETE
+    @Path("/{id}")
+    public Response delete(@PathParam("id") Long id) {
+        productService.delete(id);
+        return Response.noContent().build(); // HTTP 204 No Content
     }
 }

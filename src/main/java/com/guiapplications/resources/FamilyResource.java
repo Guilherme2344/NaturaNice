@@ -7,8 +7,10 @@ import com.guiapplications.services.FamilyService;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
@@ -34,5 +36,13 @@ public class FamilyResource {
 	public Response search(@QueryParam("name") String name) {
 	    List<Family> families = Family.findByName(name);
 	    return Response.ok(families).build();
+	}
+	
+	// delete family by id
+	@DELETE
+	@Path("/{id}")
+	public Response delete(@PathParam("id") Long id) {
+		familyService.delete(id);
+		return Response.noContent().build();
 	}
 }
