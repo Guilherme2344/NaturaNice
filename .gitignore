@@ -1,10 +1,12 @@
-#Maven
+# Maven / Quarkus Build
 target/
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup
 release.properties
 .flattened-pom.xml
+.quarkus/
+*.log
 
 # Eclipse
 .project
@@ -32,14 +34,10 @@ nb-configuration.xml
 *.swp
 *.swo
 
-# patch
+# Patch
 *.orig
 *.rej
 
-# Local environment
+# Local environment & Certs
 .env
-
-# Plugin directory
-/.quarkus/cli/plugins/
-# TLS Certificates
 .certs/
