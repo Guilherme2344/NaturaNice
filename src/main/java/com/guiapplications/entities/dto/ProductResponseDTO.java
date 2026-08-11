@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.guiapplications.entities.Product;
+import com.guiapplications.enums.ExpirationStatus;
 
 public record ProductResponseDTO(
 	    Long id,
@@ -12,22 +13,28 @@ public record ProductResponseDTO(
 	    LocalDate expirationDate,
 	    BigDecimal purchasePrice,
 	    BigDecimal sellingPrice,
-	    String familyName,
-	    String brandName,
-	    String categoryName
+	    BrandResponseDTO brand,
+	    CategoryResponseDTO category,
+	    FamilyResponseDTO family,
+	    ExpirationStatus expirationStatus,
+	    String expirationStatusDescription
 	) {
 	    // converts entity to DTO
 	    public static ProductResponseDTO fromEntity(Product product) {
-	        return new ProductResponseDTO(
-	            product.id,
-	            product.name,
-	            product.quantity,
-	            product.expirationDate,
-	            product.purchasePrice,
-	            product.sellingPrice,
-	            product.family != null ? product.family.name : null,
-	            product.brand != null ? product.brand.name : null,
-	            product.category != null ? product.category.name : null
+	    	ExpirationStatus status = ExpirationStatus.calculate(product.expirationDate);
+	    	
+	    	return new ProductResponseDTO(
+	        		product.id,
+	                product.name,
+	                product.quantity,
+	                product.expirationDate,
+	                product.purchasePrice,
+	                product.sellingPrice,
+	                BrandResponseDTO.fromEntity(product.brand),
+	                CategoryResponseDTO.fromEntity(product.category),
+	                FamilyResponseDTO.fromEntity(product.family),
+	                status,
+	                status != null ? status.getDescription() : null
 	        );
 	    }
 	}
