@@ -3,7 +3,9 @@ package com.guiapplications.services;
 import java.util.List;
 
 import com.guiapplications.entities.Family;
+import com.guiapplications.entities.dto.FamilyRequestDTO;
 import com.guiapplications.entities.dto.FamilyResponseDTO;
+import com.guiapplications.exceptions.ResourceAlreadyExistsException;
 import com.guiapplications.exceptions.ResourceInUseException;
 import com.guiapplications.exceptions.ResourceNotFoundException;
 
@@ -14,6 +16,23 @@ import jakarta.validation.ConstraintViolationException;
 
 @ApplicationScoped
 public class FamilyService {
+	
+	// create a Family
+	@Transactional
+	public FamilyResponseDTO create(FamilyRequestDTO dto) {
+		String trimmedName = dto.name().trim();
+		
+		// check if already exists the typed name
+        List<Family> existing = Family.findByName(trimmedName);
+        if (!existing.isEmpty()) {
+            throw new ResourceAlreadyExistsException("Já existe uma família cadastrada com o nome: " + trimmedName);
+        }
+		
+		Family family = new Family();
+		family.name = dto.name().trim();
+		family.persist();
+		return FamilyResponseDTO.fromEntity(family);
+	}
 	
 	// list all families
 	public List<FamilyResponseDTO> listAll(){

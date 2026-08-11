@@ -3,7 +3,9 @@ package com.guiapplications.services;
 import java.util.List;
 
 import com.guiapplications.entities.Category;
+import com.guiapplications.entities.dto.CategoryRequestDTO;
 import com.guiapplications.entities.dto.CategoryResponseDTO;
+import com.guiapplications.exceptions.ResourceAlreadyExistsException;
 import com.guiapplications.exceptions.ResourceInUseException;
 import com.guiapplications.exceptions.ResourceNotFoundException;
 
@@ -14,6 +16,23 @@ import jakarta.validation.ConstraintViolationException;
 
 @ApplicationScoped
 public class CategoryService {
+	
+	// create a Category
+	@Transactional
+	public CategoryResponseDTO create(CategoryRequestDTO dto) {
+		String trimmedName = dto.name().trim();
+
+		// check if already exists the typed name
+        List<Category> existing = Category.findByName(trimmedName);
+        if (!existing.isEmpty()) {
+            throw new ResourceAlreadyExistsException("Já existe uma categoria cadastrada com o nome: " + trimmedName);
+        }
+		
+		Category category = new Category();
+		category.name = dto.name().trim();
+		category.persist();
+		return CategoryResponseDTO.fromEntity(category);
+	}
 	
 	// list all categories
 	public List<CategoryResponseDTO> listAll(){

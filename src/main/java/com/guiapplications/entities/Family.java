@@ -5,11 +5,13 @@ import java.util.List;
 import java.util.Map;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 
 @Entity
 public class Family extends PanacheEntity {
 	
+	@Column(nullable = false, unique = true)
 	public String name;
 	
 	// search families by name

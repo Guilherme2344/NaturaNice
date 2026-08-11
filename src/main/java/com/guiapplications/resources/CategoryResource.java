@@ -3,12 +3,16 @@ package com.guiapplications.resources;
 import java.util.List;
 
 import com.guiapplications.entities.Category;
+import com.guiapplications.entities.dto.CategoryRequestDTO;
+import com.guiapplications.entities.dto.CategoryResponseDTO;
 import com.guiapplications.services.CategoryService;
 
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -23,6 +27,15 @@ public class CategoryResource {
 	
 	@Inject
 	CategoryService categoryService;
+	
+	// create a category
+	@POST
+	public Response create(@Valid CategoryRequestDTO dto) {
+	    CategoryResponseDTO createdCategory = categoryService.create(dto);
+	    return Response.status(Response.Status.CREATED)
+	                   .entity(createdCategory)
+	                   .build();
+	}
 	
 	// get all categories
 	@GET

@@ -3,12 +3,16 @@ package com.guiapplications.resources;
 import java.util.List;
 
 import com.guiapplications.entities.Brand;
+import com.guiapplications.entities.dto.BrandRequestDTO;
+import com.guiapplications.entities.dto.BrandResponseDTO;
 import com.guiapplications.services.BrandService;
 
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -23,6 +27,15 @@ public class BrandResource {
 	
 	@Inject
 	BrandService brandService;
+	
+	// create a brand
+	@POST
+	public Response create(@Valid BrandRequestDTO dto) {
+	    BrandResponseDTO createdBrand = brandService.create(dto);
+	    return Response.status(Response.Status.CREATED)
+	                   .entity(createdBrand)
+	                   .build();
+	}
 	
 	// get all brands
 	@GET

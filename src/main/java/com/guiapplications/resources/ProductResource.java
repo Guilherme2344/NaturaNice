@@ -4,13 +4,16 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+import com.guiapplications.entities.dto.ProductRequestDTO;
 import com.guiapplications.entities.dto.ProductResponseDTO;
 import com.guiapplications.services.ProductService;
 
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -26,6 +29,15 @@ public class ProductResource {
 	@Inject
 	ProductService productService;
 	
+	// create a Product
+	@POST
+	public Response create(@Valid ProductRequestDTO dto) {
+	    ProductResponseDTO createdProduct = productService.create(dto);
+	    return Response.status(Response.Status.CREATED)
+	                   .entity(createdProduct)
+	                   .build();
+	}
+	
 	// get all products
 	@GET
     public Response getAll() {
@@ -38,7 +50,7 @@ public class ProductResource {
     public Response search(
             @QueryParam("query") String query,         // wide search
             @QueryParam("familyName") String familyName,     // family filter
-            @QueryParam("brandName") String brandName,       // brand filter
+            @QueryParam("ProductName") String ProductName,       // Product filter
             @QueryParam("categoryName") String categoryName, // category filter
             @QueryParam("maxExpirationDate") String maxExpirationDate // date limit (dd/MM/yyyy)
     ) {
@@ -50,7 +62,7 @@ public class ProductResource {
                 : null;
 
         List<ProductResponseDTO> result = productService.searchProducts(
-                query, familyName, brandName, categoryName, dateLimit
+                query, familyName, ProductName, categoryName, dateLimit
         );
         
         return Response.ok(result).build();

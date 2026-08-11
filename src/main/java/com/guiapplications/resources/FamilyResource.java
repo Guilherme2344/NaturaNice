@@ -3,12 +3,16 @@ package com.guiapplications.resources;
 import java.util.List;
 
 import com.guiapplications.entities.Family;
+import com.guiapplications.entities.dto.FamilyRequestDTO;
+import com.guiapplications.entities.dto.FamilyResponseDTO;
 import com.guiapplications.services.FamilyService;
 
 import jakarta.inject.Inject;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -23,6 +27,15 @@ public class FamilyResource {
 	
 	@Inject
 	FamilyService familyService;
+	
+	// create a family
+	@POST
+	public Response create(@Valid FamilyRequestDTO dto) {
+	    FamilyResponseDTO createdFamily = familyService.create(dto);
+	    return Response.status(Response.Status.CREATED)
+	                   .entity(createdFamily)
+	                   .build();
+	}
 	
 	// get all families
 	@GET

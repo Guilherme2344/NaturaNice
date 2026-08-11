@@ -3,7 +3,9 @@ package com.guiapplications.services;
 import java.util.List;
 
 import com.guiapplications.entities.Brand;
+import com.guiapplications.entities.dto.BrandRequestDTO;
 import com.guiapplications.entities.dto.BrandResponseDTO;
+import com.guiapplications.exceptions.ResourceAlreadyExistsException;
 import com.guiapplications.exceptions.ResourceInUseException;
 import com.guiapplications.exceptions.ResourceNotFoundException;
 
@@ -14,6 +16,23 @@ import jakarta.validation.ConstraintViolationException;
 
 @ApplicationScoped
 public class BrandService {
+	
+	// create a brand
+	@Transactional
+	public BrandResponseDTO create(BrandRequestDTO dto) {
+		String trimmedName = dto.name().trim();
+
+        // check if already exists the typed name
+        List<Brand> existing = Brand.findByName(trimmedName);
+        if (!existing.isEmpty()) {
+            throw new ResourceAlreadyExistsException("Já existe uma marca cadastrada com o nome: " + trimmedName);
+        }
+		
+		Brand brand = new Brand();
+		brand.name = dto.name().trim();
+		brand.persist();
+		return BrandResponseDTO.fromEntity(brand);
+	}
 	
 	// list all brands
 	public List<BrandResponseDTO> listAll(){
