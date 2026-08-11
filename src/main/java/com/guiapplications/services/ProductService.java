@@ -77,6 +77,53 @@ public class ProductService {
                 .toList();
     }
 	
+	// update a product
+	@Transactional
+    public ProductResponseDTO update(Long id, ProductRequestDTO dto) {
+        Product product = Product.findById(id);
+        if (product == null) {
+            throw new ResourceNotFoundException("Produto com ID " + id + " não encontrado.");
+        }
+
+        String trimmedName = dto.name().trim();
+
+        // check if there are duplicated names
+        long duplicateCount = Product.count(
+            "unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND id != ?2", 
+            trimmedName, id
+        );
+        if (duplicateCount > 0) {
+            throw new ResourceAlreadyExistsException("Já existe outro produto cadastrado com o nome: " + trimmedName);
+        }
+
+        Brand brand = Brand.findById(dto.brandId());
+        if (brand == null) {
+            throw new ResourceNotFoundException("Marca não encontrada com o ID: " + dto.brandId());
+        }
+
+        Category category = Category.findById(dto.categoryId());
+        if (category == null) {
+            throw new ResourceNotFoundException("Categoria não encontrada com o ID: " + dto.categoryId());
+        }
+
+        Family family = Family.findById(dto.familyId());
+        if (family == null) {
+            throw new ResourceNotFoundException("Família não encontrada com o ID: " + dto.familyId());
+        }
+
+        // update data
+        product.name = trimmedName;
+        product.quantity = dto.quantity();
+        product.expirationDate = dto.expirationDate();
+        product.purchasePrice = dto.purchasePrice();
+        product.sellingPrice = dto.sellingPrice();
+        product.brand = brand;
+        product.category = category;
+        product.family = family;
+
+        return ProductResponseDTO.fromEntity(product);
+    }
+	
 	@Transactional
     public void delete(Long id) {
         Product product = Product.findById(id);

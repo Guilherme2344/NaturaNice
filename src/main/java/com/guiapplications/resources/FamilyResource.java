@@ -13,6 +13,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -49,6 +50,14 @@ public class FamilyResource {
 	public Response search(@QueryParam("name") String name) {
 	    List<Family> families = Family.findByName(name);
 	    return Response.ok(families).build();
+	}
+	
+	// update a family
+	@PUT
+	@Path("/{id}")
+	public Response update(@PathParam("id") Long id, @Valid FamilyRequestDTO dto) {
+	    FamilyResponseDTO updatedFamily = familyService.update(id, dto);
+	    return Response.ok(updatedFamily).build();
 	}
 	
 	// delete family by id

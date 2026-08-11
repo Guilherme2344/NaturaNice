@@ -13,6 +13,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -49,6 +50,14 @@ public class BrandResource {
 	public Response search(@QueryParam("name") String name) {
 	    List<Brand> brands = Brand.findByName(name);
 	    return Response.ok(brands).build();
+	}
+	
+	// update a brand
+	@PUT
+	@Path("/{id}")
+	public Response update(@PathParam("id") Long id, @Valid BrandRequestDTO dto) {
+	    BrandResponseDTO updatedBrand = brandService.update(id, dto);
+	    return Response.ok(updatedBrand).build();
 	}
 	
 	// delete brand by id

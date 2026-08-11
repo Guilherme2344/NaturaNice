@@ -42,6 +42,29 @@ public class FamilyService {
 				.toList();
 	}
 	
+	// update a family
+	@Transactional
+    public FamilyResponseDTO update(Long id, FamilyRequestDTO dto) {
+        Family family = Family.findById(id);
+        if (family == null) {
+            throw new ResourceNotFoundException("Família com ID " + id + " não encontrada.");
+        }
+
+        String trimmedName = dto.name().trim();
+
+        // check if there are duplicated names
+        long duplicateCount = Family.count(
+            "unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND id != ?2", 
+            trimmedName, id
+        );
+        if (duplicateCount > 0) {
+            throw new ResourceAlreadyExistsException("Já existe outra família cadastrada com o nome: " + trimmedName);
+        }
+
+        family.name = trimmedName;
+        return FamilyResponseDTO.fromEntity(family);
+    }
+	
 	// delete family by id
 	@Transactional
 	public void delete(Long id) {

@@ -14,6 +14,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -67,6 +68,14 @@ public class ProductResource {
         
         return Response.ok(result).build();
     }
+	
+	// update a product
+	@PUT
+	@Path("/{id}")
+	public Response update(@PathParam("id") Long id, @Valid ProductRequestDTO dto) {
+	    ProductResponseDTO updatedProduct = productService.update(id, dto);
+	    return Response.ok(updatedProduct).build();
+	}
 	
 	// delete product by id
 	@DELETE

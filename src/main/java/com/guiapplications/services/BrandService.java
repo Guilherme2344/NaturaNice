@@ -42,6 +42,29 @@ public class BrandService {
 				.toList();
 	}
 	
+	// update a brand
+	@Transactional
+    public BrandResponseDTO update(Long id, BrandRequestDTO dto) {
+        Brand brand = Brand.findById(id);
+        if (brand == null) {
+            throw new ResourceNotFoundException("Marca com ID " + id + " não encontrada.");
+        }
+
+        String trimmedName = dto.name().trim();
+
+        // check if there are duplicated names
+        long duplicateCount = Brand.count(
+            "unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND id != ?2", 
+            trimmedName, id
+        );
+        if (duplicateCount > 0) {
+            throw new ResourceAlreadyExistsException("Já existe outra marca cadastrada com o nome: " + trimmedName);
+        }
+
+        brand.name = trimmedName;
+        return BrandResponseDTO.fromEntity(brand);
+    }
+	
 	// delete brand by id
 	@Transactional
 	public void delete(Long id) {

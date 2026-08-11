@@ -13,6 +13,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
@@ -49,6 +50,14 @@ public class CategoryResource {
 	public Response search(@QueryParam("name") String name) {
 	    List<Category> categories = Category.findByName(name);
 	    return Response.ok(categories).build();
+	}
+	
+	// update a category
+	@PUT
+	@Path("/{id}")
+	public Response update(@PathParam("id") Long id, @Valid CategoryRequestDTO dto) {
+	    CategoryResponseDTO updatedCategory = categoryService.update(id, dto);
+	    return Response.ok(updatedCategory).build();
 	}
 	
 	// delete category by id
