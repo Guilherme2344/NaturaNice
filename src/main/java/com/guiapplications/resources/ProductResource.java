@@ -69,6 +69,22 @@ public class ProductResource {
         return Response.ok(result).build();
     }
 	
+	// get all expired products
+	@GET
+    @Path("/expired")
+    public Response getExpiredProducts() {
+        List<ProductResponseDTO> products = productService.findExpired();
+        return Response.ok(products).build();
+    }
+
+	// get all near expiration products
+    @GET
+    @Path("/near-expiration")
+    public Response getNearExpirationProducts() {
+        List<ProductResponseDTO> products = productService.findNearExpiration();
+        return Response.ok(products).build();
+    }
+	
 	// update a product
 	@PUT
 	@Path("/{id}")

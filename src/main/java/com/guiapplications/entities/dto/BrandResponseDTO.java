@@ -4,13 +4,15 @@ import com.guiapplications.entities.Brand;
 
 public record BrandResponseDTO(
 		Long id,
-	    String name
+	    String name,
+	    String hexColor
 	) {
 	    // converts entity to DTO
 	    public static BrandResponseDTO fromEntity(Brand brand) {
 	        return new BrandResponseDTO(
 	        	brand.id,
-	            brand.name
+	            brand.name,
+	            brand.hexColor
 	        );
 	    }
 	}

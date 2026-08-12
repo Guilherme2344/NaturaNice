@@ -38,9 +38,9 @@ public class DatabaseSeeder {
             Family cuidados = createFamily("Cuidados Corporais");
 
             // brands
-            Brand avon = createBrand("Avon");
-            Brand natura = createBrand("Natura");
-            Brand boticario = createBrand("O Boticário");
+            Brand eudora = createBrand("Eudora", "#53308D");
+            Brand natura = createBrand("Natura", "#F38120");
+            Brand mary = createBrand("Mary Kay", "#ED3E94");
 
             // categories
             Category batom = createCategory("Batom");
@@ -55,7 +55,7 @@ public class DatabaseSeeder {
                 "15.00",
                 "29.90",
                 maquiagem,
-                avon,
+                eudora,
                 batom
             );
 
@@ -66,7 +66,7 @@ public class DatabaseSeeder {
                 "35.00",
                 "62.00",
                 maquiagem,
-                boticario,
+                mary,
                 base
             );
 
@@ -101,9 +101,10 @@ public class DatabaseSeeder {
         return f;
     }
 
-    private Brand createBrand(String name) {
+    private Brand createBrand(String name, String hexColor) {
         Brand b = new Brand();
         b.name = name;
+        b.hexColor = hexColor;
         b.persist();
         return b;
     }

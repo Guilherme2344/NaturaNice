@@ -100,6 +100,18 @@ public class Product extends PanacheEntity {
         return list(hql.toString(), params);
     }
     
+    // products expired: expirationDate <= current data
+    public static List<Product> findExpired() {
+        return list("expirationDate <= CURRENT_DATE ORDER BY expirationDate ASC");
+    }
+
+    // products near expiration: within tomorrow and the next 180 days range
+    public static List<Product> findNearExpiration() {
+        LocalDate today = LocalDate.now();
+        LocalDate limitDate = today.plusDays(180);
+        return list("expirationDate > CURRENT_DATE AND expirationDate <= ?1 ORDER BY expirationDate ASC", limitDate);
+    }
+    
     // remove accents from words
     private static String normalizeText(String input) {
         if (input == null || input.isBlank()) {

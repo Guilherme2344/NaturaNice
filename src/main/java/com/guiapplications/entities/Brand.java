@@ -13,6 +13,8 @@ public class Brand extends PanacheEntity {
 	
 	@Column(nullable = false, unique = true)
 	public String name;
+	@Column(nullable = false, length = 7)
+	public String hexColor;
 	
 	// search brands by name
     public static List<Brand> findByName(String name) {

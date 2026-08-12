@@ -77,6 +77,22 @@ public class ProductService {
                 .toList();
     }
 	
+	// list all expired products
+	public List<ProductResponseDTO> findExpired() {
+	    return Product.findExpired()
+	            .stream()
+	            .map(ProductResponseDTO::fromEntity)
+	            .toList();
+	}
+
+	// list all near expiration products
+	public List<ProductResponseDTO> findNearExpiration() {
+	    return Product.findNearExpiration()
+	            .stream()
+	            .map(ProductResponseDTO::fromEntity)
+	            .toList();
+	}
+	
 	// update a product
 	@Transactional
     public ProductResponseDTO update(Long id, ProductRequestDTO dto) {

@@ -30,6 +30,7 @@ public class BrandService {
 		
 		Brand brand = new Brand();
 		brand.name = dto.name().trim();
+		brand.hexColor = dto.hexColor().toUpperCase();
 		brand.persist();
 		return BrandResponseDTO.fromEntity(brand);
 	}
@@ -62,6 +63,7 @@ public class BrandService {
         }
 
         brand.name = trimmedName;
+        brand.hexColor = dto.hexColor().toUpperCase();
         return BrandResponseDTO.fromEntity(brand);
     }
 	
