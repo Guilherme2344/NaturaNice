@@ -1,26 +1,33 @@
+import { useEffect, useState } from 'react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
-
-const mockExpired: Product[] = [
-    {
-        id: 3,
-        name: 'Creme Noturno Nutritivo',
-        brand: { id: 12, name: 'Avon', color: '#C2185B' },
-        category: { id: 1, name: 'Cuidados com a Pele' },
-        family: { id: 4, name: 'Cremes' },
-        quantity: 8,
-        expirationDate: '2026-07-15',
-        sellingPrice: 42.0,
-        expirationStatus: 'EXPIRED',
-        expirationStatusDescription: 'Vencido',
-    },
-];
+import { productService } from '../services/productService';
 
 export default function ExpiredProducts() {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchProducts = async () => {
+        try {
+            setLoading(true);
+            const data = await productService.getExpired();
+            setProducts(data);
+        } catch (err) {
+            console.error('Erro ao buscar produtos vencidos:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
     return (
         <ProductsTable
             title="Produtos Vencidos"
-            subtitle="Itens fora do prazo de validade que devem ser descartados/separados"
-            products={mockExpired}
+            subtitle="Itens com data expirada que devem ser separados/descartados"
+            products={products}
+            loading={loading}
             onEdit={(p) => console.log('Editar:', p)}
             onDelete={(id) => console.log('Excluir:', id)}
         />

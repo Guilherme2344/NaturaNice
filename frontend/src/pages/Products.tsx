@@ -1,26 +1,33 @@
+import { useEffect, useState } from 'react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
-
-const mockProducts: Product[] = [
-    {
-        id: 1,
-        name: 'Sérum Preenchedor Facial',
-        brand: { id: 10, name: 'Natura', color: '#E65100' },
-        category: { id: 1, name: 'Cuidados com a Pele' },
-        family: { id: 2, name: 'Séruns' },
-        quantity: 15,
-        expirationDate: '2026-09-20',
-        sellingPrice: 89.9,
-        expirationStatus: 'NEAR_EXPIRATION',
-        expirationStatusDescription: 'Perto de Vencer',
-    },
-];
+import { productService } from '../services/productService';
 
 export default function Products() {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchProducts = async () => {
+        try {
+            setLoading(true);
+            const data = await productService.getAll();
+            setProducts(data);
+        } catch (err) {
+            console.error('Erro ao buscar produtos:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
     return (
         <ProductsTable
             title="Todos os Produtos"
-            subtitle="Listagem geral do estoque"
-            products={mockProducts}
+            subtitle="Listagem geral dos itens no estoque"
+            products={products}
+            loading={loading}
             onAdd={() => console.log('Novo produto')}
             onEdit={(p) => console.log('Editar:', p)}
             onDelete={(id) => console.log('Excluir:', id)}

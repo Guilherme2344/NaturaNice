@@ -1,26 +1,33 @@
+import { useEffect, useState } from 'react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
-
-const mockNearExpiration: Product[] = [
-    {
-        id: 1,
-        name: 'Sérum Preenchedor Facial',
-        brand: { id: 10, name: 'Natura', color: '#E65100' },
-        category: { id: 1, name: 'Cuidados com a Pele' },
-        family: { id: 2, name: 'Séruns' },
-        quantity: 15,
-        expirationDate: '2026-09-20',
-        sellingPrice: 89.9,
-        expirationStatus: 'NEAR_EXPIRATION',
-        expirationStatusDescription: 'Perto de Vencer',
-    },
-];
+import { productService } from '../services/productService';
 
 export default function NearExpirationProducts() {
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchProducts = async () => {
+        try {
+            setLoading(true);
+            const data = await productService.getNearExpiration();
+            setProducts(data);
+        } catch (err) {
+            console.error('Erro ao buscar produtos perto de vencer:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchProducts();
+    }, []);
+
     return (
         <ProductsTable
-            title="Produtos À Vencer"
-            subtitle="Itens que exigem atenção devido ao prazo de validade"
-            products={mockNearExpiration}
+            title="Produtos Perto de Vencer"
+            subtitle="Itens com data de validade próxima que exigem atenção"
+            products={products}
+            loading={loading}
             onEdit={(p) => console.log('Editar:', p)}
             onDelete={(id) => console.log('Excluir:', id)}
         />

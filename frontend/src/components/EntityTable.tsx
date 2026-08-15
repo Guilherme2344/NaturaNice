@@ -11,19 +11,22 @@ import {
     TextInput,
     Pagination,
     Select,
+    Center,
+    Loader,
 } from '@mantine/core';
 import { Edit, Trash2, Plus, Search } from 'lucide-react';
 
 export type Entity = {
     id: number;
     name: string;
-    color?: string;
+    hexColor?: string;
 };
 
 interface EntityTableProps {
     title: string;
     subtitle?: string;
     items?: Entity[];
+    loading?: boolean; // Prop para controlar estado de carregamento
     showColor?: boolean;
     onEdit?: (item: Entity) => void;
     onDelete?: (id: number) => void;
@@ -34,6 +37,7 @@ export default function EntityTable({
     title,
     subtitle,
     items = [],
+    loading = false,
     showColor = false,
     onEdit,
     onDelete,
@@ -45,7 +49,7 @@ export default function EntityTable({
 
     const itemsPerPage = Number(pageSize) || 5;
 
-    // 1. Filtra os itens com base na pesquisa (nome ou ID)
+    // 1. Filtra os itens por nome ou ID
     const filteredItems = items.filter((item) => {
         const query = search.toLowerCase();
         return (
@@ -54,10 +58,10 @@ export default function EntityTable({
         );
     });
 
-    // 2. Calcula o total de páginas
+    // 2. Total de páginas
     const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
 
-    // 3. Fatia o array para a página atual
+    // 3. Fatiamento para paginação
     const paginatedItems = filteredItems.slice(
         (activePage - 1) * itemsPerPage,
         activePage * itemsPerPage
@@ -71,8 +75,8 @@ export default function EntityTable({
 
             <Table.Td>
                 <Group gap="xs">
-                    {showColor && item.color && (
-                        <ColorSwatch color={item.color} size={16} />
+                    {showColor && item.hexColor && (
+                        <ColorSwatch color={item.hexColor} size={16} />
                     )}
                     <Text size="sm" fw={500}>
                         {item.name}
@@ -83,7 +87,7 @@ export default function EntityTable({
             {showColor && (
                 <Table.Td>
                     <Text size="xs" c="dimmed">
-                        {item.color || 'Sem cor definida'}
+                        {item.hexColor || 'Sem cor definida'}
                     </Text>
                 </Table.Td>
             )}
@@ -127,33 +131,31 @@ export default function EntityTable({
                 {onAdd && (
                     <Button
                         leftSection={<Plus size={16} />}
-                        color="blue"
+                        color="green"
                         onClick={onAdd}
                     >
-                        Nova Cadastrar
+                        Inserir
                     </Button>
                 )}
             </Group>
 
-            {/* Barra de Pesquisa */}
+            {/* Pesquisa */}
             <TextInput
                 placeholder={`Pesquisar ${title.toLowerCase()}...`}
                 leftSection={<Search size={16} />}
                 value={search}
                 onChange={(e) => {
                     setSearch(e.currentTarget.value);
-                    setPage(1); // Reseta para a página 1 durante a busca
+                    setPage(1);
                 }}
                 mb="md"
             />
 
-            {/* Tabela */}
+            {/* Tabela com suporte a carregamento */}
             <Table striped highlightOnHover verticalSpacing="sm">
                 <Table.Thead>
                     <Table.Tr>
-                        <Table.Th>ID</Table.Th>
                         <Table.Th>Nome</Table.Th>
-                        {showColor && <Table.Th>Cor Hexadecimal</Table.Th>}
                         <Table.Th style={{ textAlign: 'right' }}>
                             Ações
                         </Table.Th>
@@ -161,15 +163,64 @@ export default function EntityTable({
                 </Table.Thead>
 
                 <Table.Tbody>
-                    {paginatedItems.length > 0 ? (
-                        rows
+                    {loading ? (
+                        <Table.Tr>
+                            <Table.Td colSpan={2} align="center" py="xl">
+                                <Center
+                                    style={{ flexDirection: 'column', gap: 8 }}
+                                >
+                                    <Loader size="sm" color="blue" />
+                                    <Text size="sm" c="dimmed">
+                                        Carregando dados...
+                                    </Text>
+                                </Center>
+                            </Table.Td>
+                        </Table.Tr>
+                    ) : paginatedItems.length > 0 ? (
+                        paginatedItems.map((item) => (
+                            <Table.Tr key={item.id}>
+                                {/* Nome acompanhado da bolinha de cor (se existir) */}
+                                <Table.Td>
+                                    <Group gap="xs">
+                                        {showColor && item.hexColor && (
+                                            <ColorSwatch
+                                                color={item.hexColor}
+                                                size={16}
+                                            />
+                                        )}
+                                        <Text size="sm" fw={500}>
+                                            {item.name}
+                                        </Text>
+                                    </Group>
+                                </Table.Td>
+
+                                {/* Botões de Ação */}
+                                <Table.Td align="right">
+                                    <Group gap="xs" justify="flex-end">
+                                        <ActionIcon
+                                            variant="light"
+                                            color="blue"
+                                            title="Editar"
+                                            onClick={() => onEdit?.(item)}
+                                        >
+                                            <Edit size={16} />
+                                        </ActionIcon>
+
+                                        <ActionIcon
+                                            variant="light"
+                                            color="red"
+                                            title="Excluir"
+                                            onClick={() => onDelete?.(item.id)}
+                                        >
+                                            <Trash2 size={16} />
+                                        </ActionIcon>
+                                    </Group>
+                                </Table.Td>
+                            </Table.Tr>
+                        ))
                     ) : (
                         <Table.Tr>
-                            <Table.Td
-                                colSpan={showColor ? 4 : 3}
-                                align="center"
-                                py="xl"
-                            >
+                            <Table.Td colSpan={2} align="center" py="xl">
                                 <Text c="dimmed">
                                     Nenhum registro encontrado.
                                 </Text>
@@ -180,7 +231,7 @@ export default function EntityTable({
             </Table>
 
             {/* Rodapé com Paginação */}
-            {filteredItems.length > 0 && (
+            {!loading && filteredItems.length > 0 && (
                 <Group
                     justify="space-between"
                     mt="md"

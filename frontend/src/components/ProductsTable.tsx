@@ -12,6 +12,8 @@ import {
     TextInput,
     Pagination,
     Select,
+    Center,
+    Loader,
 } from '@mantine/core';
 import { Edit, Trash2, Plus, Search } from 'lucide-react';
 
@@ -20,15 +22,32 @@ export type ExpirationStatus =
     | 'NEAR_EXPIRATION'
     | 'EXPIRED';
 
+export type Brand = {
+    id: number;
+    name: string;
+    hexColor?: string;
+};
+
+export type Category = {
+    id: number;
+    name: string;
+};
+
+export type Family = {
+    id: number;
+    name: string;
+};
+
 export type Product = {
     id: number;
     name: string;
-    brand: { id: number; name: string; color: string };
-    category: { id: number; name: string };
-    family: { id: number; name: string };
     quantity: number;
     expirationDate: string;
+    purchasePrice: number;
     sellingPrice: number;
+    brand: Brand;
+    category: Category;
+    family: Family;
     expirationStatus: ExpirationStatus;
     expirationStatusDescription: string;
 };
@@ -37,6 +56,7 @@ interface ProductsTableProps {
     title?: string;
     subtitle?: string;
     products?: Product[];
+    loading?: boolean;
     onEdit?: (product: Product) => void;
     onDelete?: (id: number) => void;
     onAdd?: () => void;
@@ -46,13 +66,14 @@ export default function ProductsTable({
     title = 'Estoque de Produtos',
     subtitle = 'Listagem geral dos itens cadastrados no sistema',
     products = [],
+    loading = false,
     onEdit,
     onDelete,
     onAdd,
 }: ProductsTableProps) {
     const [search, setSearch] = useState('');
     const [activePage, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState<string | null>('5'); // 5 itens por página
+    const [pageSize, setPageSize] = useState<string | null>('5');
 
     const itemsPerPage = Number(pageSize) || 5;
 
@@ -73,89 +94,25 @@ export default function ProductsTable({
         return `${day}/${month}/${year}`;
     };
 
-    // 1. Filtra os produtos com base na pesquisa
-    const filteredProducts = products.filter((product) => {
+    const filteredProducts = (products || []).filter((product) => {
         const query = search.toLowerCase();
         return (
-            product.name.toLowerCase().includes(query) ||
-            product.brand?.name.toLowerCase().includes(query) ||
-            product.category?.name.toLowerCase().includes(query) ||
-            product.family?.name.toLowerCase().includes(query)
+            product.name?.toLowerCase().includes(query) ||
+            product.brand?.name?.toLowerCase().includes(query) ||
+            product.category?.name?.toLowerCase().includes(query) ||
+            product.family?.name?.toLowerCase().includes(query)
         );
     });
 
-    // 2. Calcula o total de páginas
-    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
 
-    // 3. Fatia o array para exibir apenas os itens da página atual
     const paginatedProducts = filteredProducts.slice(
         (activePage - 1) * itemsPerPage,
         activePage * itemsPerPage
     );
 
-    const rows = paginatedProducts.map((product) => (
-        <Table.Tr key={product.id}>
-            <Table.Td fw={500}>{product.name}</Table.Td>
-
-            <Table.Td>
-                <Group gap="xs">
-                    <ColorSwatch
-                        color={product.brand?.color || '#ccc'}
-                        size={14}
-                    />
-                    <Text size="sm">{product.brand?.name || '-'}</Text>
-                </Group>
-            </Table.Td>
-
-            <Table.Td>
-                <Text size="sm">{product.category?.name || '-'}</Text>
-                <Text size="xs" c="dimmed">
-                    {product.family?.name || '-'}
-                </Text>
-            </Table.Td>
-
-            <Table.Td fw={500}>{product.quantity} un</Table.Td>
-            <Table.Td>{formatDate(product.expirationDate)}</Table.Td>
-            <Table.Td fw={600}>
-                R$ {product.sellingPrice?.toFixed(2) || '0.00'}
-            </Table.Td>
-
-            <Table.Td>
-                <Badge
-                    color={getStatusBadgeColor(product.expirationStatus)}
-                    variant="light"
-                >
-                    {product.expirationStatusDescription}
-                </Badge>
-            </Table.Td>
-
-            <Table.Td align="right">
-                <Group gap="xs" justify="flex-end">
-                    <ActionIcon
-                        variant="light"
-                        color="blue"
-                        title="Editar produto"
-                        onClick={() => onEdit?.(product)}
-                    >
-                        <Edit size={16} />
-                    </ActionIcon>
-
-                    <ActionIcon
-                        variant="light"
-                        color="red"
-                        title="Excluir produto"
-                        onClick={() => onDelete?.(product.id)}
-                    >
-                        <Trash2 size={16} />
-                    </ActionIcon>
-                </Group>
-            </Table.Td>
-        </Table.Tr>
-    ));
-
     return (
         <Paper shadow="xs" p="md" radius="md" withBorder>
-            {/* Cabeçalho */}
             <Group justify="space-between" mb="md">
                 <div>
                     <Title order={3}>{title}</Title>
@@ -176,19 +133,17 @@ export default function ProductsTable({
                 )}
             </Group>
 
-            {/* Barra de Pesquisa */}
             <TextInput
-                placeholder="Pesquisar por nome, marca, categoria ou família..."
+                placeholder="Pesquisar por produto, marca, categoria ou família..."
                 leftSection={<Search size={16} />}
                 value={search}
                 onChange={(e) => {
                     setSearch(e.currentTarget.value);
-                    setPage(1); // Volta para a primeira página ao pesquisar
+                    setPage(1);
                 }}
                 mb="md"
             />
 
-            {/* Tabela */}
             <Table striped highlightOnHover verticalSpacing="sm">
                 <Table.Thead>
                     <Table.Tr>
@@ -196,8 +151,9 @@ export default function ProductsTable({
                         <Table.Th>Marca</Table.Th>
                         <Table.Th>Categoria / Família</Table.Th>
                         <Table.Th>Qtd</Table.Th>
-                        <Table.Th>Validade</Table.Th>
-                        <Table.Th>Preço</Table.Th>
+                        <Table.Th>Data de Vencimento</Table.Th>
+                        <Table.Th>Preço Compra</Table.Th>
+                        <Table.Th>Preço Venda</Table.Th>
                         <Table.Th>Status</Table.Th>
                         <Table.Th style={{ textAlign: 'right' }}>
                             Ações
@@ -206,11 +162,109 @@ export default function ProductsTable({
                 </Table.Thead>
 
                 <Table.Tbody>
-                    {paginatedProducts.length > 0 ? (
-                        rows
+                    {loading ? (
+                        <Table.Tr>
+                            <Table.Td colSpan={9} align="center" py="xl">
+                                <Center
+                                    style={{ flexDirection: 'column', gap: 8 }}
+                                >
+                                    <Loader size="sm" color="blue" />
+                                    <Text size="sm" c="dimmed">
+                                        Carregando produtos...
+                                    </Text>
+                                </Center>
+                            </Table.Td>
+                        </Table.Tr>
+                    ) : paginatedProducts.length > 0 ? (
+                        paginatedProducts.map((product) => (
+                            <Table.Tr key={product.id}>
+                                <Table.Td fw={500}>{product.name}</Table.Td>
+
+                                <Table.Td>
+                                    <Group gap="xs">
+                                        <ColorSwatch
+                                            color={
+                                                product.brand?.hexColor ||
+                                                '#ccc'
+                                            }
+                                            size={14}
+                                        />
+                                        <Text size="sm">
+                                            {product.brand?.name || '-'}
+                                        </Text>
+                                    </Group>
+                                </Table.Td>
+
+                                <Table.Td>
+                                    <Text size="sm">
+                                        {product.category?.name || '-'}
+                                    </Text>
+                                    <Text size="xs" c="dimmed">
+                                        {product.family?.name || '-'}
+                                    </Text>
+                                </Table.Td>
+
+                                <Table.Td fw={500}>
+                                    {product.quantity} un
+                                </Table.Td>
+
+                                {/* Data de Vencimento formatada */}
+                                <Table.Td>
+                                    {formatDate(product.expirationDate)}
+                                </Table.Td>
+
+                                {/* Preço de Compra */}
+                                <Table.Td c="dimmed">
+                                    R${' '}
+                                    {product.purchasePrice?.toFixed(2) ||
+                                        '0.00'}
+                                </Table.Td>
+
+                                {/* Preço de Venda */}
+                                <Table.Td fw={600}>
+                                    R${' '}
+                                    {product.sellingPrice?.toFixed(2) || '0.00'}
+                                </Table.Td>
+
+                                <Table.Td>
+                                    <Badge
+                                        color={getStatusBadgeColor(
+                                            product.expirationStatus
+                                        )}
+                                        variant="light"
+                                    >
+                                        {product.expirationStatusDescription}
+                                    </Badge>
+                                </Table.Td>
+
+                                <Table.Td align="right">
+                                    <Group gap="xs" justify="flex-end">
+                                        <ActionIcon
+                                            variant="light"
+                                            color="blue"
+                                            title="Editar produto"
+                                            onClick={() => onEdit?.(product)}
+                                        >
+                                            <Edit size={16} />
+                                        </ActionIcon>
+
+                                        <ActionIcon
+                                            variant="light"
+                                            color="red"
+                                            title="Excluir produto"
+                                            onClick={() =>
+                                                onDelete?.(product.id)
+                                            }
+                                        >
+                                            <Trash2 size={16} />
+                                        </ActionIcon>
+                                    </Group>
+                                </Table.Td>
+                            </Table.Tr>
+                        ))
                     ) : (
                         <Table.Tr>
-                            <Table.Td colSpan={8} align="center" py="xl">
+                            <Table.Td colSpan={9} align="center" py="xl">
                                 <Text c="dimmed">
                                     Nenhum produto encontrado.
                                 </Text>
@@ -220,8 +274,7 @@ export default function ProductsTable({
                 </Table.Tbody>
             </Table>
 
-            {/* Rodapé com Paginação */}
-            {filteredProducts.length > 0 && (
+            {!loading && filteredProducts.length > 0 && (
                 <Group
                     justify="space-between"
                     mt="md"
