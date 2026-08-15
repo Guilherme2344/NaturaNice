@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
     Table,
     Badge,
@@ -9,9 +10,10 @@ import {
     ActionIcon,
     Button,
     TextInput,
+    Pagination,
+    Select,
 } from '@mantine/core';
 import { Edit, Trash2, Plus, Search } from 'lucide-react';
-import { useState } from 'react';
 
 export type ExpirationStatus =
     | 'FAR_FROM_EXPIRING'
@@ -25,7 +27,7 @@ export type Product = {
     category: { id: number; name: string };
     family: { id: number; name: string };
     quantity: number;
-    expirationDate: string; // ISO String (ex: "2026-09-15")
+    expirationDate: string;
     sellingPrice: number;
     expirationStatus: ExpirationStatus;
     expirationStatusDescription: string;
@@ -49,6 +51,10 @@ export default function ProductsTable({
     onAdd,
 }: ProductsTableProps) {
     const [search, setSearch] = useState('');
+    const [activePage, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<string | null>('5'); // 5 itens por página
+
+    const itemsPerPage = Number(pageSize) || 5;
 
     const getStatusBadgeColor = (status: ExpirationStatus) => {
         switch (status) {
@@ -67,6 +73,7 @@ export default function ProductsTable({
         return `${day}/${month}/${year}`;
     };
 
+    // 1. Filtra os produtos com base na pesquisa
     const filteredProducts = products.filter((product) => {
         const query = search.toLowerCase();
         return (
@@ -77,12 +84,19 @@ export default function ProductsTable({
         );
     });
 
-    const rows = filteredProducts.map((product) => (
+    // 2. Calcula o total de páginas
+    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+
+    // 3. Fatia o array para exibir apenas os itens da página atual
+    const paginatedProducts = filteredProducts.slice(
+        (activePage - 1) * itemsPerPage,
+        activePage * itemsPerPage
+    );
+
+    const rows = paginatedProducts.map((product) => (
         <Table.Tr key={product.id}>
-            {/* Nome do Produto */}
             <Table.Td fw={500}>{product.name}</Table.Td>
 
-            {/* Marca com a bolinha de cor (ColorSwatch) */}
             <Table.Td>
                 <Group gap="xs">
                     <ColorSwatch
@@ -93,7 +107,6 @@ export default function ProductsTable({
                 </Group>
             </Table.Td>
 
-            {/* Categoria e Família */}
             <Table.Td>
                 <Text size="sm">{product.category?.name || '-'}</Text>
                 <Text size="xs" c="dimmed">
@@ -101,18 +114,12 @@ export default function ProductsTable({
                 </Text>
             </Table.Td>
 
-            {/* Quantidade */}
             <Table.Td fw={500}>{product.quantity} un</Table.Td>
-
-            {/* Data de Validade */}
             <Table.Td>{formatDate(product.expirationDate)}</Table.Td>
-
-            {/* Preço de Venda */}
             <Table.Td fw={600}>
                 R$ {product.sellingPrice?.toFixed(2) || '0.00'}
             </Table.Td>
 
-            {/* Badge de Validade */}
             <Table.Td>
                 <Badge
                     color={getStatusBadgeColor(product.expirationStatus)}
@@ -122,7 +129,6 @@ export default function ProductsTable({
                 </Badge>
             </Table.Td>
 
-            {/* Ações Diretas */}
             <Table.Td align="right">
                 <Group gap="xs" justify="flex-end">
                     <ActionIcon
@@ -149,6 +155,7 @@ export default function ProductsTable({
 
     return (
         <Paper shadow="xs" p="md" radius="md" withBorder>
+            {/* Cabeçalho */}
             <Group justify="space-between" mb="md">
                 <div>
                     <Title order={3}>{title}</Title>
@@ -161,22 +168,27 @@ export default function ProductsTable({
                 {onAdd && (
                     <Button
                         leftSection={<Plus size={16} />}
-                        color="green"
+                        color="blue"
                         onClick={onAdd}
                     >
-                        Inserir
+                        Novo Produto
                     </Button>
                 )}
             </Group>
 
+            {/* Barra de Pesquisa */}
             <TextInput
                 placeholder="Pesquisar por nome, marca, categoria ou família..."
                 leftSection={<Search size={16} />}
                 value={search}
-                onChange={(e) => setSearch(e.currentTarget.value)}
+                onChange={(e) => {
+                    setSearch(e.currentTarget.value);
+                    setPage(1); // Volta para a primeira página ao pesquisar
+                }}
                 mb="md"
             />
 
+            {/* Tabela */}
             <Table striped highlightOnHover verticalSpacing="sm">
                 <Table.Thead>
                     <Table.Tr>
@@ -194,7 +206,7 @@ export default function ProductsTable({
                 </Table.Thead>
 
                 <Table.Tbody>
-                    {products.length > 0 ? (
+                    {paginatedProducts.length > 0 ? (
                         rows
                     ) : (
                         <Table.Tr>
@@ -207,6 +219,41 @@ export default function ProductsTable({
                     )}
                 </Table.Tbody>
             </Table>
+
+            {/* Rodapé com Paginação */}
+            {filteredProducts.length > 0 && (
+                <Group
+                    justify="space-between"
+                    mt="md"
+                    pt="xs"
+                    style={{ borderTop: '1px solid #eee' }}
+                >
+                    <Group gap="xs">
+                        <Text size="sm" c="dimmed">
+                            Exibindo itens por página:
+                        </Text>
+                        <Select
+                            data={['5', '10', '20', '50']}
+                            value={pageSize}
+                            onChange={(val) => {
+                                setPageSize(val);
+                                setPage(1);
+                            }}
+                            style={{ width: 80 }}
+                            size="xs"
+                        />
+                    </Group>
+
+                    <Pagination
+                        total={totalPages}
+                        value={activePage}
+                        onChange={setPage}
+                        color="blue"
+                        size="sm"
+                        radius="md"
+                    />
+                </Group>
+            )}
         </Paper>
     );
 }

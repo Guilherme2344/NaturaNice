@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
     Table,
     Group,
@@ -5,25 +6,25 @@ import {
     Text,
     Paper,
     Title,
-    Button,
     ActionIcon,
+    Button,
     TextInput,
+    Pagination,
+    Select,
 } from '@mantine/core';
 import { Edit, Trash2, Plus, Search } from 'lucide-react';
-import { useState } from 'react';
 
-// Interface base que serve para Marca, Categoria e Família
-export interface Entity {
+export type Entity = {
     id: number;
     name: string;
-    color?: string; // Opcional (usado para Marcas)
-}
+    color?: string;
+};
 
 interface EntityTableProps {
     title: string;
     subtitle?: string;
-    items: Entity[];
-    showColor?: boolean; // Se true, exibe a bolinha de cor (ColorSwatch)
+    items?: Entity[];
+    showColor?: boolean;
     onEdit?: (item: Entity) => void;
     onDelete?: (id: number) => void;
     onAdd?: () => void;
@@ -32,14 +33,19 @@ interface EntityTableProps {
 export default function EntityTable({
     title,
     subtitle,
-    items,
+    items = [],
     showColor = false,
     onEdit,
     onDelete,
     onAdd,
 }: EntityTableProps) {
     const [search, setSearch] = useState('');
+    const [activePage, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<string | null>('5');
 
+    const itemsPerPage = Number(pageSize) || 5;
+
+    // 1. Filtra os itens com base na pesquisa (nome ou ID)
     const filteredItems = items.filter((item) => {
         const query = search.toLowerCase();
         return (
@@ -48,14 +54,21 @@ export default function EntityTable({
         );
     });
 
-    const rows = filteredItems.map((item) => (
+    // 2. Calcula o total de páginas
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+    // 3. Fatia o array para a página atual
+    const paginatedItems = filteredItems.slice(
+        (activePage - 1) * itemsPerPage,
+        activePage * itemsPerPage
+    );
+
+    const rows = paginatedItems.map((item) => (
         <Table.Tr key={item.id}>
-            {/* ID do Cadastro */}
             <Table.Td fw={500} w={80}>
                 #{item.id}
             </Table.Td>
 
-            {/* Nome e Cor (se aplicável) */}
             <Table.Td>
                 <Group gap="xs">
                     {showColor && item.color && (
@@ -67,7 +80,6 @@ export default function EntityTable({
                 </Group>
             </Table.Td>
 
-            {/* Código Hexadecimal da Cor (apenas para Marcas) */}
             {showColor && (
                 <Table.Td>
                     <Text size="xs" c="dimmed">
@@ -76,13 +88,12 @@ export default function EntityTable({
                 </Table.Td>
             )}
 
-            {/* Menu de Ações */}
             <Table.Td align="right">
                 <Group gap="xs" justify="flex-end">
                     <ActionIcon
                         variant="light"
                         color="blue"
-                        title="Editar produto"
+                        title="Editar"
                         onClick={() => onEdit?.(item)}
                     >
                         <Edit size={16} />
@@ -91,7 +102,7 @@ export default function EntityTable({
                     <ActionIcon
                         variant="light"
                         color="red"
-                        title="Excluir produto"
+                        title="Excluir"
                         onClick={() => onDelete?.(item.id)}
                     >
                         <Trash2 size={16} />
@@ -103,7 +114,7 @@ export default function EntityTable({
 
     return (
         <Paper shadow="xs" p="md" radius="md" withBorder>
-            {/* Cabeçalho da Tabela */}
+            {/* Cabeçalho */}
             <Group justify="space-between" mb="md">
                 <div>
                     <Title order={3}>{title}</Title>
@@ -116,23 +127,27 @@ export default function EntityTable({
                 {onAdd && (
                     <Button
                         leftSection={<Plus size={16} />}
-                        color="green"
+                        color="blue"
                         onClick={onAdd}
                     >
-                        Inserir
+                        Nova Cadastrar
                     </Button>
                 )}
             </Group>
 
+            {/* Barra de Pesquisa */}
             <TextInput
                 placeholder={`Pesquisar ${title.toLowerCase()}...`}
                 leftSection={<Search size={16} />}
                 value={search}
-                onChange={(e) => setSearch(e.currentTarget.value)}
+                onChange={(e) => {
+                    setSearch(e.currentTarget.value);
+                    setPage(1); // Reseta para a página 1 durante a busca
+                }}
                 mb="md"
             />
 
-            {/* Tabela do Mantine */}
+            {/* Tabela */}
             <Table striped highlightOnHover verticalSpacing="sm">
                 <Table.Thead>
                     <Table.Tr>
@@ -146,7 +161,7 @@ export default function EntityTable({
                 </Table.Thead>
 
                 <Table.Tbody>
-                    {items.length > 0 ? (
+                    {paginatedItems.length > 0 ? (
                         rows
                     ) : (
                         <Table.Tr>
@@ -156,13 +171,48 @@ export default function EntityTable({
                                 py="xl"
                             >
                                 <Text c="dimmed">
-                                    Nenhum registro cadastrado.
+                                    Nenhum registro encontrado.
                                 </Text>
                             </Table.Td>
                         </Table.Tr>
                     )}
                 </Table.Tbody>
             </Table>
+
+            {/* Rodapé com Paginação */}
+            {filteredItems.length > 0 && (
+                <Group
+                    justify="space-between"
+                    mt="md"
+                    pt="xs"
+                    style={{ borderTop: '1px solid #eee' }}
+                >
+                    <Group gap="xs">
+                        <Text size="sm" c="dimmed">
+                            Exibindo itens por página:
+                        </Text>
+                        <Select
+                            data={['5', '10', '20', '50']}
+                            value={pageSize}
+                            onChange={(val) => {
+                                setPageSize(val);
+                                setPage(1);
+                            }}
+                            style={{ width: 80 }}
+                            size="xs"
+                        />
+                    </Group>
+
+                    <Pagination
+                        total={totalPages}
+                        value={activePage}
+                        onChange={setPage}
+                        color="blue"
+                        size="sm"
+                        radius="md"
+                    />
+                </Group>
+            )}
         </Paper>
     );
 }
