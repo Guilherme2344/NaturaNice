@@ -1,23 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Loader, Center, Text } from '@mantine/core';
 import EntityTable from '../components/EntityTable';
 import type { Entity } from '../components/EntityTable';
+import { EntityModal } from '../components/EntityModal';
 import { entityService } from '../services/entityService';
 
 export default function Brands() {
     const [brands, setBrands] = useState<Entity[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [modalOpened, setModalOpened] = useState(false);
 
     const fetchBrands = async () => {
         try {
             setLoading(true);
-            setError(null);
             const data = await entityService.getBrands();
             setBrands(data);
         } catch (err) {
             console.error('Erro ao buscar marcas:', err);
-            setError('Erro ao carregar as marcas do servidor.');
         } finally {
             setLoading(false);
         }
@@ -27,31 +25,32 @@ export default function Brands() {
         fetchBrands();
     }, []);
 
-    if (loading) {
-        return (
-            <Center py="xl">
-                <Loader size="lg" color="blue" />
-            </Center>
-        );
-    }
-
-    if (error) {
-        return (
-            <Center py="xl">
-                <Text c="red">{error}</Text>
-            </Center>
-        );
-    }
+    const handleCreate = async (values: {
+        name: string;
+        hexColor?: string;
+    }) => {
+        await entityService.createBrand(values);
+        await fetchBrands(); // Recarrega a tabela após cadastrar
+    };
 
     return (
-        <EntityTable
-            title="Marcas"
-            subtitle="Marcas cadastradas no sistema"
-            items={brands}
-            showColor={true} // Exibe a cor hexadecimal enviada pelo backend
-            onAdd={() => console.log('Novo cadastro')}
-            onEdit={(item) => console.log('Editar:', item)}
-            onDelete={(id) => console.log('Excluir ID:', id)}
-        />
+        <>
+            <EntityTable
+                title="Marcas"
+                subtitle="Marcas cadastradas no estoque"
+                items={brands}
+                loading={loading}
+                showColor={true}
+                onAdd={() => setModalOpened(true)}
+            />
+
+            <EntityModal
+                opened={modalOpened}
+                onClose={() => setModalOpened(false)}
+                title="Cadastrar Nova Marca"
+                showColor={true}
+                onSubmit={handleCreate}
+            />
+        </>
     );
 }

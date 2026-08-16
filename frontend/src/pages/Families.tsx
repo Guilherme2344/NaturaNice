@@ -1,23 +1,21 @@
 import { useEffect, useState } from 'react';
-import { Loader, Center, Text } from '@mantine/core';
 import EntityTable from '../components/EntityTable';
 import type { Entity } from '../components/EntityTable';
+import { EntityModal } from '../components/EntityModal';
 import { entityService } from '../services/entityService';
 
 export default function Families() {
     const [families, setFamilies] = useState<Entity[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [modalOpened, setModalOpened] = useState(false);
 
     const fetchFamilies = async () => {
         try {
             setLoading(true);
-            setError(null);
             const data = await entityService.getFamilies();
             setFamilies(data);
         } catch (err) {
             console.error('Erro ao buscar famílias:', err);
-            setError('Erro ao carregar as famílias do servidor.');
         } finally {
             setLoading(false);
         }
@@ -27,31 +25,29 @@ export default function Families() {
         fetchFamilies();
     }, []);
 
-    if (loading) {
-        return (
-            <Center py="xl">
-                <Loader size="lg" color="blue" />
-            </Center>
-        );
-    }
-
-    if (error) {
-        return (
-            <Center py="xl">
-                <Text c="red">{error}</Text>
-            </Center>
-        );
-    }
+    const handleCreate = async (values: { name: string }) => {
+        await entityService.createFamily(values);
+        await fetchFamilies();
+    };
 
     return (
-        <EntityTable
-            title="Famílias"
-            subtitle="Famílias e subgrupos de produtos"
-            items={families}
-            showColor={false}
-            onAdd={() => console.log('Novo cadastro')}
-            onEdit={(item) => console.log('Editar:', item)}
-            onDelete={(id) => console.log('Excluir ID:', id)}
-        />
+        <>
+            <EntityTable
+                title="Famílias"
+                subtitle="Famílias e subgrupos de produtos"
+                items={families}
+                loading={loading}
+                showColor={false}
+                onAdd={() => setModalOpened(true)}
+            />
+
+            <EntityModal
+                opened={modalOpened}
+                onClose={() => setModalOpened(false)}
+                title="Cadastrar Nova Família"
+                showColor={false}
+                onSubmit={handleCreate}
+            />
+        </>
     );
 }

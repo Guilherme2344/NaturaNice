@@ -26,7 +26,7 @@ interface EntityTableProps {
     title: string;
     subtitle?: string;
     items?: Entity[];
-    loading?: boolean; // Prop para controlar estado de carregamento
+    loading?: boolean;
     showColor?: boolean;
     onEdit?: (item: Entity) => void;
     onDelete?: (id: number) => void;
@@ -49,7 +49,7 @@ export default function EntityTable({
 
     const itemsPerPage = Number(pageSize) || 5;
 
-    // 1. Filtra os itens por nome ou ID
+    // Filtra os itens com base na pesquisa
     const filteredItems = items.filter((item) => {
         const query = search.toLowerCase();
         return (
@@ -58,63 +58,14 @@ export default function EntityTable({
         );
     });
 
-    // 2. Total de páginas
-    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    // Total de páginas
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
 
-    // 3. Fatiamento para paginação
+    // Fatiamento para a página atual
     const paginatedItems = filteredItems.slice(
         (activePage - 1) * itemsPerPage,
         activePage * itemsPerPage
     );
-
-    const rows = paginatedItems.map((item) => (
-        <Table.Tr key={item.id}>
-            <Table.Td fw={500} w={80}>
-                #{item.id}
-            </Table.Td>
-
-            <Table.Td>
-                <Group gap="xs">
-                    {showColor && item.hexColor && (
-                        <ColorSwatch color={item.hexColor} size={16} />
-                    )}
-                    <Text size="sm" fw={500}>
-                        {item.name}
-                    </Text>
-                </Group>
-            </Table.Td>
-
-            {showColor && (
-                <Table.Td>
-                    <Text size="xs" c="dimmed">
-                        {item.hexColor || 'Sem cor definida'}
-                    </Text>
-                </Table.Td>
-            )}
-
-            <Table.Td align="right">
-                <Group gap="xs" justify="flex-end">
-                    <ActionIcon
-                        variant="light"
-                        color="blue"
-                        title="Editar"
-                        onClick={() => onEdit?.(item)}
-                    >
-                        <Edit size={16} />
-                    </ActionIcon>
-
-                    <ActionIcon
-                        variant="light"
-                        color="red"
-                        title="Excluir"
-                        onClick={() => onDelete?.(item.id)}
-                    >
-                        <Trash2 size={16} />
-                    </ActionIcon>
-                </Group>
-            </Table.Td>
-        </Table.Tr>
-    ));
 
     return (
         <Paper shadow="xs" p="md" radius="md" withBorder>
@@ -131,10 +82,10 @@ export default function EntityTable({
                 {onAdd && (
                     <Button
                         leftSection={<Plus size={16} />}
-                        color="green"
+                        color="blue"
                         onClick={onAdd}
                     >
-                        Inserir
+                        Novo Cadastrar
                     </Button>
                 )}
             </Group>
@@ -151,7 +102,7 @@ export default function EntityTable({
                 mb="md"
             />
 
-            {/* Tabela com suporte a carregamento */}
+            {/* Tabela */}
             <Table striped highlightOnHover verticalSpacing="sm">
                 <Table.Thead>
                     <Table.Tr>
@@ -179,7 +130,6 @@ export default function EntityTable({
                     ) : paginatedItems.length > 0 ? (
                         paginatedItems.map((item) => (
                             <Table.Tr key={item.id}>
-                                {/* Nome acompanhado da bolinha de cor (se existir) */}
                                 <Table.Td>
                                     <Group gap="xs">
                                         {showColor && item.hexColor && (
@@ -194,7 +144,6 @@ export default function EntityTable({
                                     </Group>
                                 </Table.Td>
 
-                                {/* Botões de Ação */}
                                 <Table.Td align="right">
                                     <Group gap="xs" justify="flex-end">
                                         <ActionIcon
