@@ -7,12 +7,14 @@ import {
     Group,
     Stack,
 } from '@mantine/core';
+import type { Entity } from '../components/EntityTable';
 
 interface EntityModalProps {
     opened: boolean;
     onClose: () => void;
     title: string;
     showColor?: boolean;
+    initialData?: Entity | null;
     onSubmit: (values: { name: string; hexColor?: string }) => Promise<void>;
 }
 
@@ -21,6 +23,7 @@ export function EntityModal({
     onClose,
     title,
     showColor = false,
+    initialData,
     onSubmit,
 }: EntityModalProps) {
     const [name, setName] = useState('');
@@ -29,10 +32,15 @@ export function EntityModal({
 
     useEffect(() => {
         if (opened) {
-            setName('');
-            setHexColor('#206095');
+            if (initialData) {
+                setName(initialData.name);
+                setHexColor(initialData.hexColor || '#206095');
+            } else {
+                setName('');
+                setHexColor('#206095');
+            }
         }
-    }, [opened]);
+    }, [opened, initialData]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -44,23 +52,19 @@ export function EntityModal({
 
         try {
             setLoading(true);
-
-            // Envia apenas o nome e hexColor (se aplicável, como em Marcas)
             await onSubmit({
                 name: name.trim(),
                 ...(showColor && { hexColor }),
             });
-
             onClose();
         } catch (error: any) {
             console.error(
-                'Erro ao cadastrar registro:',
+                'Erro ao salvar registro:',
                 error.response?.data || error
             );
             alert(
-                'Erro ao cadastrar: ' +
-                    (error.response?.data?.message ||
-                        'Verifique os dados informados.')
+                'Erro ao salvar: ' +
+                    (error.response?.data?.message || 'Verifique os dados.')
             );
         } finally {
             setLoading(false);
@@ -92,22 +96,6 @@ export function EntityModal({
                             value={hexColor}
                             onChange={setHexColor}
                             format="hex"
-                            swatches={[
-                                '#25262b',
-                                '#868e96',
-                                '#fa5252',
-                                '#e64980',
-                                '#be4bdb',
-                                '#7950f2',
-                                '#4c6ef5',
-                                '#228be6',
-                                '#15aabf',
-                                '#12b886',
-                                '#40c057',
-                                '#82c91e',
-                                '#fab005',
-                                '#fd7e14',
-                            ]}
                         />
                     )}
 
@@ -120,7 +108,7 @@ export function EntityModal({
                             Cancelar
                         </Button>
                         <Button type="submit" color="blue" loading={loading}>
-                            Cadastrar
+                            {initialData ? 'Salvar Alterações' : 'Cadastrar'}
                         </Button>
                     </Group>
                 </Stack>

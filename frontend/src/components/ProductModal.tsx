@@ -10,6 +10,7 @@ import {
     Grid,
 } from '@mantine/core';
 import type { CreateProductDTO } from '../services/productService';
+import type { Product } from '../components/ProductsTable';
 import type { Entity } from '../components/EntityTable';
 
 interface ProductModalProps {
@@ -18,6 +19,7 @@ interface ProductModalProps {
     brands: Entity[];
     categories: Entity[];
     families: Entity[];
+    initialData?: Product | null;
     onSubmit: (data: CreateProductDTO) => Promise<void>;
 }
 
@@ -27,6 +29,7 @@ export function ProductModal({
     brands,
     categories,
     families,
+    initialData,
     onSubmit,
 }: ProductModalProps) {
     const [name, setName] = useState('');
@@ -41,16 +44,37 @@ export function ProductModal({
 
     useEffect(() => {
         if (opened) {
-            setName('');
-            setQuantity(1);
-            setExpirationDate('');
-            setPurchasePrice(0);
-            setSellingPrice(0);
-            setBrandId(null);
-            setCategoryId(null);
-            setFamilyId(null);
+            if (initialData) {
+                setName(initialData.name || '');
+                setQuantity(initialData.quantity || 0);
+                setExpirationDate(initialData.expirationDate || '');
+                setPurchasePrice(initialData.purchasePrice || 0);
+                setSellingPrice(initialData.sellingPrice || 0);
+                setBrandId(
+                    initialData.brand?.id ? String(initialData.brand.id) : null
+                );
+                setCategoryId(
+                    initialData.category?.id
+                        ? String(initialData.category.id)
+                        : null
+                );
+                setFamilyId(
+                    initialData.family?.id
+                        ? String(initialData.family.id)
+                        : null
+                );
+            } else {
+                setName('');
+                setQuantity(1);
+                setExpirationDate('');
+                setPurchasePrice(0);
+                setSellingPrice(0);
+                setBrandId(null);
+                setCategoryId(null);
+                setFamilyId(null);
+            }
         }
-    }, [opened]);
+    }, [opened, initialData]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -59,36 +83,23 @@ export function ProductModal({
         const numCategoryId = Number(categoryId);
         const numFamilyId = Number(familyId);
 
-        // Validação: Garante que um item real da lista foi selecionado (ID > 0)
-        if (!name.trim()) {
-            alert('Informe o nome do produto.');
-            return;
-        }
-        if (!brandId || numBrandId <= 0) {
-            alert('Selecione uma Marca válida.');
-            return;
-        }
-        if (!categoryId || numCategoryId <= 0) {
-            alert('Selecione uma Categoria válida.');
-            return;
-        }
-        if (!familyId || numFamilyId <= 0) {
-            alert('Selecione uma Família válida.');
-            return;
-        }
-        if (!expirationDate) {
-            alert('Informe a data de vencimento.');
+        if (
+            !name.trim() ||
+            !numBrandId ||
+            !numCategoryId ||
+            !numFamilyId ||
+            !expirationDate
+        ) {
+            alert('Preencha todos os campos obrigatórios.');
             return;
         }
 
         try {
             setLoading(true);
-
-            // Payload plano com IDs numéricos reais
             const payload: CreateProductDTO = {
                 name: name.trim(),
                 quantity: Number(quantity) || 0,
-                expirationDate, // "YYYY-MM-DD"
+                expirationDate,
                 purchasePrice: Number(purchasePrice) || 0,
                 sellingPrice: Number(sellingPrice) || 0,
                 brandId: numBrandId,
@@ -100,14 +111,10 @@ export function ProductModal({
             onClose();
         } catch (error: any) {
             console.error(
-                'Erro retornado pelo Quarkus:',
+                'Erro ao salvar produto:',
                 error.response?.data || error
             );
-            alert(
-                'Erro 400 ao cadastrar: ' +
-                    (JSON.stringify(error.response?.data) ||
-                        'Verifique se os campos atendem às validações do backend.')
-            );
+            alert('Erro ao salvar produto.');
         } finally {
             setLoading(false);
         }
@@ -117,7 +124,7 @@ export function ProductModal({
         <Modal
             opened={opened}
             onClose={onClose}
-            title="Cadastrar Novo Produto"
+            title={initialData ? 'Editar Produto' : 'Cadastrar Novo Produto'}
             size="lg"
             centered
             radius="md"
@@ -126,7 +133,6 @@ export function ProductModal({
                 <Stack gap="md">
                     <TextInput
                         label="Nome do Produto"
-                        placeholder="Ex: Batom Ultramatte Vermelho"
                         required
                         value={name}
                         onChange={(e) => setName(e.currentTarget.value)}
@@ -136,7 +142,6 @@ export function ProductModal({
                         <Grid.Col span={4}>
                             <Select
                                 label="Marca"
-                                placeholder="Selecione"
                                 required
                                 data={brands.map((b) => ({
                                     value: String(b.id),
@@ -147,11 +152,9 @@ export function ProductModal({
                                 searchable
                             />
                         </Grid.Col>
-
                         <Grid.Col span={4}>
                             <Select
                                 label="Categoria"
-                                placeholder="Selecione"
                                 required
                                 data={categories.map((c) => ({
                                     value: String(c.id),
@@ -162,11 +165,9 @@ export function ProductModal({
                                 searchable
                             />
                         </Grid.Col>
-
                         <Grid.Col span={4}>
                             <Select
                                 label="Família"
-                                placeholder="Selecione"
                                 required
                                 data={families.map((f) => ({
                                     value: String(f.id),
@@ -182,15 +183,13 @@ export function ProductModal({
                     <Grid>
                         <Grid.Col span={6}>
                             <NumberInput
-                                label="Quantidade em Estoque"
-                                placeholder="0"
+                                label="Quantidade"
                                 required
                                 min={0}
                                 value={quantity}
                                 onChange={setQuantity}
                             />
                         </Grid.Col>
-
                         <Grid.Col span={6}>
                             <TextInput
                                 type="date"
@@ -208,7 +207,6 @@ export function ProductModal({
                         <Grid.Col span={6}>
                             <NumberInput
                                 label="Preço de Compra (R$)"
-                                placeholder="0.00"
                                 decimalScale={2}
                                 fixedDecimalScale
                                 min={0}
@@ -218,11 +216,9 @@ export function ProductModal({
                                 onChange={setPurchasePrice}
                             />
                         </Grid.Col>
-
                         <Grid.Col span={6}>
                             <NumberInput
                                 label="Preço de Venda (R$)"
-                                placeholder="0.00"
                                 decimalScale={2}
                                 fixedDecimalScale
                                 min={0}
@@ -243,7 +239,9 @@ export function ProductModal({
                             Cancelar
                         </Button>
                         <Button type="submit" color="blue" loading={loading}>
-                            Cadastrar Produto
+                            {initialData
+                                ? 'Salvar Alterações'
+                                : 'Cadastrar Produto'}
                         </Button>
                     </Group>
                 </Stack>

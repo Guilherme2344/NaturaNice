@@ -6,7 +6,26 @@ export interface CreateEntityDTO {
     hexColor?: string; // Usado apenas para marcas
 }
 
+export interface UpdateEntityDTO {
+    name: string;
+    hexColor?: string;
+}
+
 export const entityService = {
+    // POST (Cadastro)
+    createBrand: async (data: CreateEntityDTO): Promise<Entity> => {
+        const response = await api.post<Entity>('/brands', data);
+        return response.data;
+    },
+    createCategory: async (data: CreateEntityDTO): Promise<Entity> => {
+        const response = await api.post<Entity>('/categories', data);
+        return response.data;
+    },
+    createFamily: async (data: CreateEntityDTO): Promise<Entity> => {
+        const response = await api.post<Entity>('/families', data);
+        return response.data;
+    },
+
     // GET: Buscar todas as marcas
     getBrands: async (): Promise<Entity[]> => {
         const response = await api.get<Entity[]>('/brands');
@@ -25,17 +44,23 @@ export const entityService = {
         return response.data;
     },
 
-    // POST (Cadastro)
-    createBrand: async (data: CreateEntityDTO): Promise<Entity> => {
-        const response = await api.post<Entity>('/brands', data);
+    // PUT (Atualização)
+    updateBrand: async (id: number, data: UpdateEntityDTO): Promise<Entity> => {
+        const response = await api.put<Entity>(`/brands/${id}`, data);
         return response.data;
     },
-    createCategory: async (data: CreateEntityDTO): Promise<Entity> => {
-        const response = await api.post<Entity>('/categories', data);
+    updateCategory: async (
+        id: number,
+        data: UpdateEntityDTO
+    ): Promise<Entity> => {
+        const response = await api.put<Entity>(`/categories/${id}`, data);
         return response.data;
     },
-    createFamily: async (data: CreateEntityDTO): Promise<Entity> => {
-        const response = await api.post<Entity>('/families', data);
+    updateFamily: async (
+        id: number,
+        data: UpdateEntityDTO
+    ): Promise<Entity> => {
+        const response = await api.put<Entity>(`/families/${id}`, data);
         return response.data;
     },
 

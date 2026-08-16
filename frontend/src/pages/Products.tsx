@@ -1,80 +1,90 @@
 import { useEffect, useState } from 'react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
-import { DeleteModal } from '../components/DeleteModal';
-import { productService } from '../services/productService';
+import { ProductModal } from '../components/ProductModal';
+import {
+    productService,
+    type CreateProductDTO,
+} from '../services/productService';
+import { entityService } from '../services/entityService';
+import type { Entity } from '../components/EntityTable';
 
 export default function Products() {
     const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [brands, setBrands] = useState<Entity[]>([]);
+    const [categories, setCategories] = useState<Entity[]>([]);
+    const [families, setFamilies] = useState<Entity[]>([]);
 
-    // Estados de Exclusão
-    const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [modalOpened, setModalOpened] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(
         null
     );
-    const [deleteLoading, setDeleteLoading] = useState(false);
 
-    const fetchProducts = async () => {
+    const fetchData = async () => {
         try {
             setLoading(true);
-            const data = await productService.getAll();
-            setProducts(data);
+            const [prodsData, brandsData, categoriesData, familiesData] =
+                await Promise.all([
+                    productService.getAll(),
+                    entityService.getBrands(),
+                    entityService.getCategories(),
+                    entityService.getFamilies(),
+                ]);
+
+            setProducts(prodsData);
+            setBrands(brandsData);
+            setCategories(categoriesData);
+            setFamilies(familiesData);
         } catch (err) {
-            console.error('Erro ao buscar produtos:', err);
+            console.error('Erro ao buscar dados:', err);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchProducts();
+        fetchData();
     }, []);
 
-    const handleOpenDelete = (id: number) => {
-        const product = products.find((p) => p.id === id);
-        if (product) {
-            setSelectedProduct(product);
-            setDeleteModalOpened(true);
-        }
+    const handleOpenAdd = () => {
+        setSelectedProduct(null);
+        setModalOpened(true);
     };
 
-    const handleConfirmDelete = async () => {
-        if (!selectedProduct) return;
-        try {
-            setDeleteLoading(true);
-            await productService.delete(selectedProduct.id);
-            setDeleteModalOpened(false);
-            await fetchProducts();
-        } catch (err: any) {
-            alert(
-                'Erro ao excluir produto: ' +
-                    (err.response?.data?.message || err.message)
-            );
-        } finally {
-            setDeleteLoading(false);
+    const handleOpenEdit = (product: Product) => {
+        setSelectedProduct(product);
+        setModalOpened(true);
+    };
+
+    const handleSubmitProduct = async (data: CreateProductDTO) => {
+        if (selectedProduct) {
+            // Executa o PUT
+            await productService.update(selectedProduct.id, data);
+        } else {
+            // Executa o POST
+            await productService.create(data);
         }
+        await fetchData();
     };
 
     return (
         <>
             <ProductsTable
                 title="Todos os Produtos"
-                subtitle="Listagem geral dos itens cadastrados no sistema"
                 products={products}
                 loading={loading}
-                onDelete={handleOpenDelete}
+                onAdd={handleOpenAdd}
+                onEdit={handleOpenEdit}
             />
 
-            <DeleteModal
-                opened={deleteModalOpened}
-                onClose={() => setDeleteModalOpened(false)}
-                onConfirm={handleConfirmDelete}
-                itemDescription={
-                    selectedProduct?.name
-                        ? `o produto "${selectedProduct.name}"`
-                        : 'este produto'
-                }
-                loading={deleteLoading}
+            <ProductModal
+                opened={modalOpened}
+                onClose={() => setModalOpened(false)}
+                brands={brands}
+                categories={categories}
+                families={families}
+                initialData={selectedProduct}
+                onSubmit={handleSubmitProduct}
             />
         </>
     );

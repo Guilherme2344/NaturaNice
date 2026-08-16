@@ -13,6 +13,11 @@ export interface CreateProductDTO {
 }
 
 export const productService = {
+    // POST (Cadastro)
+    create: async (data: CreateProductDTO): Promise<Product> => {
+        const response = await api.post<Product>('/products', data);
+        return response.data;
+    },
     // GET: Buscar todos os produtos
     getAll: async (): Promise<Product[]> => {
         const response = await api.get<Product[]>('/products');
@@ -31,9 +36,8 @@ export const productService = {
         return response.data;
     },
 
-    // POST (Cadastro)
-    create: async (data: CreateProductDTO): Promise<Product> => {
-        const response = await api.post<Product>('/products', data);
+    update: async (id: number, data: CreateProductDTO): Promise<Product> => {
+        const response = await api.put<Product>(`/products/${id}`, data);
         return response.data;
     },
 
