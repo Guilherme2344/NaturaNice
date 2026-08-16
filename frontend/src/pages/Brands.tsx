@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react';
 import EntityTable from '../components/EntityTable';
-import type { Entity } from '../components/EntityTable';
+import { type Entity } from '../components/EntityTable';
 import { EntityModal } from '../components/EntityModal';
+import { DeleteModal } from '../components/DeleteModal';
 import { entityService } from '../services/entityService';
 
 export default function Brands() {
     const [brands, setBrands] = useState<Entity[]>([]);
     const [loading, setLoading] = useState(true);
     const [modalOpened, setModalOpened] = useState(false);
+
+    // Estado para exclusão
+    const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+    const [selectedBrand, setSelectedBrand] = useState<Entity | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
     const fetchBrands = async () => {
         try {
@@ -30,7 +36,33 @@ export default function Brands() {
         hexColor?: string;
     }) => {
         await entityService.createBrand(values);
-        await fetchBrands(); // Recarrega a tabela após cadastrar
+        await fetchBrands();
+    };
+
+    const handleOpenDelete = (id: number) => {
+        const brand = brands.find((b) => b.id === id);
+        if (brand) {
+            setSelectedBrand(brand);
+            setDeleteModalOpened(true);
+        }
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!selectedBrand) return;
+        try {
+            setDeleteLoading(true);
+            await entityService.deleteBrand(selectedBrand.id);
+            setDeleteModalOpened(false);
+            await fetchBrands();
+        } catch (err: any) {
+            alert(
+                'Erro ao excluir marca: ' +
+                    (err.response?.data?.message ||
+                        'Verifique se existem produtos vinculados a esta marca.')
+            );
+        } finally {
+            setDeleteLoading(false);
+        }
     };
 
     return (
@@ -42,6 +74,7 @@ export default function Brands() {
                 loading={loading}
                 showColor={true}
                 onAdd={() => setModalOpened(true)}
+                onDelete={handleOpenDelete}
             />
 
             <EntityModal
@@ -50,6 +83,18 @@ export default function Brands() {
                 title="Cadastrar Nova Marca"
                 showColor={true}
                 onSubmit={handleCreate}
+            />
+
+            <DeleteModal
+                opened={deleteModalOpened}
+                onClose={() => setDeleteModalOpened(false)}
+                onConfirm={handleConfirmDelete}
+                itemDescription={
+                    selectedBrand?.name
+                        ? `a marca "${selectedBrand.name}"`
+                        : 'esta marca'
+                }
+                loading={deleteLoading}
             />
         </>
     );

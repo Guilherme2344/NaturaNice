@@ -1,62 +1,57 @@
 import { useEffect, useState } from 'react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
-import { ProductModal } from '../components/ProductModal';
-import {
-    productService,
-    type CreateProductDTO,
-} from '../services/productService';
-import type { Entity } from '../components/EntityTable';
-import { entityService } from '../services/entityService';
+import { DeleteModal } from '../components/DeleteModal';
+import { productService } from '../services/productService';
 
 export default function Products() {
     const [products, setProducts] = useState<Product[]>([]);
-    const [brands, setBrands] = useState<Entity[]>([]);
-    const [categories, setCategories] = useState<Entity[]>([]);
-    const [families, setFamilies] = useState<Entity[]>([]);
-
     const [loading, setLoading] = useState(true);
-    const [modalOpened, setModalOpened] = useState(false);
 
-    // Busca dados de produtos e os selects de marcas, categorias e famílias
-    const fetchData = async () => {
+    // Estados de Exclusão
+    const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(
+        null
+    );
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const fetchProducts = async () => {
         try {
             setLoading(true);
-            const [prodsData, brandsData, categoriesData, familiesData] =
-                await Promise.all([
-                    productService.getAll(),
-                    entityService.getBrands(),
-                    entityService.getCategories(),
-                    entityService.getFamilies(),
-                ]);
-
-            setProducts(prodsData);
-            setBrands(brandsData);
-            setCategories(categoriesData);
-            setFamilies(familiesData);
+            const data = await productService.getAll();
+            setProducts(data);
         } catch (err) {
-            console.error('Erro ao buscar dados do servidor:', err);
+            console.error('Erro ao buscar produtos:', err);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchData();
+        fetchProducts();
     }, []);
 
-    const handleCreateProduct = async (data: CreateProductDTO) => {
-        await productService.create(data);
-        await fetchData(); // Recarrega os produtos na tabela após o POST
+    const handleOpenDelete = (id: number) => {
+        const product = products.find((p) => p.id === id);
+        if (product) {
+            setSelectedProduct(product);
+            setDeleteModalOpened(true);
+        }
     };
 
-    const handleDeleteProduct = async (id: number) => {
-        if (confirm('Deseja realmente excluir este produto?')) {
-            try {
-                await productService.delete(id);
-                await fetchData();
-            } catch (err) {
-                alert('Erro ao excluir produto.');
-            }
+    const handleConfirmDelete = async () => {
+        if (!selectedProduct) return;
+        try {
+            setDeleteLoading(true);
+            await productService.delete(selectedProduct.id);
+            setDeleteModalOpened(false);
+            await fetchProducts();
+        } catch (err: any) {
+            alert(
+                'Erro ao excluir produto: ' +
+                    (err.response?.data?.message || err.message)
+            );
+        } finally {
+            setDeleteLoading(false);
         }
     };
 
@@ -67,17 +62,19 @@ export default function Products() {
                 subtitle="Listagem geral dos itens cadastrados no sistema"
                 products={products}
                 loading={loading}
-                onAdd={() => setModalOpened(true)}
-                onDelete={handleDeleteProduct}
+                onDelete={handleOpenDelete}
             />
 
-            <ProductModal
-                opened={modalOpened}
-                onClose={() => setModalOpened(false)}
-                brands={brands}
-                categories={categories}
-                families={families}
-                onSubmit={handleCreateProduct}
+            <DeleteModal
+                opened={deleteModalOpened}
+                onClose={() => setDeleteModalOpened(false)}
+                onConfirm={handleConfirmDelete}
+                itemDescription={
+                    selectedProduct?.name
+                        ? `o produto "${selectedProduct.name}"`
+                        : 'este produto'
+                }
+                loading={deleteLoading}
             />
         </>
     );

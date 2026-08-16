@@ -38,4 +38,14 @@ export const entityService = {
         const response = await api.post<Entity>('/families', data);
         return response.data;
     },
+
+    deleteBrand: async (id: number): Promise<void> => {
+        await api.delete(`/brands/${id}`);
+    },
+    deleteCategory: async (id: number): Promise<void> => {
+        await api.delete(`/categories/${id}`);
+    },
+    deleteFamily: async (id: number): Promise<void> => {
+        await api.delete(`/families/${id}`);
+    },
 };
