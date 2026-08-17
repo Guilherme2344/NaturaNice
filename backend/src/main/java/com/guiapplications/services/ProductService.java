@@ -61,7 +61,7 @@ public class ProductService {
 	
 	// list all products
 	public List<ProductResponseDTO> listAll(){
-		List<Product> products = Product.listAll();
+		List<Product> products = Product.listAllWithRelations();
 		return products.stream()
 				.map(ProductResponseDTO::fromEntity)
 				.toList();
@@ -148,6 +148,7 @@ public class ProductService {
             throw new ResourceNotFoundException("Produto com ID " + id + " não encontrado.");
         }
 
+        com.guiapplications.entities.SaleItem.update("product = null WHERE product.id = ?1", id);
         product.delete();
     }
 }

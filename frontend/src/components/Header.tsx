@@ -1,4 +1,4 @@
-import { AppShell, Burger, Group, NavLink, Text } from '@mantine/core';
+import { AppShell, Burger, Group, NavLink, Text, Divider, Stack } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
     Package,
@@ -7,10 +7,12 @@ import {
     Tag,
     Layers,
     FolderTree,
+    Calendar,
+    BarChart3,
 } from 'lucide-react';
 import { Link, Outlet, useLocation } from 'react-router';
 
-const navItems = [
+const stockNavItems = [
     { label: 'Todos os Produtos', icon: Package, href: '/' },
     {
         label: 'Produtos À Vencer',
@@ -29,8 +31,22 @@ const navItems = [
     { label: 'Famílias', icon: FolderTree, href: '/families' },
 ];
 
+const reportNavItems = [
+    {
+        label: 'Relatório Mensal',
+        icon: Calendar,
+        href: '/reports/monthly',
+        color: '#099268', // teal
+    },
+    {
+        label: 'Relatório Anual',
+        icon: BarChart3,
+        href: '/reports/annual',
+        color: '#1c7ed6', // blue
+    },
+];
+
 export default function Header({ children }: { children: React.ReactNode }) {
-    // Hook do Mantine para controlar abertura/fechamento do menu mobile
     const [opened, { toggle }] = useDisclosure();
     const location = useLocation();
 
@@ -61,27 +77,57 @@ export default function Header({ children }: { children: React.ReactNode }) {
 
             {/* Sidebar Navigation */}
             <AppShell.Navbar p="md">
-                <Text size="xs" fw={700} c="dimmed" mb="sm">
-                    GESTÃO DO ESTOQUE
-                </Text>
+                <Stack gap="xs">
+                    {/* Seção 1: Gestão do Estoque */}
+                    <div>
+                        <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">
+                            Gestão do Estoque
+                        </Text>
+                        {stockNavItems.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = location.pathname === item.href;
 
-                {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.href;
+                            return (
+                                <NavLink
+                                    key={item.label}
+                                    component={Link}
+                                    to={item.href}
+                                    label={item.label}
+                                    leftSection={<Icon size={18} color={item.color} />}
+                                    active={isActive}
+                                    mb={4}
+                                    style={{ borderRadius: '6px' }}
+                                />
+                            );
+                        })}
+                    </div>
 
-                    return (
-                        <NavLink
-                            key={item.label}
-                            component={Link}
-                            to={item.href}
-                            label={item.label}
-                            leftSection={<Icon size={18} color={item.color} />}
-                            active={isActive}
-                            mb={4}
-                            style={{ borderRadius: '6px' }}
-                        />
-                    );
-                })}
+                    <Divider my="xs" />
+
+                    {/* Seção 2: Relatórios */}
+                    <div>
+                        <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">
+                            Relatórios
+                        </Text>
+                        {reportNavItems.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = location.pathname === item.href;
+
+                            return (
+                                <NavLink
+                                    key={item.label}
+                                    component={Link}
+                                    to={item.href}
+                                    label={item.label}
+                                    leftSection={<Icon size={18} color={item.color} />}
+                                    active={isActive}
+                                    mb={4}
+                                    style={{ borderRadius: '6px' }}
+                                />
+                            );
+                        })}
+                    </div>
+                </Stack>
             </AppShell.Navbar>
 
             {/* Área Principal de Conteúdo */}

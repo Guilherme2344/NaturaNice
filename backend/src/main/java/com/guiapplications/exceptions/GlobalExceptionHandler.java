@@ -5,9 +5,12 @@ import com.guiapplications.exceptions.dto.ErrorResponseDTO;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
 import jakarta.ws.rs.ext.Provider;
+import org.jboss.logging.Logger;
 
 @Provider // register global mapper in Quarkus
 public class GlobalExceptionHandler implements ExceptionMapper<Throwable> {
+
+    private static final Logger LOG = Logger.getLogger(GlobalExceptionHandler.class);
 
     @Override
     public Response toResponse(Throwable exception) {
@@ -43,6 +46,7 @@ public class GlobalExceptionHandler implements ExceptionMapper<Throwable> {
         }
 
         // generic error (500)
+        LOG.error("Erro interno no servidor: ", exception);
         ErrorResponseDTO error = new ErrorResponseDTO(
             Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(),
             "Erro interno no servidor",

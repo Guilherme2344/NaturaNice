@@ -16,7 +16,7 @@ import {
     Loader,
     Stack,
 } from '@mantine/core';
-import { Edit, Trash2, Plus, Search } from 'lucide-react';
+import { Edit, Trash2, Plus, Search, ShoppingCart } from 'lucide-react';
 
 export type ExpirationStatus =
     | 'FAR_FROM_EXPIRING'
@@ -62,6 +62,7 @@ interface ProductsTableProps {
     onEdit?: (product: Product) => void;
     onDelete?: (id: number) => void;
     onAdd?: () => void;
+    onSale?: (product: Product) => void;
 }
 
 export default function ProductsTable({
@@ -72,6 +73,7 @@ export default function ProductsTable({
     onEdit,
     onDelete,
     onAdd,
+    onSale,
 }: ProductsTableProps) {
     const [search, setSearch] = useState('');
     const [activePage, setPage] = useState(1);
@@ -248,6 +250,18 @@ export default function ProductsTable({
 
                                 <Table.Td align="right">
                                     <Group gap="xs" justify="flex-end">
+                                        {onSale && (
+                                            <ActionIcon
+                                                variant="light"
+                                                color="teal"
+                                                title={product.quantity > 0 ? 'Efetivar Venda' : 'Sem Estoque'}
+                                                disabled={product.quantity <= 0}
+                                                onClick={() => onSale(product)}
+                                            >
+                                                <ShoppingCart size={16} />
+                                            </ActionIcon>
+                                        )}
+
                                         <ActionIcon
                                             variant="light"
                                             color="blue"

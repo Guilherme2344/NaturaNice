@@ -2,11 +2,15 @@ package com.guiapplications.config;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 
 import com.guiapplications.entities.Brand;
 import com.guiapplications.entities.Category;
 import com.guiapplications.entities.Family;
 import com.guiapplications.entities.Product;
+import com.guiapplications.entities.Sale;
+import com.guiapplications.entities.SaleItem;
 
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -24,12 +28,17 @@ public class DatabaseSeeder {
     @Transactional
     public void initExtension(@Observes StartupEvent event) {
         // Enables unaccent in database
-        em.createNativeQuery("CREATE EXTENSION IF NOT EXISTS unaccent;").executeUpdate();
+        try {
+            em.createNativeQuery("CREATE EXTENSION IF NOT EXISTS unaccent;").executeUpdate();
+        } catch (Exception ignored) {}
+        try {
+            em.createNativeQuery("ALTER TABLE sale_items ALTER COLUMN product_id DROP NOT NULL;").executeUpdate();
+        } catch (Exception ignored) {}
     }
 	
     @Transactional
     public void runSeeder(@Observes StartupEvent event) {
-        // if products are registered
+        // if products are not registered yet
         if (Product.count() == 0) {
             
             // families
@@ -48,7 +57,7 @@ public class DatabaseSeeder {
             Category hidratante = createCategory("Hidratante");
 
             // products
-            createProduct(
+            Product batomProd = createProduct(
                 "Batom Ultramatte Vermelho",
                 15,
                 LocalDate.of(2027, 8, 15),
@@ -59,7 +68,7 @@ public class DatabaseSeeder {
                 batom
             );
 
-            createProduct(
+            Product baseProd = createProduct(
                 "Base Líquida Checkmat",
                 8,
                 LocalDate.of(2026, 11, 30),
@@ -70,7 +79,7 @@ public class DatabaseSeeder {
                 base
             );
 
-            createProduct(
+            Product cremeProd = createProduct(
                 "Creme Hidratante Tododia Algodão",
                 20,
                 LocalDate.of(2028, 1, 10),
@@ -91,6 +100,13 @@ public class DatabaseSeeder {
                 natura,
                 base
             );
+
+            // Seed sample sales for demonstration in reports
+            if (Sale.count() == 0) {
+                createSale(batomProd, 2, batomProd.sellingPrice, LocalDateTime.now().minusDays(2));
+                createSale(baseProd, 1, baseProd.sellingPrice, LocalDateTime.now().minusDays(5));
+                createSale(cremeProd, 3, cremeProd.sellingPrice, LocalDateTime.now().minusDays(10));
+            }
         }
     }
 
@@ -116,9 +132,9 @@ public class DatabaseSeeder {
         return c;
     }
 
-    private void createProduct(String name, Integer quantity, LocalDate expDate, 
-                               String cost, String price, Family family, 
-                               Brand brand, Category category) {
+    private Product createProduct(String name, Integer quantity, LocalDate expDate, 
+                                 String cost, String price, Family family, 
+                                 Brand brand, Category category) {
         Product p = new Product();
         p.name = name;
         p.quantity = quantity;
@@ -130,5 +146,22 @@ public class DatabaseSeeder {
         p.category = category;
         
         p.persist();
+        return p;
+    }
+
+    private void createSale(Product product, int quantity, BigDecimal sellingPrice, LocalDateTime date) {
+        Sale sale = new Sale();
+        sale.saleDate = date;
+        sale.items = new ArrayList<>();
+
+        SaleItem item = new SaleItem();
+        item.sale = sale;
+        item.product = product;
+        item.quantity = quantity;
+        item.purchasePrice = product.purchasePrice != null ? product.purchasePrice : BigDecimal.ZERO;
+        item.sellingPrice = sellingPrice;
+
+        sale.items.add(item);
+        sale.persist();
     }
 }

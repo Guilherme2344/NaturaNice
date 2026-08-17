@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
 import { ProductModal } from '../components/ProductModal';
+import { SaleModal } from '../components/SaleModal';
+import { DeleteModal } from '../components/DeleteModal';
 import {
     productService,
     type CreateProductDTO,
 } from '../services/productService';
+import { saleService } from '../services/saleService';
 import { entityService } from '../services/entityService';
 import type { Entity } from '../components/EntityTable';
 
@@ -19,6 +22,13 @@ export default function Products() {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(
         null
     );
+
+    const [saleModalOpened, setSaleModalOpened] = useState(false);
+    const [productToSell, setProductToSell] = useState<Product | null>(null);
+
+    const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -56,15 +66,51 @@ export default function Products() {
         setModalOpened(true);
     };
 
+    const handleOpenSale = (product: Product) => {
+        setProductToSell(product);
+        setSaleModalOpened(true);
+    };
+
+    const handleOpenDelete = (id: number) => {
+        const prod = products.find((p) => p.id === id);
+        if (prod) {
+            setProductToDelete(prod);
+            setDeleteModalOpened(true);
+        }
+    };
+
     const handleSubmitProduct = async (data: CreateProductDTO) => {
         if (selectedProduct) {
-            // Executa o PUT
             await productService.update(selectedProduct.id, data);
         } else {
-            // Executa o POST
             await productService.create(data);
         }
         await fetchData();
+    };
+
+    const handleConfirmSale = async (quantity: number, sellingPrice: number) => {
+        if (!productToSell) return;
+        await saleService.createSale({
+            productId: productToSell.id,
+            quantity,
+            sellingPrice,
+        });
+        await fetchData();
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!productToDelete) return;
+        try {
+            setDeleting(true);
+            await productService.delete(productToDelete.id);
+            setDeleteModalOpened(false);
+            setProductToDelete(null);
+            await fetchData();
+        } catch (err) {
+            console.error('Erro ao excluir produto:', err);
+        } finally {
+            setDeleting(false);
+        }
     };
 
     return (
@@ -75,6 +121,8 @@ export default function Products() {
                 loading={loading}
                 onAdd={handleOpenAdd}
                 onEdit={handleOpenEdit}
+                onDelete={handleOpenDelete}
+                onSale={handleOpenSale}
             />
 
             <ProductModal
@@ -85,6 +133,22 @@ export default function Products() {
                 families={families}
                 initialData={selectedProduct}
                 onSubmit={handleSubmitProduct}
+            />
+
+            <SaleModal
+                opened={saleModalOpened}
+                onClose={() => setSaleModalOpened(false)}
+                product={productToSell}
+                onConfirmSale={handleConfirmSale}
+            />
+
+            <DeleteModal
+                opened={deleteModalOpened}
+                onClose={() => setDeleteModalOpened(false)}
+                onConfirm={handleConfirmDelete}
+                title="Excluir Produto"
+                itemDescription={productToDelete ? `o produto "${productToDelete.name}"` : 'este produto'}
+                loading={deleting}
             />
         </>
     );

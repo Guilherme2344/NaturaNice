@@ -101,16 +101,21 @@ public class Product extends PanacheEntity {
         return list(hql.toString(), params);
     }
     
+    // list all products with relations fetched in a single query (prevents N+1)
+    public static List<Product> listAllWithRelations() {
+        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family");
+    }
+
     // products expired: expirationDate <= current data
     public static List<Product> findExpired() {
-        return list("expirationDate <= CURRENT_DATE ORDER BY expirationDate ASC");
+        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate <= CURRENT_DATE ORDER BY p.expirationDate ASC");
     }
 
     // products near expiration: within tomorrow and the next 180 days range
     public static List<Product> findNearExpiration() {
         LocalDate today = LocalDate.now();
         LocalDate limitDate = today.plusDays(180);
-        return list("expirationDate > CURRENT_DATE AND expirationDate <= ?1 ORDER BY expirationDate ASC", limitDate);
+        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate > CURRENT_DATE AND p.expirationDate <= ?1 ORDER BY p.expirationDate ASC", limitDate);
     }
     
     // remove accents from words

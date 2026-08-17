@@ -6,6 +6,8 @@ import Categories from '../pages/Categories';
 import Families from '../pages/Families';
 import NearExpirationProducts from '../pages/NearExpirationProducts';
 import ExpiredProducts from '../pages/ExpiredProducts';
+import MonthlyReport from '../pages/MonthlyReport';
+import AnnualReport from '../pages/AnnualReport';
 
 export default function AppRoutes() {
     const routes = useRoutes([
@@ -22,6 +24,8 @@ export default function AppRoutes() {
                 { path: '/brands', element: <Brands /> },
                 { path: '/categories', element: <Categories /> },
                 { path: '/families', element: <Families /> },
+                { path: '/reports/monthly', element: <MonthlyReport /> },
+                { path: '/reports/annual', element: <AnnualReport /> },
             ],
         },
     ]);
