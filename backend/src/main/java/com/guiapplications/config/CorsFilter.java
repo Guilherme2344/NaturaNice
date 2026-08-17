@@ -1,4 +1,4 @@
-package com.guiapplication.config;
+package com.guiapplications.config;
 
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.container.ContainerResponseContext;

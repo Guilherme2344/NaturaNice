@@ -14,6 +14,7 @@ import {
     Select,
     Center,
     Loader,
+    Stack,
 } from '@mantine/core';
 import { Edit, Trash2, Plus, Search } from 'lucide-react';
 
@@ -45,6 +46,7 @@ export type Product = {
     expirationDate: string;
     purchasePrice: number;
     sellingPrice: number;
+    profit: number;
     brand: Brand;
     category: Category;
     family: Family;
@@ -147,14 +149,14 @@ export default function ProductsTable({
             <Table striped highlightOnHover verticalSpacing="sm">
                 <Table.Thead>
                     <Table.Tr>
-                        <Table.Th>Produto</Table.Th>
                         <Table.Th>Marca</Table.Th>
+                        <Table.Th>Produto</Table.Th>
                         <Table.Th>Categoria / Família</Table.Th>
                         <Table.Th>Qtd</Table.Th>
                         <Table.Th>Data de Vencimento</Table.Th>
-                        <Table.Th>Preço Compra</Table.Th>
-                        <Table.Th>Preço Venda</Table.Th>
-                        <Table.Th>Status</Table.Th>
+                        <Table.Th>Valor Compra</Table.Th>
+                        <Table.Th>Valor Venda</Table.Th>
+                        <Table.Th>Resultado</Table.Th>
                         <Table.Th style={{ textAlign: 'right' }}>
                             Ações
                         </Table.Th>
@@ -178,8 +180,6 @@ export default function ProductsTable({
                     ) : paginatedProducts.length > 0 ? (
                         paginatedProducts.map((product) => (
                             <Table.Tr key={product.id}>
-                                <Table.Td fw={500}>{product.name}</Table.Td>
-
                                 <Table.Td>
                                     <Group gap="xs">
                                         <ColorSwatch
@@ -194,6 +194,8 @@ export default function ProductsTable({
                                         </Text>
                                     </Group>
                                 </Table.Td>
+
+                                <Table.Td fw={500}>{product.name}</Table.Td>
 
                                 <Table.Td>
                                     <Text size="sm">
@@ -210,31 +212,38 @@ export default function ProductsTable({
 
                                 {/* Data de Vencimento formatada */}
                                 <Table.Td>
-                                    {formatDate(product.expirationDate)}
+                                    <Stack gap={4} align="flex-start">
+                                        <Text size="sm">
+                                            {formatDate(product.expirationDate)}
+                                        </Text>
+                                        <Badge
+                                            color={getStatusBadgeColor(
+                                                product.expirationStatus
+                                            )}
+                                            variant="light"
+                                        >
+                                            {
+                                                product.expirationStatusDescription
+                                            }
+                                        </Badge>
+                                    </Stack>
                                 </Table.Td>
 
                                 {/* Preço de Compra */}
-                                <Table.Td c="dimmed">
+                                <Table.Td fw={400}>
                                     R${' '}
                                     {product.purchasePrice?.toFixed(2) ||
                                         '0.00'}
                                 </Table.Td>
 
                                 {/* Preço de Venda */}
-                                <Table.Td fw={600}>
+                                <Table.Td fw={400}>
                                     R${' '}
                                     {product.sellingPrice?.toFixed(2) || '0.00'}
                                 </Table.Td>
 
-                                <Table.Td>
-                                    <Badge
-                                        color={getStatusBadgeColor(
-                                            product.expirationStatus
-                                        )}
-                                        variant="light"
-                                    >
-                                        {product.expirationStatusDescription}
-                                    </Badge>
+                                <Table.Td fw={600}>
+                                    R$ {product.profit?.toFixed(2) || '0.00'}
                                 </Table.Td>
 
                                 <Table.Td align="right">

@@ -13,6 +13,7 @@ public record ProductResponseDTO(
 	    LocalDate expirationDate,
 	    BigDecimal purchasePrice,
 	    BigDecimal sellingPrice,
+	    BigDecimal profit,
 	    BrandResponseDTO brand,
 	    CategoryResponseDTO category,
 	    FamilyResponseDTO family,
@@ -22,6 +23,9 @@ public record ProductResponseDTO(
 	    // converts entity to DTO
 	    public static ProductResponseDTO fromEntity(Product product) {
 	    	ExpirationStatus status = ExpirationStatus.calculate(product.expirationDate);
+	    	BigDecimal profit = (product.sellingPrice != null && product.purchasePrice != null)
+	                ? product.sellingPrice.subtract(product.purchasePrice)
+	                : BigDecimal.ZERO;
 	    	
 	    	return new ProductResponseDTO(
 	        		product.id,
@@ -30,6 +34,7 @@ public record ProductResponseDTO(
 	                product.expirationDate,
 	                product.purchasePrice,
 	                product.sellingPrice,
+	                profit,
 	                BrandResponseDTO.fromEntity(product.brand),
 	                CategoryResponseDTO.fromEntity(product.category),
 	                FamilyResponseDTO.fromEntity(product.family),

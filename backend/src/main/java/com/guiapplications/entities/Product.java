@@ -22,6 +22,7 @@ public class Product extends PanacheEntity {
 	@Column(nullable = true)
 	public BigDecimal purchasePrice;
 	public BigDecimal sellingPrice;
+	public BigDecimal profit;
 	
 	@ManyToOne
 	@JoinColumn(name = "family_id")
