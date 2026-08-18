@@ -8,6 +8,7 @@ import com.guiapplications.entities.Customer;
 import com.guiapplications.entities.Product;
 import com.guiapplications.entities.Sale;
 import com.guiapplications.entities.SaleItem;
+import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.SaleRequestDTO;
 import com.guiapplications.entities.dto.SaleResponseDTO;
 import com.guiapplications.exceptions.ResourceNotFoundException;
@@ -20,6 +21,11 @@ public class SaleService {
 
     @Transactional
     public SaleResponseDTO createSale(SaleRequestDTO dto) {
+        return createSale(dto, null);
+    }
+
+    @Transactional
+    public SaleResponseDTO createSale(SaleRequestDTO dto, Long userId) {
         if (dto.productId() == null) {
             throw new IllegalArgumentException("ID do produto é obrigatório.");
         }
@@ -32,6 +38,8 @@ public class SaleService {
         if (product == null) {
             throw new ResourceNotFoundException("Produto não encontrado com id: " + dto.productId());
         }
+
+        User user = userId != null ? User.findById(userId) : null;
 
         int currentStock = product.quantity != null ? product.quantity : 0;
         if (currentStock < dto.quantity()) {
@@ -47,10 +55,11 @@ public class SaleService {
         Customer customer = null;
         if (dto.customerName() != null && !dto.customerName().isBlank()) {
             String trimmedName = dto.customerName().trim();
-            customer = Customer.findByName(trimmedName);
+            customer = Customer.findByNameAndUser(trimmedName, user);
             if (customer == null) {
                 customer = new Customer();
                 customer.name = trimmedName;
+                customer.user = user;
                 customer.persist();
             }
         }
@@ -59,6 +68,7 @@ public class SaleService {
         Sale sale = new Sale();
         sale.saleDate = LocalDateTime.now();
         sale.customer = customer;
+        sale.user = user;
         sale.items = new ArrayList<>();
 
         SaleItem item = new SaleItem();

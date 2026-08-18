@@ -6,6 +6,7 @@ import com.guiapplications.services.SaleService;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
@@ -21,8 +22,8 @@ public class SaleResource {
     SaleService saleService;
 
     @POST
-    public Response createSale(SaleRequestDTO dto) {
-        SaleResponseDTO response = saleService.createSale(dto);
+    public Response createSale(SaleRequestDTO dto, @HeaderParam("X-User-Id") Long userId) {
+        SaleResponseDTO response = saleService.createSale(dto, userId);
         return Response.status(Response.Status.CREATED).entity(response).build();
     }
 }

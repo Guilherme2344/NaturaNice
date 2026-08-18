@@ -8,6 +8,7 @@ import java.time.YearMonth;
 import java.util.List;
 
 import com.guiapplications.entities.Sale;
+import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.AnnualSalesReportDTO;
 import com.guiapplications.entities.dto.DailySalesSummaryDTO;
 import com.guiapplications.entities.dto.MonthlySalesReportDTO;
@@ -18,13 +19,18 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public class ReportService {
 
-    // monthly report
     public MonthlySalesReportDTO getMonthlyReport(int year, int month, String customerName) {
+        return getMonthlyReport(year, month, customerName, null);
+    }
+
+    // monthly report
+    public MonthlySalesReportDTO getMonthlyReport(int year, int month, String customerName, Long userId) {
         YearMonth yearMonth = YearMonth.of(year, month);
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(LocalTime.MAX);
 
-        List<DailySalesSummaryDTO> dailySummaries = Sale.getDailySummaries(start, end, customerName);
+        User user = userId != null ? User.findById(userId) : null;
+        List<DailySalesSummaryDTO> dailySummaries = Sale.getDailySummaries(start, end, customerName, user);
 
         BigDecimal totalRevenue = BigDecimal.ZERO;
         BigDecimal totalCost = BigDecimal.ZERO;
@@ -41,13 +47,18 @@ public class ReportService {
         return new MonthlySalesReportDTO(year, month, totalRevenue, totalCost, totalProfit, totalItemsSold, dailySummaries);
     }
 
-    // annual report
     public AnnualSalesReportDTO getAnnualReport(int year, String customerName) {
+        return getAnnualReport(year, customerName, null);
+    }
+
+    // annual report
+    public AnnualSalesReportDTO getAnnualReport(int year, String customerName, Long userId) {
         Year y = Year.of(year);
         LocalDateTime start = y.atDay(1).atStartOfDay();
         LocalDateTime end = y.atMonth(12).atEndOfMonth().atTime(LocalTime.MAX);
 
-        List<MonthlySalesSummaryDTO> monthlySummaries = Sale.getMonthlySummaries(start, end, customerName);
+        User user = userId != null ? User.findById(userId) : null;
+        List<MonthlySalesSummaryDTO> monthlySummaries = Sale.getMonthlySummaries(start, end, customerName, user);
 
         BigDecimal totalRevenue = BigDecimal.ZERO;
         BigDecimal totalCost = BigDecimal.ZERO;

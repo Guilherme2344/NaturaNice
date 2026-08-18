@@ -8,6 +8,7 @@ import com.guiapplications.services.ReportService;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
@@ -26,12 +27,13 @@ public class ReportResource {
     public MonthlySalesReportDTO getMonthlyReport(
             @QueryParam("year") Integer year,
             @QueryParam("month") Integer month,
-            @QueryParam("customerName") String customerName) {
+            @QueryParam("customerName") String customerName,
+            @HeaderParam("X-User-Id") Long userId) {
 
         int selectedYear = (year != null) ? year : LocalDate.now().getYear();
         int selectedMonth = (month != null) ? month : LocalDate.now().getMonthValue();
 
-        return reportService.getMonthlyReport(selectedYear, selectedMonth, customerName);
+        return reportService.getMonthlyReport(selectedYear, selectedMonth, customerName, userId);
     }
 
     // annual report
@@ -39,9 +41,10 @@ public class ReportResource {
     @Path("/annual")
     public AnnualSalesReportDTO getAnnualReport(
             @QueryParam("year") Integer year,
-            @QueryParam("customerName") String customerName) {
+            @QueryParam("customerName") String customerName,
+            @HeaderParam("X-User-Id") Long userId) {
         int selectedYear = (year != null) ? year : LocalDate.now().getYear();
 
-        return reportService.getAnnualReport(selectedYear, customerName);
+        return reportService.getAnnualReport(selectedYear, customerName, userId);
     }
 }

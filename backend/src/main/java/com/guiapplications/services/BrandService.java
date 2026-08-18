@@ -3,6 +3,7 @@ package com.guiapplications.services;
 import java.util.List;
 
 import com.guiapplications.entities.Brand;
+import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.BrandRequestDTO;
 import com.guiapplications.entities.dto.BrandResponseDTO;
 import com.guiapplications.exceptions.ResourceAlreadyExistsException;
@@ -17,27 +18,43 @@ import jakarta.validation.ConstraintViolationException;
 @ApplicationScoped
 public class BrandService {
 	
-	// create a brand
 	@Transactional
 	public BrandResponseDTO create(BrandRequestDTO dto) {
-		String trimmedName = dto.name().trim();
+		return create(dto, null);
+	}
 
-        // check if already exists the typed name
-        List<Brand> existing = Brand.findByName(trimmedName);
+	// create a brand
+	@Transactional
+	public BrandResponseDTO create(BrandRequestDTO dto, Long userId) {
+		String trimmedName = dto.name().trim();
+		User user = userId != null ? User.findById(userId) : null;
+
+        // check if already exists the typed name for this user
+        List<Brand> existing = Brand.findByNameAndUser(trimmedName, user);
         if (!existing.isEmpty()) {
             throw new ResourceAlreadyExistsException("Já existe uma marca cadastrada com o nome: " + trimmedName);
         }
 		
 		Brand brand = new Brand();
-		brand.name = dto.name().trim();
+		brand.name = trimmedName;
 		brand.hexColor = dto.hexColor().toUpperCase();
+		brand.user = user;
 		brand.persist();
 		return BrandResponseDTO.fromEntity(brand);
 	}
 	
 	// list all brands
-	public List<BrandResponseDTO> listAll(){
-		List<Brand> brands = Brand.listAll();
+	public List<BrandResponseDTO> listAll(Long userId){
+		User user = userId != null ? User.findById(userId) : null;
+		List<Brand> brands = Brand.listByUser(user);
+		return brands.stream()
+				.map(BrandResponseDTO::fromEntity)
+				.toList();
+	}
+
+	public List<BrandResponseDTO> search(String name, Long userId){
+		User user = userId != null ? User.findById(userId) : null;
+		List<Brand> brands = Brand.findByNameAndUser(name, user);
 		return brands.stream()
 				.map(BrandResponseDTO::fromEntity)
 				.toList();

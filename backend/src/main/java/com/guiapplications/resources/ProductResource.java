@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
@@ -32,8 +33,8 @@ public class ProductResource {
 	
 	// create a Product
 	@POST
-	public Response create(@Valid ProductRequestDTO dto) {
-	    ProductResponseDTO createdProduct = productService.create(dto);
+	public Response create(@Valid ProductRequestDTO dto, @HeaderParam("X-User-Id") Long userId) {
+	    ProductResponseDTO createdProduct = productService.create(dto, userId);
 	    return Response.status(Response.Status.CREATED)
 	                   .entity(createdProduct)
 	                   .build();
@@ -41,8 +42,8 @@ public class ProductResource {
 	
 	// get all products
 	@GET
-    public Response getAll() {
-        return Response.ok(productService.listAll()).build();
+    public Response getAll(@HeaderParam("X-User-Id") Long userId) {
+        return Response.ok(productService.listAll(userId)).build();
     }
 	
 	// search products by any criterion below
@@ -53,7 +54,8 @@ public class ProductResource {
             @QueryParam("familyName") String familyName,     // family filter
             @QueryParam("ProductName") String ProductName,       // Product filter
             @QueryParam("categoryName") String categoryName, // category filter
-            @QueryParam("maxExpirationDate") String maxExpirationDate // date limit (dd/MM/yyyy)
+            @QueryParam("maxExpirationDate") String maxExpirationDate, // date limit (dd/MM/yyyy)
+            @HeaderParam("X-User-Id") Long userId
     ) {
 		
 		final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -63,7 +65,7 @@ public class ProductResource {
                 : null;
 
         List<ProductResponseDTO> result = productService.searchProducts(
-                query, familyName, ProductName, categoryName, dateLimit
+                query, familyName, ProductName, categoryName, dateLimit, userId
         );
         
         return Response.ok(result).build();
@@ -72,16 +74,16 @@ public class ProductResource {
 	// get all expired products
 	@GET
     @Path("/expired")
-    public Response getExpiredProducts() {
-        List<ProductResponseDTO> products = productService.findExpired();
+    public Response getExpiredProducts(@HeaderParam("X-User-Id") Long userId) {
+        List<ProductResponseDTO> products = productService.findExpired(userId);
         return Response.ok(products).build();
     }
 
 	// get all near expiration products
     @GET
     @Path("/near-expiration")
-    public Response getNearExpirationProducts() {
-        List<ProductResponseDTO> products = productService.findNearExpiration();
+    public Response getNearExpirationProducts(@HeaderParam("X-User-Id") Long userId) {
+        List<ProductResponseDTO> products = productService.findNearExpiration(userId);
         return Response.ok(products).build();
     }
 	

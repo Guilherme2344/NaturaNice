@@ -10,6 +10,7 @@ import java.util.Map;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 
@@ -35,6 +36,10 @@ public class Product extends PanacheEntity {
 	@ManyToOne
 	@JoinColumn(name = "category_id")
 	public Category category;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id", nullable = true)
+	public User user;
 	
 	// search products by name
 	public static List<Product> findByName(String name) {
@@ -49,7 +54,7 @@ public class Product extends PanacheEntity {
    
     // dynamic search
     public static List<Product> findWithFilters(
-            String query, String familyName, String brandName, String categoryName, LocalDate maxExpDate
+            String query, String familyName, String brandName, String categoryName, LocalDate maxExpDate, User user
     ) {
     	StringBuilder hql = new StringBuilder(
     	        "SELECT DISTINCT p FROM Product p " +
@@ -59,6 +64,11 @@ public class Product extends PanacheEntity {
     	        "WHERE 1=1"
     	    );
         Map<String, Object> params = new HashMap<>();
+
+        if (user != null) {
+            hql.append(" AND p.user = :user");
+            params.put("user", user);
+        }
 
         // wide search
         if (query != null && !query.isBlank()) {
@@ -95,27 +105,34 @@ public class Product extends PanacheEntity {
             params.put("maxExpDate", maxExpDate);
         }
 
-        // FILTERS END
-        
         // return data
         return list(hql.toString(), params);
     }
     
     // list all products with relations fetched in a single query (prevents N+1)
-    public static List<Product> listAllWithRelations() {
-        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family");
+    public static List<Product> listAllWithRelations(User user) {
+        if (user == null) {
+            return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family");
+        }
+        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.user = ?1", user);
     }
 
     // products expired: expirationDate <= current data
-    public static List<Product> findExpired() {
-        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate <= CURRENT_DATE ORDER BY p.expirationDate ASC");
+    public static List<Product> findExpired(User user) {
+        if (user == null) {
+            return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate <= CURRENT_DATE ORDER BY p.expirationDate ASC");
+        }
+        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate <= CURRENT_DATE AND p.user = ?1 ORDER BY p.expirationDate ASC", user);
     }
 
     // products near expiration: within tomorrow and the next 180 days range
-    public static List<Product> findNearExpiration() {
+    public static List<Product> findNearExpiration(User user) {
         LocalDate today = LocalDate.now();
         LocalDate limitDate = today.plusDays(180);
-        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate > CURRENT_DATE AND p.expirationDate <= ?1 ORDER BY p.expirationDate ASC", limitDate);
+        if (user == null) {
+            return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate > CURRENT_DATE AND p.expirationDate <= ?1 ORDER BY p.expirationDate ASC", limitDate);
+        }
+        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate > CURRENT_DATE AND p.expirationDate <= ?1 AND p.user = ?2 ORDER BY p.expirationDate ASC", limitDate, user);
     }
     
     // remove accents from words

@@ -3,6 +3,7 @@ package com.guiapplications.services;
 import java.util.List;
 
 import com.guiapplications.entities.Category;
+import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.CategoryRequestDTO;
 import com.guiapplications.entities.dto.CategoryResponseDTO;
 import com.guiapplications.exceptions.ResourceAlreadyExistsException;
@@ -17,26 +18,42 @@ import jakarta.validation.ConstraintViolationException;
 @ApplicationScoped
 public class CategoryService {
 	
-	// create a Category
 	@Transactional
 	public CategoryResponseDTO create(CategoryRequestDTO dto) {
-		String trimmedName = dto.name().trim();
+		return create(dto, null);
+	}
 
-		// check if already exists the typed name
-        List<Category> existing = Category.findByName(trimmedName);
+	// create a Category
+	@Transactional
+	public CategoryResponseDTO create(CategoryRequestDTO dto, Long userId) {
+		String trimmedName = dto.name().trim();
+		User user = userId != null ? User.findById(userId) : null;
+
+		// check if already exists the typed name for this user
+        List<Category> existing = Category.findByNameAndUser(trimmedName, user);
         if (!existing.isEmpty()) {
             throw new ResourceAlreadyExistsException("Já existe uma categoria cadastrada com o nome: " + trimmedName);
         }
 		
 		Category category = new Category();
-		category.name = dto.name().trim();
+		category.name = trimmedName;
+		category.user = user;
 		category.persist();
 		return CategoryResponseDTO.fromEntity(category);
 	}
 	
 	// list all categories
-	public List<CategoryResponseDTO> listAll(){
-		List<Category> categories = Category.listAll();
+	public List<CategoryResponseDTO> listAll(Long userId){
+		User user = userId != null ? User.findById(userId) : null;
+		List<Category> categories = Category.listByUser(user);
+		return categories.stream()
+				.map(CategoryResponseDTO::fromEntity)
+				.toList();
+	}
+
+	public List<CategoryResponseDTO> search(String name, Long userId){
+		User user = userId != null ? User.findById(userId) : null;
+		List<Category> categories = Category.findByNameAndUser(name, user);
 		return categories.stream()
 				.map(CategoryResponseDTO::fromEntity)
 				.toList();

@@ -10,7 +10,21 @@ export const api = axios.create({
     timeout: 10000,
 });
 
-// Interceptor opcional: util para logar erros no console
+// Interceptor de requisição: envia o X-User-Id do usuário logado
+api.interceptors.request.use((config) => {
+    const storedUser = localStorage.getItem('app_user');
+    if (storedUser) {
+        try {
+            const user = JSON.parse(storedUser);
+            if (user && user.id) {
+                config.headers['X-User-Id'] = String(user.id);
+            }
+        } catch (e) {}
+    }
+    return config;
+});
+
+// Interceptor de resposta: loga erros no console
 api.interceptors.response.use(
     (response) => response,
     (error) => {
@@ -21,3 +35,5 @@ api.interceptors.response.use(
         return Promise.reject(error);
     }
 );
+
+export default api;

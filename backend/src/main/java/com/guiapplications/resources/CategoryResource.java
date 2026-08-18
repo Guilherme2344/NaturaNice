@@ -2,7 +2,6 @@ package com.guiapplications.resources;
 
 import java.util.List;
 
-import com.guiapplications.entities.Category;
 import com.guiapplications.entities.dto.CategoryRequestDTO;
 import com.guiapplications.entities.dto.CategoryResponseDTO;
 import com.guiapplications.services.CategoryService;
@@ -12,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
@@ -31,8 +31,8 @@ public class CategoryResource {
 	
 	// create a category
 	@POST
-	public Response create(@Valid CategoryRequestDTO dto) {
-	    CategoryResponseDTO createdCategory = categoryService.create(dto);
+	public Response create(@Valid CategoryRequestDTO dto, @HeaderParam("X-User-Id") Long userId) {
+	    CategoryResponseDTO createdCategory = categoryService.create(dto, userId);
 	    return Response.status(Response.Status.CREATED)
 	                   .entity(createdCategory)
 	                   .build();
@@ -40,15 +40,15 @@ public class CategoryResource {
 	
 	// get all categories
 	@GET
-    public Response getAll() {
-        return Response.ok(categoryService.listAll()).build();
+    public Response getAll(@HeaderParam("X-User-Id") Long userId) {
+        return Response.ok(categoryService.listAll(userId)).build();
     }
 	
 	// get category by name
 	@GET
 	@Path("/search")
-	public Response search(@QueryParam("name") String name) {
-	    List<Category> categories = Category.findByName(name);
+	public Response search(@QueryParam("name") String name, @HeaderParam("X-User-Id") Long userId) {
+	    List<CategoryResponseDTO> categories = categoryService.search(name, userId);
 	    return Response.ok(categories).build();
 	}
 	

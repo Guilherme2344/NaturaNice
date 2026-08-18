@@ -2,7 +2,6 @@ package com.guiapplications.resources;
 
 import java.util.List;
 
-import com.guiapplications.entities.Brand;
 import com.guiapplications.entities.dto.BrandRequestDTO;
 import com.guiapplications.entities.dto.BrandResponseDTO;
 import com.guiapplications.services.BrandService;
@@ -12,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
@@ -31,8 +31,8 @@ public class BrandResource {
 	
 	// create a brand
 	@POST
-	public Response create(@Valid BrandRequestDTO dto) {
-	    BrandResponseDTO createdBrand = brandService.create(dto);
+	public Response create(@Valid BrandRequestDTO dto, @HeaderParam("X-User-Id") Long userId) {
+	    BrandResponseDTO createdBrand = brandService.create(dto, userId);
 	    return Response.status(Response.Status.CREATED)
 	                   .entity(createdBrand)
 	                   .build();
@@ -40,15 +40,15 @@ public class BrandResource {
 	
 	// get all brands
 	@GET
-    public Response getAll() {
-        return Response.ok(brandService.listAll()).build();
+    public Response getAll(@HeaderParam("X-User-Id") Long userId) {
+        return Response.ok(brandService.listAll(userId)).build();
     }
 	
 	// get brand by name
 	@GET
 	@Path("/search")
-	public Response search(@QueryParam("name") String name) {
-	    List<Brand> brands = Brand.findByName(name);
+	public Response search(@QueryParam("name") String name, @HeaderParam("X-User-Id") Long userId) {
+	    List<BrandResponseDTO> brands = brandService.search(name, userId);
 	    return Response.ok(brands).build();
 	}
 	

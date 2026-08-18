@@ -1,0 +1,9 @@
+# Sensitive Environment Files
+.env
+.env.*
+!.env.example
+
+# Maven / Quarkus Build
+target/
+.quarkus/
+*.log

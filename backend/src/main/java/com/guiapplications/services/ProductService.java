@@ -7,6 +7,7 @@ import com.guiapplications.entities.Brand;
 import com.guiapplications.entities.Category;
 import com.guiapplications.entities.Family;
 import com.guiapplications.entities.Product;
+import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.ProductRequestDTO;
 import com.guiapplications.entities.dto.ProductResponseDTO;
 import com.guiapplications.exceptions.ResourceAlreadyExistsException;
@@ -21,10 +22,24 @@ public class ProductService {
 	// create a product
 	@Transactional
     public ProductResponseDTO create(ProductRequestDTO dto) {
+        return create(dto, null);
+    }
+
+	@Transactional
+    public ProductResponseDTO create(ProductRequestDTO dto, Long userId) {
 		String trimmedName = dto.name().trim();
+
+        User user = userId != null ? User.findById(userId) : null;
 		
-		// check if already exists the typed name
-		if (Product.count("unaccent(LOWER(name)) = unaccent(LOWER(?1))", trimmedName) > 0) {
+		// check if already exists the typed name for this user
+		long duplicateCount;
+        if (user != null) {
+            duplicateCount = Product.count("unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND (user = ?2 OR user IS NULL)", trimmedName, user);
+        } else {
+            duplicateCount = Product.count("unaccent(LOWER(name)) = unaccent(LOWER(?1))", trimmedName);
+        }
+
+		if (duplicateCount > 0) {
 			throw new ResourceAlreadyExistsException("Já existe um produto cadastrado com o nome: " + trimmedName);
 		}
 		
@@ -42,10 +57,9 @@ public class ProductService {
         if (family == null) {
             throw new ResourceNotFoundException("Família não encontrada com o ID: " + dto.familyId());
         }
-        
 
         Product product = new Product();
-        product.name = dto.name();
+        product.name = trimmedName;
         product.quantity = dto.quantity();
         product.expirationDate = dto.expirationDate();
         product.purchasePrice = dto.purchasePrice();
@@ -53,6 +67,7 @@ public class ProductService {
         product.brand = brand;
         product.category = category;
         product.family = family;
+        product.user = user;
 
         product.persist();
 
@@ -60,34 +75,38 @@ public class ProductService {
     }
 	
 	// list all products
-	public List<ProductResponseDTO> listAll(){
-		List<Product> products = Product.listAllWithRelations();
+	public List<ProductResponseDTO> listAll(Long userId) {
+        User user = userId != null ? User.findById(userId) : null;
+		List<Product> products = Product.listAllWithRelations(user);
 		return products.stream()
 				.map(ProductResponseDTO::fromEntity)
 				.toList();
 	}
 	
-	// search products by any criterion below
+	// search products by any criterion
 	public List<ProductResponseDTO> searchProducts(
-            String query, String familyName, String brandName, String categoryName, LocalDate maxExpDate
+            String query, String familyName, String brandName, String categoryName, LocalDate maxExpDate, Long userId
     ) {
-        List<Product> products = Product.findWithFilters(query, familyName, brandName, categoryName, maxExpDate);
+        User user = userId != null ? User.findById(userId) : null;
+        List<Product> products = Product.findWithFilters(query, familyName, brandName, categoryName, maxExpDate, user);
         return products.stream()
                 .map(ProductResponseDTO::fromEntity)
                 .toList();
     }
 	
 	// list all expired products
-	public List<ProductResponseDTO> findExpired() {
-	    return Product.findExpired()
+	public List<ProductResponseDTO> findExpired(Long userId) {
+        User user = userId != null ? User.findById(userId) : null;
+	    return Product.findExpired(user)
 	            .stream()
 	            .map(ProductResponseDTO::fromEntity)
 	            .toList();
 	}
 
 	// list all near expiration products
-	public List<ProductResponseDTO> findNearExpiration() {
-	    return Product.findNearExpiration()
+	public List<ProductResponseDTO> findNearExpiration(Long userId) {
+        User user = userId != null ? User.findById(userId) : null;
+	    return Product.findNearExpiration(user)
 	            .stream()
 	            .map(ProductResponseDTO::fromEntity)
 	            .toList();

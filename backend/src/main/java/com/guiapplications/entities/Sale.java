@@ -22,12 +22,16 @@ public class Sale extends PanacheEntity {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "customer_id", nullable = true)
 	public Customer customer;
+
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "user_id", nullable = true)
+	public User user;
 	
 	@OneToMany(mappedBy = "sale", cascade = CascadeType.ALL)
 	public List<SaleItem> items;
 	
 	// daily sales summary
-    public static List<DailySalesSummaryDTO> getDailySummaries(LocalDateTime start, LocalDateTime end, String customerName) {
+    public static List<DailySalesSummaryDTO> getDailySummaries(LocalDateTime start, LocalDateTime end, String customerName, User user) {
         StringBuilder jpql = new StringBuilder(
             "SELECT new com.guiapplications.entities.dto.DailySalesSummaryDTO(" +
             "  CAST(s.saleDate AS date), " +
@@ -41,6 +45,10 @@ public class Sale extends PanacheEntity {
             "WHERE s.saleDate >= :start AND s.saleDate <= :end "
         );
 
+        if (user != null) {
+            jpql.append(" AND s.user = :user ");
+        }
+
         if (customerName != null && !customerName.isBlank()) {
             jpql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :customerName ");
         }
@@ -53,6 +61,10 @@ public class Sale extends PanacheEntity {
                 .setParameter("start", start)
                 .setParameter("end", end);
 
+        if (user != null) {
+            query.setParameter("user", user);
+        }
+
         if (customerName != null && !customerName.isBlank()) {
             query.setParameter("customerName", "%" + customerName.trim().toLowerCase() + "%");
         }
@@ -61,7 +73,7 @@ public class Sale extends PanacheEntity {
     }
     
     // monthly summary
-    public static List<MonthlySalesSummaryDTO> getMonthlySummaries(LocalDateTime start, LocalDateTime end, String customerName) {
+    public static List<MonthlySalesSummaryDTO> getMonthlySummaries(LocalDateTime start, LocalDateTime end, String customerName, User user) {
         StringBuilder jpql = new StringBuilder(
             "SELECT new com.guiapplications.entities.dto.MonthlySalesSummaryDTO(" +
             "  MONTH(s.saleDate), " +
@@ -75,6 +87,10 @@ public class Sale extends PanacheEntity {
             "WHERE s.saleDate >= :start AND s.saleDate <= :end "
         );
 
+        if (user != null) {
+            jpql.append(" AND s.user = :user ");
+        }
+
         if (customerName != null && !customerName.isBlank()) {
             jpql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :customerName ");
         }
@@ -86,6 +102,10 @@ public class Sale extends PanacheEntity {
                 .createQuery(jpql.toString(), MonthlySalesSummaryDTO.class)
                 .setParameter("start", start)
                 .setParameter("end", end);
+
+        if (user != null) {
+            query.setParameter("user", user);
+        }
 
         if (customerName != null && !customerName.isBlank()) {
             query.setParameter("customerName", "%" + customerName.trim().toLowerCase() + "%");
