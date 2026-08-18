@@ -102,82 +102,83 @@ export default function EntityTable({
                 mb="md"
             />
 
-            {/* Tabela */}
-            <Table striped highlightOnHover verticalSpacing="sm">
-                <Table.Thead>
-                    <Table.Tr>
-                        <Table.Th>Nome</Table.Th>
-                        <Table.Th style={{ textAlign: 'right' }}>
-                            Ações
-                        </Table.Th>
-                    </Table.Tr>
-                </Table.Thead>
-
-                <Table.Tbody>
-                    {loading ? (
+            <Table.ScrollContainer minWidth={400}>
+                <Table striped highlightOnHover verticalSpacing="sm">
+                    <Table.Thead>
                         <Table.Tr>
-                            <Table.Td colSpan={2} align="center" py="xl">
-                                <Center
-                                    style={{ flexDirection: 'column', gap: 8 }}
-                                >
-                                    <Loader size="sm" color="blue" />
-                                    <Text size="sm" c="dimmed">
-                                        Carregando dados...
-                                    </Text>
-                                </Center>
-                            </Table.Td>
+                            <Table.Th>Nome</Table.Th>
+                            <Table.Th style={{ textAlign: 'right' }}>
+                                Ações
+                            </Table.Th>
                         </Table.Tr>
-                    ) : paginatedItems.length > 0 ? (
-                        paginatedItems.map((item) => (
-                            <Table.Tr key={item.id}>
-                                <Table.Td>
-                                    <Group gap="xs">
-                                        {showColor && item.hexColor && (
-                                            <ColorSwatch
-                                                color={item.hexColor}
-                                                size={16}
-                                            />
-                                        )}
-                                        <Text size="sm" fw={500}>
-                                            {item.name}
+                    </Table.Thead>
+
+                    <Table.Tbody>
+                        {loading ? (
+                            <Table.Tr>
+                                <Table.Td colSpan={2} align="center" py="xl">
+                                    <Center
+                                        style={{ flexDirection: 'column', gap: 8 }}
+                                    >
+                                        <Loader size="sm" color="blue" />
+                                        <Text size="sm" c="dimmed">
+                                            Carregando dados...
                                         </Text>
-                                    </Group>
-                                </Table.Td>
-
-                                <Table.Td align="right">
-                                    <Group gap="xs" justify="flex-end">
-                                        <ActionIcon
-                                            variant="light"
-                                            color="blue"
-                                            title="Editar"
-                                            onClick={() => onEdit?.(item)}
-                                        >
-                                            <Edit size={16} />
-                                        </ActionIcon>
-
-                                        <ActionIcon
-                                            variant="light"
-                                            color="red"
-                                            title="Excluir"
-                                            onClick={() => onDelete?.(item.id)}
-                                        >
-                                            <Trash2 size={16} />
-                                        </ActionIcon>
-                                    </Group>
+                                    </Center>
                                 </Table.Td>
                             </Table.Tr>
-                        ))
-                    ) : (
-                        <Table.Tr>
-                            <Table.Td colSpan={2} align="center" py="xl">
-                                <Text c="dimmed">
-                                    Nenhum registro encontrado.
-                                </Text>
-                            </Table.Td>
-                        </Table.Tr>
-                    )}
-                </Table.Tbody>
-            </Table>
+                        ) : paginatedItems.length > 0 ? (
+                            paginatedItems.map((item) => (
+                                <Table.Tr key={item.id}>
+                                    <Table.Td>
+                                        <Group gap="xs">
+                                            {showColor && item.hexColor && (
+                                                <ColorSwatch
+                                                    color={item.hexColor}
+                                                    size={16}
+                                                />
+                                            )}
+                                            <Text size="sm" fw={500}>
+                                                {item.name}
+                                            </Text>
+                                        </Group>
+                                    </Table.Td>
+
+                                    <Table.Td align="right">
+                                        <Group gap="xs" justify="flex-end">
+                                            <ActionIcon
+                                                variant="light"
+                                                color="blue"
+                                                title="Editar"
+                                                onClick={() => onEdit?.(item)}
+                                            >
+                                                <Edit size={16} />
+                                            </ActionIcon>
+
+                                            <ActionIcon
+                                                variant="light"
+                                                color="red"
+                                                title="Excluir"
+                                                onClick={() => onDelete?.(item.id)}
+                                            >
+                                                <Trash2 size={16} />
+                                            </ActionIcon>
+                                        </Group>
+                                    </Table.Td>
+                                </Table.Tr>
+                            ))
+                        ) : (
+                            <Table.Tr>
+                                <Table.Td colSpan={2} align="center" py="xl">
+                                    <Text c="dimmed">
+                                        Nenhum registro encontrado.
+                                    </Text>
+                                </Table.Td>
+                            </Table.Tr>
+                        )}
+                    </Table.Tbody>
+                </Table>
+            </Table.ScrollContainer>
 
             {/* Rodapé com Paginação */}
             {!loading && filteredItems.length > 0 && (

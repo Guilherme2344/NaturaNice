@@ -148,154 +148,156 @@ export default function ProductsTable({
                 mb="md"
             />
 
-            <Table striped highlightOnHover verticalSpacing="sm">
-                <Table.Thead>
-                    <Table.Tr>
-                        <Table.Th>Marca</Table.Th>
-                        <Table.Th>Produto</Table.Th>
-                        <Table.Th>Categoria / Família</Table.Th>
-                        <Table.Th>Qtd</Table.Th>
-                        <Table.Th>Data de Vencimento</Table.Th>
-                        <Table.Th>Valor Compra</Table.Th>
-                        <Table.Th>Valor Venda</Table.Th>
-                        <Table.Th>Resultado</Table.Th>
-                        <Table.Th style={{ textAlign: 'right' }}>
-                            Ações
-                        </Table.Th>
-                    </Table.Tr>
-                </Table.Thead>
-
-                <Table.Tbody>
-                    {loading ? (
+            <Table.ScrollContainer minWidth={900}>
+                <Table striped highlightOnHover verticalSpacing="sm">
+                    <Table.Thead>
                         <Table.Tr>
-                            <Table.Td colSpan={9} align="center" py="xl">
-                                <Center
-                                    style={{ flexDirection: 'column', gap: 8 }}
-                                >
-                                    <Loader size="sm" color="blue" />
-                                    <Text size="sm" c="dimmed">
-                                        Carregando produtos...
-                                    </Text>
-                                </Center>
-                            </Table.Td>
+                            <Table.Th>Marca</Table.Th>
+                            <Table.Th>Produto</Table.Th>
+                            <Table.Th>Categoria / Família</Table.Th>
+                            <Table.Th>Qtd</Table.Th>
+                            <Table.Th>Data de Vencimento</Table.Th>
+                            <Table.Th>Valor Compra</Table.Th>
+                            <Table.Th>Valor Venda</Table.Th>
+                            <Table.Th>Resultado</Table.Th>
+                            <Table.Th style={{ textAlign: 'right' }}>
+                                Ações
+                            </Table.Th>
                         </Table.Tr>
-                    ) : paginatedProducts.length > 0 ? (
-                        paginatedProducts.map((product) => (
-                            <Table.Tr key={product.id}>
-                                <Table.Td>
-                                    <Group gap="xs">
-                                        <ColorSwatch
-                                            color={
-                                                product.brand?.hexColor ||
-                                                '#ccc'
-                                            }
-                                            size={14}
-                                        />
-                                        <Text size="sm">
-                                            {product.brand?.name || '-'}
+                    </Table.Thead>
+
+                    <Table.Tbody>
+                        {loading ? (
+                            <Table.Tr>
+                                <Table.Td colSpan={9} align="center" py="xl">
+                                    <Center
+                                        style={{ flexDirection: 'column', gap: 8 }}
+                                    >
+                                        <Loader size="sm" color="blue" />
+                                        <Text size="sm" c="dimmed">
+                                            Carregando produtos...
                                         </Text>
-                                    </Group>
-                                </Table.Td>
-
-                                <Table.Td fw={500}>{product.name}</Table.Td>
-
-                                <Table.Td>
-                                    <Text size="sm">
-                                        {product.category?.name || '-'}
-                                    </Text>
-                                    <Text size="xs" c="dimmed">
-                                        {product.family?.name || '-'}
-                                    </Text>
-                                </Table.Td>
-
-                                <Table.Td fw={500}>
-                                    {product.quantity} un
-                                </Table.Td>
-
-                                {/* Data de Vencimento formatada */}
-                                <Table.Td>
-                                    <Stack gap={4} align="flex-start">
-                                        <Text size="sm">
-                                            {formatDate(product.expirationDate)}
-                                        </Text>
-                                        <Badge
-                                            color={getStatusBadgeColor(
-                                                product.expirationStatus
-                                            )}
-                                            variant="light"
-                                        >
-                                            {
-                                                product.expirationStatusDescription
-                                            }
-                                        </Badge>
-                                    </Stack>
-                                </Table.Td>
-
-                                {/* Preço de Compra */}
-                                <Table.Td fw={400}>
-                                    R${' '}
-                                    {product.purchasePrice?.toFixed(2) ||
-                                        '0.00'}
-                                </Table.Td>
-
-                                {/* Preço de Venda */}
-                                <Table.Td fw={400}>
-                                    R${' '}
-                                    {product.sellingPrice?.toFixed(2) || '0.00'}
-                                </Table.Td>
-
-                                <Table.Td fw={600}>
-                                    R$ {product.profit?.toFixed(2) || '0.00'}
-                                </Table.Td>
-
-                                <Table.Td align="right">
-                                    <Group gap="xs" justify="flex-end">
-                                        {onSale && (
-                                            <ActionIcon
-                                                variant="light"
-                                                color="teal"
-                                                title={product.quantity > 0 ? 'Efetivar Venda' : 'Sem Estoque'}
-                                                disabled={product.quantity <= 0}
-                                                onClick={() => onSale(product)}
-                                            >
-                                                <ShoppingCart size={16} />
-                                            </ActionIcon>
-                                        )}
-
-                                        <ActionIcon
-                                            variant="light"
-                                            color="blue"
-                                            title="Editar produto"
-                                            onClick={() => onEdit?.(product)}
-                                        >
-                                            <Edit size={16} />
-                                        </ActionIcon>
-
-                                        <ActionIcon
-                                            variant="light"
-                                            color="red"
-                                            title="Excluir produto"
-                                            onClick={() =>
-                                                onDelete?.(product.id)
-                                            }
-                                        >
-                                            <Trash2 size={16} />
-                                        </ActionIcon>
-                                    </Group>
+                                    </Center>
                                 </Table.Td>
                             </Table.Tr>
-                        ))
-                    ) : (
-                        <Table.Tr>
-                            <Table.Td colSpan={9} align="center" py="xl">
-                                <Text c="dimmed">
-                                    Nenhum produto encontrado.
-                                </Text>
-                            </Table.Td>
-                        </Table.Tr>
-                    )}
-                </Table.Tbody>
-            </Table>
+                        ) : paginatedProducts.length > 0 ? (
+                            paginatedProducts.map((product) => (
+                                <Table.Tr key={product.id}>
+                                    <Table.Td>
+                                        <Group gap="xs">
+                                            <ColorSwatch
+                                                color={
+                                                    product.brand?.hexColor ||
+                                                    '#ccc'
+                                                }
+                                                size={14}
+                                            />
+                                            <Text size="sm">
+                                                {product.brand?.name || '-'}
+                                            </Text>
+                                        </Group>
+                                    </Table.Td>
+
+                                    <Table.Td fw={500}>{product.name}</Table.Td>
+
+                                    <Table.Td>
+                                        <Text size="sm">
+                                            {product.category?.name || '-'}
+                                        </Text>
+                                        <Text size="xs" c="dimmed">
+                                            {product.family?.name || '-'}
+                                        </Text>
+                                    </Table.Td>
+
+                                    <Table.Td fw={500}>
+                                        {product.quantity} un
+                                    </Table.Td>
+
+                                    {/* Data de Vencimento formatada */}
+                                    <Table.Td>
+                                        <Stack gap={4} align="flex-start">
+                                            <Text size="sm">
+                                                {formatDate(product.expirationDate)}
+                                            </Text>
+                                            <Badge
+                                                color={getStatusBadgeColor(
+                                                    product.expirationStatus
+                                                )}
+                                                variant="light"
+                                            >
+                                                {
+                                                    product.expirationStatusDescription
+                                                }
+                                            </Badge>
+                                        </Stack>
+                                    </Table.Td>
+
+                                    {/* Preço de Compra */}
+                                    <Table.Td fw={400}>
+                                        R${' '}
+                                        {product.purchasePrice?.toFixed(2) ||
+                                            '0.00'}
+                                    </Table.Td>
+
+                                    {/* Preço de Venda */}
+                                    <Table.Td fw={400}>
+                                        R${' '}
+                                        {product.sellingPrice?.toFixed(2) || '0.00'}
+                                    </Table.Td>
+
+                                    <Table.Td fw={600}>
+                                        R$ {product.profit?.toFixed(2) || '0.00'}
+                                    </Table.Td>
+
+                                    <Table.Td align="right">
+                                        <Group gap="xs" justify="flex-end">
+                                            {onSale && (
+                                                <ActionIcon
+                                                    variant="light"
+                                                    color="teal"
+                                                    title={product.quantity > 0 ? 'Efetivar Venda' : 'Sem Estoque'}
+                                                    disabled={product.quantity <= 0}
+                                                    onClick={() => onSale(product)}
+                                                >
+                                                    <ShoppingCart size={16} />
+                                                </ActionIcon>
+                                            )}
+
+                                            <ActionIcon
+                                                variant="light"
+                                                color="blue"
+                                                title="Editar produto"
+                                                onClick={() => onEdit?.(product)}
+                                            >
+                                                <Edit size={16} />
+                                            </ActionIcon>
+
+                                            <ActionIcon
+                                                variant="light"
+                                                color="red"
+                                                title="Excluir produto"
+                                                onClick={() =>
+                                                    onDelete?.(product.id)
+                                                }
+                                            >
+                                                <Trash2 size={16} />
+                                            </ActionIcon>
+                                        </Group>
+                                    </Table.Td>
+                                </Table.Tr>
+                            ))
+                        ) : (
+                            <Table.Tr>
+                                <Table.Td colSpan={9} align="center" py="xl">
+                                    <Text c="dimmed">
+                                        Nenhum produto encontrado.
+                                    </Text>
+                                </Table.Td>
+                            </Table.Tr>
+                        )}
+                    </Table.Tbody>
+                </Table>
+            </Table.ScrollContainer>
 
             {!loading && filteredProducts.length > 0 && (
                 <Group

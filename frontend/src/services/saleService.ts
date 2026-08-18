@@ -4,6 +4,7 @@ export interface CreateSaleDTO {
     productId: number;
     quantity: number;
     sellingPrice?: number;
+    customerName?: string;
 }
 
 export interface SaleResponse {
@@ -16,6 +17,7 @@ export interface SaleResponse {
     sellingPrice: number;
     totalAmount: number;
     totalProfit: number;
+    customerName?: string;
 }
 
 export const saleService = {

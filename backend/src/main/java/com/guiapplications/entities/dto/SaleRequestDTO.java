@@ -5,5 +5,6 @@ import java.math.BigDecimal;
 public record SaleRequestDTO(
     Long productId,
     Integer quantity,
-    BigDecimal sellingPrice
+    BigDecimal sellingPrice,
+    String customerName
 ) {}

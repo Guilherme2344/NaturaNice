@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
     Paper,
     Title,
@@ -20,8 +21,10 @@ import {
     Package,
     Calendar,
     BarChart3,
+    User,
 } from 'lucide-react';
 import type { DailySalesSummary, MonthlySalesSummary } from '../services/reportService';
+import { customerService, type Customer } from '../services/customerService';
 
 const MONTH_NAMES = [
     'Janeiro',
@@ -40,6 +43,7 @@ const MONTH_NAMES = [
 
 interface BreakdownRow {
     label: string;
+    customerName: string;
     revenue: number;
     cost: number;
     profit: number;
@@ -54,6 +58,8 @@ interface ReportViewProps {
     onYearChange: (year: number) => void;
     selectedMonth?: number;
     onMonthChange?: (month: number) => void;
+    selectedCustomer?: string;
+    onCustomerChange?: (customerName: string) => void;
     totalRevenue: number;
     totalCost: number;
     totalProfit: number;
@@ -70,6 +76,8 @@ export function ReportView({
     onYearChange,
     selectedMonth = 1,
     onMonthChange,
+    selectedCustomer = '',
+    onCustomerChange,
     totalRevenue = 0,
     totalCost = 0,
     totalProfit = 0,
@@ -85,10 +93,23 @@ export function ReportView({
         (_, i) => String(START_YEAR + i)
     );
 
+    const [customers, setCustomers] = useState<Customer[]>([]);
+
+    useEffect(() => {
+        customerService.getAll()
+            .then(setCustomers)
+            .catch((err) => console.error('Erro ao carregar clientes:', err));
+    }, []);
+
     const monthOptions = MONTH_NAMES.map((name, index) => ({
         value: String(index + 1),
         label: name,
     }));
+
+    const customerOptions = [
+        { value: '', label: 'Todos os Clientes' },
+        ...customers.map((c) => ({ value: c.name, label: c.name })),
+    ];
 
     const formatCurrency = (val: number) =>
         `R$ ${(val || 0).toLocaleString('pt-BR', {
@@ -143,6 +164,7 @@ export function ReportView({
         if ('date' in item) {
             return {
                 label: formatDate(item.date),
+                customerName: item.customerName || 'Cliente não informado',
                 revenue: item.revenue,
                 cost: item.cost,
                 profit: item.profit,
@@ -151,6 +173,7 @@ export function ReportView({
         } else {
             return {
                 label: MONTH_NAMES[item.month - 1] || `Mês ${item.month}`,
+                customerName: item.customerName || 'Cliente não informado',
                 revenue: item.revenue,
                 cost: item.cost,
                 profit: item.profit,
@@ -178,14 +201,27 @@ export function ReportView({
                         </Text>
                     </div>
 
-                    <Group gap="sm">
+                    <Group gap="sm" wrap="wrap">
+                        {onCustomerChange && (
+                            <Select
+                                label="Cliente"
+                                placeholder="Todos os Clientes"
+                                data={customerOptions}
+                                value={selectedCustomer}
+                                onChange={(val) => onCustomerChange(val || '')}
+                                style={{ width: 180 }}
+                                size="xs"
+                                leftSection={<User size={14} />}
+                                clearable
+                            />
+                        )}
                         {type === 'monthly' && onMonthChange && (
                             <Select
                                 label="Mês"
                                 data={monthOptions}
                                 value={String(selectedMonth)}
                                 onChange={(val) => val && onMonthChange(Number(val))}
-                                style={{ width: 140 }}
+                                style={{ width: 130 }}
                                 size="xs"
                             />
                         )}
@@ -300,48 +336,52 @@ export function ReportView({
                         </Text>
                     </Center>
                 ) : rows.length > 0 ? (
-                    <Table striped highlightOnHover verticalSpacing="sm">
-                        <Table.Thead>
-                            <Table.Tr>
-                                <Table.Th>{type === 'monthly' ? 'Data' : 'Mês'}</Table.Th>
-                                <Table.Th>Faturamento</Table.Th>
-                                <Table.Th>Custo</Table.Th>
-                                <Table.Th>Lucro</Table.Th>
-                                <Table.Th>Qtd. Vendida</Table.Th>
-                                <Table.Th>Margem (%)</Table.Th>
-                            </Table.Tr>
-                        </Table.Thead>
-                        <Table.Tbody>
-                            {rows.map((row, index) => {
-                                const rowMargin = row.revenue > 0 ? (row.profit / row.revenue) * 100 : 0;
-                                const rowMeta = getProfitIndicator(row.profit);
-                                const RowIcon = rowMeta.Icon;
+                    <Table.ScrollContainer minWidth={700}>
+                        <Table striped highlightOnHover verticalSpacing="sm">
+                            <Table.Thead>
+                                <Table.Tr>
+                                    <Table.Th>{type === 'monthly' ? 'Data' : 'Mês'}</Table.Th>
+                                    <Table.Th>Cliente</Table.Th>
+                                    <Table.Th>Faturamento</Table.Th>
+                                    <Table.Th>Custo</Table.Th>
+                                    <Table.Th>Lucro</Table.Th>
+                                    <Table.Th>Qtd. Vendida</Table.Th>
+                                    <Table.Th>Margem (%)</Table.Th>
+                                </Table.Tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                                {rows.map((row, index) => {
+                                    const rowMargin = row.revenue > 0 ? (row.profit / row.revenue) * 100 : 0;
+                                    const rowMeta = getProfitIndicator(row.profit);
+                                    const RowIcon = rowMeta.Icon;
 
-                                return (
-                                    <Table.Tr key={index}>
-                                        <Table.Td fw={600}>{row.label}</Table.Td>
-                                        <Table.Td fw={500} c="blue">
-                                            {formatCurrency(row.revenue)}
-                                        </Table.Td>
-                                        <Table.Td c="orange">{formatCurrency(row.cost)}</Table.Td>
-                                        <Table.Td fw={700} c={rowMeta.textColor}>
-                                            {row.profit === 0 ? '-' : formatCurrency(row.profit)}
-                                        </Table.Td>
-                                        <Table.Td fw={500}>{row.itemsSold} un.</Table.Td>
-                                        <Table.Td>
-                                            <Badge
-                                                variant="light"
-                                                color={rowMeta.badgeColor}
-                                                leftSection={<RowIcon size={12} />}
-                                            >
-                                                {row.profit === 0 ? '-' : `${rowMargin.toFixed(1)}%`}
-                                            </Badge>
-                                        </Table.Td>
-                                    </Table.Tr>
-                                );
-                            })}
-                        </Table.Tbody>
-                    </Table>
+                                    return (
+                                        <Table.Tr key={index}>
+                                            <Table.Td fw={600}>{row.label}</Table.Td>
+                                            <Table.Td fw={500} c="gray.7">{row.customerName}</Table.Td>
+                                            <Table.Td fw={500} c="blue">
+                                                {formatCurrency(row.revenue)}
+                                            </Table.Td>
+                                            <Table.Td c="orange">{formatCurrency(row.cost)}</Table.Td>
+                                            <Table.Td fw={700} c={rowMeta.textColor}>
+                                                {row.profit === 0 ? '-' : formatCurrency(row.profit)}
+                                            </Table.Td>
+                                            <Table.Td fw={500}>{row.itemsSold} un.</Table.Td>
+                                            <Table.Td>
+                                                <Badge
+                                                    variant="light"
+                                                    color={rowMeta.badgeColor}
+                                                    leftSection={<RowIcon size={12} />}
+                                                >
+                                                    {row.profit === 0 ? '-' : `${rowMargin.toFixed(1)}%`}
+                                                </Badge>
+                                            </Table.Td>
+                                        </Table.Tr>
+                                    );
+                                })}
+                            </Table.Tbody>
+                        </Table>
+                    </Table.ScrollContainer>
                 ) : (
                     <Center py="xl" style={{ flexDirection: 'column', gap: 8 }}>
                         <Text c="dimmed" size="sm">

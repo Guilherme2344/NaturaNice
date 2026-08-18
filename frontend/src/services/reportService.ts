@@ -2,6 +2,7 @@ import { api } from './api';
 
 export interface DailySalesSummary {
     date: string;
+    customerName?: string;
     revenue: number;
     cost: number;
     profit: number;
@@ -10,6 +11,7 @@ export interface DailySalesSummary {
 
 export interface MonthlySalesSummary {
     month: number;
+    customerName?: string;
     revenue: number;
     cost: number;
     profit: number;
@@ -36,17 +38,30 @@ export interface AnnualSalesReport {
 }
 
 export const reportService = {
-    getMonthlyReport: async (year?: number, month?: number): Promise<MonthlySalesReport> => {
-        const params: Record<string, number> = {};
+    getMonthlyReport: async (
+        year?: number,
+        month?: number,
+        customerName?: string
+    ): Promise<MonthlySalesReport> => {
+        const params: Record<string, string | number> = {};
         if (year) params.year = year;
         if (month) params.month = month;
+        if (customerName && customerName.trim() !== '') {
+            params.customerName = customerName.trim();
+        }
         const response = await api.get<MonthlySalesReport>('/report/monthly', { params });
         return response.data;
     },
 
-    getAnnualReport: async (year?: number): Promise<AnnualSalesReport> => {
-        const params: Record<string, number> = {};
+    getAnnualReport: async (
+        year?: number,
+        customerName?: string
+    ): Promise<AnnualSalesReport> => {
+        const params: Record<string, string | number> = {};
         if (year) params.year = year;
+        if (customerName && customerName.trim() !== '') {
+            params.customerName = customerName.trim();
+        }
         const response = await api.get<AnnualSalesReport>('/report/annual', { params });
         return response.data;
     },

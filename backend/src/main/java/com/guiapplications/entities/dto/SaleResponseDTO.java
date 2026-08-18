@@ -12,5 +12,6 @@ public record SaleResponseDTO(
     BigDecimal purchasePrice,
     BigDecimal sellingPrice,
     BigDecimal totalAmount,
-    BigDecimal totalProfit
+    BigDecimal totalProfit,
+    String customerName
 ) {}

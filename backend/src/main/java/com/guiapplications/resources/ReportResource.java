@@ -25,20 +25,23 @@ public class ReportResource {
     @Path("/monthly")
     public MonthlySalesReportDTO getMonthlyReport(
             @QueryParam("year") Integer year,
-            @QueryParam("month") Integer month) {
+            @QueryParam("month") Integer month,
+            @QueryParam("customerName") String customerName) {
 
         int selectedYear = (year != null) ? year : LocalDate.now().getYear();
         int selectedMonth = (month != null) ? month : LocalDate.now().getMonthValue();
 
-        return reportService.getMonthlyReport(selectedYear, selectedMonth);
+        return reportService.getMonthlyReport(selectedYear, selectedMonth, customerName);
     }
 
     // annual report
     @GET
     @Path("/annual")
-    public AnnualSalesReportDTO getAnnualReport(@QueryParam("year") Integer year) {
+    public AnnualSalesReportDTO getAnnualReport(
+            @QueryParam("year") Integer year,
+            @QueryParam("customerName") String customerName) {
         int selectedYear = (year != null) ? year : LocalDate.now().getYear();
 
-        return reportService.getAnnualReport(selectedYear);
+        return reportService.getAnnualReport(selectedYear, customerName);
     }
 }

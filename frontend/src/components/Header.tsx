@@ -1,4 +1,12 @@
-import { AppShell, Burger, Group, NavLink, Text, Divider, Stack } from '@mantine/core';
+import {
+    AppShell,
+    Burger,
+    Group,
+    NavLink,
+    Text,
+    Divider,
+    Stack,
+} from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
     Package,
@@ -70,7 +78,7 @@ export default function Header({ children }: { children: React.ReactNode }) {
                         size="sm"
                     />
                     <Text size="lg" fw={700}>
-                        Produtos Mãe
+                        Natura Nice
                     </Text>
                 </Group>
             </AppShell.Header>
@@ -80,7 +88,13 @@ export default function Header({ children }: { children: React.ReactNode }) {
                 <Stack gap="xs">
                     {/* Seção 1: Gestão do Estoque */}
                     <div>
-                        <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">
+                        <Text
+                            size="xs"
+                            fw={700}
+                            c="dimmed"
+                            mb="xs"
+                            tt="uppercase"
+                        >
                             Gestão do Estoque
                         </Text>
                         {stockNavItems.map((item) => {
@@ -93,7 +107,9 @@ export default function Header({ children }: { children: React.ReactNode }) {
                                     component={Link}
                                     to={item.href}
                                     label={item.label}
-                                    leftSection={<Icon size={18} color={item.color} />}
+                                    leftSection={
+                                        <Icon size={18} color={item.color} />
+                                    }
                                     active={isActive}
                                     mb={4}
                                     style={{ borderRadius: '6px' }}
@@ -106,7 +122,13 @@ export default function Header({ children }: { children: React.ReactNode }) {
 
                     {/* Seção 2: Relatórios */}
                     <div>
-                        <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">
+                        <Text
+                            size="xs"
+                            fw={700}
+                            c="dimmed"
+                            mb="xs"
+                            tt="uppercase"
+                        >
                             Relatórios
                         </Text>
                         {reportNavItems.map((item) => {
@@ -119,7 +141,9 @@ export default function Header({ children }: { children: React.ReactNode }) {
                                     component={Link}
                                     to={item.href}
                                     label={item.label}
-                                    leftSection={<Icon size={18} color={item.color} />}
+                                    leftSection={
+                                        <Icon size={18} color={item.color} />
+                                    }
                                     active={isActive}
                                     mb={4}
                                     style={{ borderRadius: '6px' }}

@@ -10,15 +10,27 @@ import {
     Badge,
     Grid,
     Divider,
+    Autocomplete,
 } from '@mantine/core';
-import { ShoppingCart, DollarSign, TrendingUp, Package } from 'lucide-react';
+import {
+    ShoppingCart,
+    DollarSign,
+    TrendingUp,
+    Package,
+    User,
+} from 'lucide-react';
 import type { Product } from './ProductsTable';
+import { customerService, type Customer } from '../services/customerService';
 
 interface SaleModalProps {
     opened: boolean;
     onClose: () => void;
     product: Product | null;
-    onConfirmSale: (quantity: number, sellingPrice: number) => Promise<void>;
+    onConfirmSale: (
+        quantity: number,
+        sellingPrice: number,
+        customerName?: string
+    ) => Promise<void>;
 }
 
 export function SaleModal({
@@ -29,12 +41,24 @@ export function SaleModal({
 }: SaleModalProps) {
     const [quantity, setQuantity] = useState<number>(1);
     const [sellingPrice, setSellingPrice] = useState<number>(0);
+    const [customerName, setCustomerName] = useState<string>('');
+    const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (opened) {
+            customerService
+                .getAll()
+                .then((data) => setCustomers(data))
+                .catch((err) => console.error('Erro ao buscar clientes:', err));
+        }
+    }, [opened]);
 
     useEffect(() => {
         if (product) {
             setQuantity(1);
             setSellingPrice(product.sellingPrice || 0);
+            setCustomerName('');
         }
     }, [product]);
 
@@ -53,7 +77,7 @@ export function SaleModal({
 
         try {
             setLoading(true);
-            await onConfirmSale(quantity, currentSellingPrice);
+            await onConfirmSale(quantity, currentSellingPrice, customerName);
             onClose();
         } catch (error) {
             console.error('Erro ao registrar venda:', error);
@@ -80,37 +104,66 @@ export function SaleModal({
         >
             <form onSubmit={handleSubmit}>
                 <Stack gap="md">
-                    <Paper p="sm" withBorder radius="md" bg="var(--mantine-color-gray-0)">
+                    <Paper
+                        p="sm"
+                        withBorder
+                        radius="md"
+                        bg="var(--mantine-color-gray-0)"
+                    >
                         <Group justify="space-between" align="flex-start">
                             <div>
                                 <Text fw={700} size="md">
                                     {product.name}
                                 </Text>
                                 <Group gap="xs" mt={4}>
-                                    <Badge variant="light" color="blue" size="sm">
+                                    <Badge
+                                        variant="light"
+                                        color="blue"
+                                        size="sm"
+                                    >
                                         {product.brand?.name || 'Sem Marca'}
                                     </Badge>
-                                    <Badge variant="light" color="gray" size="sm">
-                                        {product.category?.name || 'Sem Categoria'}
+                                    <Badge
+                                        variant="light"
+                                        color="gray"
+                                        size="sm"
+                                    >
+                                        {product.category?.name ||
+                                            'Sem Categoria'}
                                     </Badge>
                                 </Group>
                             </div>
                             <Group gap={4} align="center">
                                 <Package size={16} className="text-gray-500" />
-                                <Text size="sm" fw={600} c={availableStock > 0 ? 'teal' : 'red'}>
+                                <Text
+                                    size="sm"
+                                    fw={600}
+                                    c={availableStock > 0 ? 'teal' : 'red'}
+                                >
                                     Estoque: {availableStock} un.
                                 </Text>
                             </Group>
                         </Group>
                     </Paper>
 
+                    <Autocomplete
+                        label="Nome do Cliente (opcional)"
+                        placeholder="Digite ou escolha um cliente cadastrado"
+                        data={customers.map((c) => c.name)}
+                        value={customerName}
+                        onChange={setCustomerName}
+                        leftSection={<User size={16} />}
+                    />
+
                     <Grid>
                         <Grid.Col span={6}>
                             <NumberInput
-                                label="Quantidade a Vender"
+                                label="Vendido"
                                 placeholder="Informe a quantidade"
                                 value={quantity}
-                                onChange={(val) => setQuantity(Number(val) || 1)}
+                                onChange={(val) =>
+                                    setQuantity(Number(val) || 1)
+                                }
                                 min={1}
                                 max={availableStock}
                                 required
@@ -123,7 +176,9 @@ export function SaleModal({
                                 label="Preço de Venda Unitário"
                                 placeholder="0.00"
                                 value={sellingPrice}
-                                onChange={(val) => setSellingPrice(Number(val) || 0)}
+                                onChange={(val) =>
+                                    setSellingPrice(Number(val) || 0)
+                                }
                                 prefix="R$ "
                                 decimalScale={2}
                                 fixedDecimalScale
@@ -133,7 +188,10 @@ export function SaleModal({
                         </Grid.Col>
                     </Grid>
 
-                    <Divider label="Resumo Financeiro da Transação" labelPosition="center" />
+                    <Divider
+                        label="Resumo Financeiro da Transação"
+                        labelPosition="center"
+                    />
 
                     <Grid>
                         <Grid.Col span={6}>
@@ -157,9 +215,18 @@ export function SaleModal({
                             </Paper>
                         </Grid.Col>
                         <Grid.Col span={6}>
-                            <Paper p="sm" radius="md" style={{ backgroundColor: 'rgba(9, 146, 104, 0.08)' }}>
+                            <Paper
+                                p="sm"
+                                radius="md"
+                                style={{
+                                    backgroundColor: 'rgba(9, 146, 104, 0.08)',
+                                }}
+                            >
                                 <Group gap={6}>
-                                    <DollarSign size={18} className="text-teal-600" />
+                                    <DollarSign
+                                        size={18}
+                                        className="text-teal-600"
+                                    />
                                     <Text size="xs" fw={700} c="teal">
                                         Total da Venda
                                     </Text>
@@ -170,14 +237,37 @@ export function SaleModal({
                             </Paper>
                         </Grid.Col>
                         <Grid.Col span={6}>
-                            <Paper p="sm" radius="md" style={{ backgroundColor: totalProfit >= 0 ? 'rgba(43, 138, 62, 0.08)' : 'rgba(224, 49, 49, 0.08)' }}>
+                            <Paper
+                                p="sm"
+                                radius="md"
+                                style={{
+                                    backgroundColor:
+                                        totalProfit >= 0
+                                            ? 'rgba(43, 138, 62, 0.08)'
+                                            : 'rgba(224, 49, 49, 0.08)',
+                                }}
+                            >
                                 <Group gap={6}>
-                                    <TrendingUp size={18} color={totalProfit >= 0 ? 'green' : 'red'} />
-                                    <Text size="xs" fw={700} c={totalProfit >= 0 ? 'green' : 'red'}>
+                                    <TrendingUp
+                                        size={18}
+                                        color={
+                                            totalProfit >= 0 ? 'green' : 'red'
+                                        }
+                                    />
+                                    <Text
+                                        size="xs"
+                                        fw={700}
+                                        c={totalProfit >= 0 ? 'green' : 'red'}
+                                    >
                                         Lucro Estimado
                                     </Text>
                                 </Group>
-                                <Text fw={800} size="lg" c={totalProfit >= 0 ? 'green' : 'red'} mt={4}>
+                                <Text
+                                    fw={800}
+                                    size="lg"
+                                    c={totalProfit >= 0 ? 'green' : 'red'}
+                                    mt={4}
+                                >
                                     R$ {totalProfit.toFixed(2)}
                                 </Text>
                             </Paper>
@@ -185,7 +275,11 @@ export function SaleModal({
                     </Grid>
 
                     <Group justify="flex-end" mt="md">
-                        <Button variant="default" onClick={onClose} disabled={loading}>
+                        <Button
+                            variant="default"
+                            onClick={onClose}
+                            disabled={loading}
+                        >
                             Cancelar
                         </Button>
                         <Button

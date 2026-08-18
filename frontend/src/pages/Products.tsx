@@ -88,12 +88,13 @@ export default function Products() {
         await fetchData();
     };
 
-    const handleConfirmSale = async (quantity: number, sellingPrice: number) => {
+    const handleConfirmSale = async (quantity: number, sellingPrice: number, customerName?: string) => {
         if (!productToSell) return;
         await saleService.createSale({
             productId: productToSell.id,
             quantity,
             sellingPrice,
+            customerName,
         });
         await fetchData();
     };

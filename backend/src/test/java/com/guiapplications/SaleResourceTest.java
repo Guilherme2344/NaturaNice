@@ -24,7 +24,7 @@ public class SaleResourceTest {
         int initialStock = product.quantity;
         long productId = product.id;
 
-        SaleRequestDTO request = new SaleRequestDTO(productId, 1, new BigDecimal("25.00"));
+        SaleRequestDTO request = new SaleRequestDTO(productId, 1, new BigDecimal("25.00"), "Maria Silva");
 
         given()
           .contentType(ContentType.JSON)
@@ -35,7 +35,8 @@ public class SaleResourceTest {
              .statusCode(201)
              .body("saleId", notNullValue())
              .body("productId", equalTo((int) productId))
-             .body("quantity", equalTo(1));
+             .body("quantity", equalTo(1))
+             .body("customerName", equalTo("Maria Silva"));
 
         Product.getEntityManager().clear();
         Product updatedProduct = Product.findById(productId);
@@ -48,7 +49,7 @@ public class SaleResourceTest {
         int fullStock = product.quantity;
         long productId = product.id;
 
-        SaleRequestDTO request = new SaleRequestDTO(productId, fullStock, new BigDecimal("30.00"));
+        SaleRequestDTO request = new SaleRequestDTO(productId, fullStock, new BigDecimal("30.00"), "João Souza");
 
         given()
           .contentType(ContentType.JSON)

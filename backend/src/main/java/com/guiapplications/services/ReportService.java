@@ -19,12 +19,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 public class ReportService {
 
     // monthly report
-    public MonthlySalesReportDTO getMonthlyReport(int year, int month) {
+    public MonthlySalesReportDTO getMonthlyReport(int year, int month, String customerName) {
         YearMonth yearMonth = YearMonth.of(year, month);
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(LocalTime.MAX);
 
-        List<DailySalesSummaryDTO> dailySummaries = Sale.getDailySummaries(start, end);
+        List<DailySalesSummaryDTO> dailySummaries = Sale.getDailySummaries(start, end, customerName);
 
         BigDecimal totalRevenue = BigDecimal.ZERO;
         BigDecimal totalCost = BigDecimal.ZERO;
@@ -42,12 +42,12 @@ public class ReportService {
     }
 
     // annual report
-    public AnnualSalesReportDTO getAnnualReport(int year) {
+    public AnnualSalesReportDTO getAnnualReport(int year, String customerName) {
         Year y = Year.of(year);
         LocalDateTime start = y.atDay(1).atStartOfDay();
         LocalDateTime end = y.atMonth(12).atEndOfMonth().atTime(LocalTime.MAX);
 
-        List<MonthlySalesSummaryDTO> monthlySummaries = Sale.getMonthlySummaries(start, end);
+        List<MonthlySalesSummaryDTO> monthlySummaries = Sale.getMonthlySummaries(start, end, customerName);
 
         BigDecimal totalRevenue = BigDecimal.ZERO;
         BigDecimal totalCost = BigDecimal.ZERO;

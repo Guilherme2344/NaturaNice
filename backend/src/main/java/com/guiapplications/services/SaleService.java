@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
+import com.guiapplications.entities.Customer;
 import com.guiapplications.entities.Product;
 import com.guiapplications.entities.Sale;
 import com.guiapplications.entities.SaleItem;
@@ -42,9 +43,22 @@ public class SaleService {
         BigDecimal unitSellingPrice = dto.sellingPrice() != null ? dto.sellingPrice() : product.sellingPrice;
         BigDecimal unitPurchasePrice = product.purchasePrice != null ? product.purchasePrice : BigDecimal.ZERO;
 
+        // Customer lookup or creation
+        Customer customer = null;
+        if (dto.customerName() != null && !dto.customerName().isBlank()) {
+            String trimmedName = dto.customerName().trim();
+            customer = Customer.findByName(trimmedName);
+            if (customer == null) {
+                customer = new Customer();
+                customer.name = trimmedName;
+                customer.persist();
+            }
+        }
+
         // 1. Create & Persist Sale and SaleItem
         Sale sale = new Sale();
         sale.saleDate = LocalDateTime.now();
+        sale.customer = customer;
         sale.items = new ArrayList<>();
 
         SaleItem item = new SaleItem();
@@ -80,7 +94,8 @@ public class SaleService {
             unitPurchasePrice,
             unitSellingPrice,
             totalAmount,
-            totalProfit
+            totalProfit,
+            customer != null ? customer.name : null
         );
     }
 }
