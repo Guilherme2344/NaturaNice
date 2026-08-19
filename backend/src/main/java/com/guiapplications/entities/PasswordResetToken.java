@@ -5,6 +5,9 @@ import java.time.LocalDateTime;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -19,6 +22,10 @@ public class PasswordResetToken extends PanacheEntity {
 
     @Column(nullable = false)
     public LocalDateTime expirationTime;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
+    public User user;
 
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(expirationTime);

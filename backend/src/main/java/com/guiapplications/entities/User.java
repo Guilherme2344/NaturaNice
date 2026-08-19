@@ -3,6 +3,8 @@ package com.guiapplications.entities;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.guiapplications.enums.Role;
+
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -15,11 +17,6 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "users")
 public class User extends PanacheEntity {
-
-    public enum Role {
-        ADMIN,
-        USER
-    }
 
     @Column(nullable = false)
     public String name;

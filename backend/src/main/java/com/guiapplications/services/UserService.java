@@ -8,6 +8,7 @@ import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.CreateUserRequestDTO;
 import com.guiapplications.entities.dto.CreateUserResponseDTO;
 import com.guiapplications.entities.dto.UserResponseDTO;
+import com.guiapplications.enums.Role;
 import com.guiapplications.exceptions.ResourceNotFoundException;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -46,7 +47,7 @@ public class UserService {
         user.name = dto.name().trim();
         user.email = email;
         user.password = hashedPassword;
-        user.role = User.Role.USER;
+        user.role = Role.USER;
         user.firstAccess = true;
 
         user.persist();

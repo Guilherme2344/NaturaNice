@@ -12,6 +12,7 @@ import com.guiapplications.entities.Product;
 import com.guiapplications.entities.Sale;
 import com.guiapplications.entities.SaleItem;
 import com.guiapplications.entities.User;
+import com.guiapplications.enums.Role;
 import com.guiapplications.services.AuthService;
 
 import io.quarkus.runtime.StartupEvent;
@@ -47,7 +48,7 @@ public class DatabaseSeeder {
             admin.name = "Administrador";
             admin.email = "admin@sistema.com";
             admin.password = AuthService.hashPassword("admin123");
-            admin.role = User.Role.ADMIN;
+            admin.role = Role.ADMIN;
             admin.firstAccess = false;
             admin.persist();
         }
