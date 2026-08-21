@@ -10,10 +10,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "brands")
+@Table(name = "brands", indexes = {
+    @Index(name = "idx_brand_name", columnList = "name"),
+    @Index(name = "idx_brand_user_id", columnList = "user_id")
+})
 public class Brand extends PanacheEntity {
 
     @Column(name = "name", nullable = false, length = 100)

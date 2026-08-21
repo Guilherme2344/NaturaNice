@@ -11,10 +11,17 @@ import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "Product", indexes = {
+    @Index(name = "idx_product_name", columnList = "name"),
+    @Index(name = "idx_product_expiration_date", columnList = "expirationDate"),
+    @Index(name = "idx_product_user_id", columnList = "user_id")
+})
 public class Product extends PanacheEntity {
 
     @Column(name = "name", nullable = false, length = 100)
@@ -132,10 +139,10 @@ public class Product extends PanacheEntity {
         return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate <= CURRENT_DATE AND p.user = ?1 ORDER BY p.expirationDate ASC", user);
     }
 
-    // products near expiration: within tomorrow and the next 180 days range
+    // products near expiration: within tomorrow and the next 540 days range
     public static List<Product> findNearExpiration(User user) {
         LocalDate today = LocalDate.now();
-        LocalDate limitDate = today.plusDays(180);
+        LocalDate limitDate = today.plusDays(540);
         if (user == null) {
             return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate > CURRENT_DATE AND p.expirationDate <= ?1 ORDER BY p.expirationDate ASC", limitDate);
         }

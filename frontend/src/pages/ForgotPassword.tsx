@@ -163,7 +163,7 @@ export default function ForgotPassword() {
                             bg="blue.0"
                             style={{ display: 'inline-flex', marginBottom: 12 }}
                         >
-                            <KeyRound size={32} className="text-blue-600" />
+                            <KeyRound size={32} color="#1c7ed6" />
                         </Paper>
                         <Title order={3} ta="center">
                             Recuperação de Senha
@@ -309,7 +309,7 @@ export default function ForgotPassword() {
                         <Stack gap="md" align="center">
                             <Alert
                                 icon={<CheckCircle2 size={20} />}
-                                color="blue"
+                                color="teal"
                                 radius="md"
                             >
                                 Sua senha foi redefinida com sucesso! Você já

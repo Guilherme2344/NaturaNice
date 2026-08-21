@@ -90,7 +90,7 @@ export default function Categories() {
             {successMessage && (
                 <Alert
                     icon={<CheckCircle2 size={18} />}
-                    color="blue"
+                    color="teal"
                     radius="md"
                     withCloseButton
                     onClose={() => setSuccessMessage('')}

@@ -5,6 +5,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
+
 import com.guiapplications.entities.Brand;
 import com.guiapplications.entities.Category;
 import com.guiapplications.entities.Family;
@@ -22,11 +24,24 @@ import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 
+// Database initial data seeder component
 @ApplicationScoped
 public class DatabaseSeeder {
 
-	@Inject
+    @Inject
     EntityManager em;
+
+    @Inject
+    @ConfigProperty(name = "admin.initial.email", defaultValue = "admin@sistema.com")
+    String adminInitialEmail;
+
+    @Inject
+    @ConfigProperty(name = "admin.initial.password", defaultValue = "admin123")
+    String adminInitialPassword;
+
+    @Inject
+    @ConfigProperty(name = "seeder.enable-sample-data", defaultValue = "true")
+    boolean enableSampleData;
 
     @Transactional
     public void initExtension(@Observes StartupEvent event) {
@@ -41,20 +56,20 @@ public class DatabaseSeeder {
 	
     @Transactional
     public void runSeeder(@Observes StartupEvent event) {
-        // Seed Default Admin User
-        User admin = User.findByEmail("admin@sistema.com");
+        // Seed Initial Admin User using configurable environment settings
+        User admin = User.findByEmail(adminInitialEmail);
         if (admin == null) {
             admin = new User();
             admin.name = "Administrador";
-            admin.email = "admin@sistema.com";
-            admin.password = AuthService.hashPassword("admin123");
+            admin.email = adminInitialEmail;
+            admin.password = AuthService.hashPassword(adminInitialPassword);
             admin.role = Role.ADMIN;
             admin.firstAccess = false;
             admin.persist();
         }
 
-        // if products are not registered yet
-        if (Product.count() == 0) {
+        // Seed sample products & sales only if enabled (development mode)
+        if (enableSampleData && Product.count() == 0) {
             
             // families
             Family maquiagem = createFamily("Maquiagem", admin);

@@ -160,10 +160,10 @@ export default function Login() {
                             bg="blue.0"
                             style={{ display: 'inline-flex', marginBottom: 12 }}
                         >
-                            <Lock size={32} className="text-blue-600" />
+                            <Lock size={32} color="#1c7ed6" />
                         </Paper>
                         <Title order={2} ta="center">
-                            Acesso ao Sistema
+                            Bem-vindo ao Sistema Natura Nice
                         </Title>
                         <Text size="sm" c="dimmed" ta="center">
                             Informe suas credenciais para entrar na conta
@@ -246,7 +246,7 @@ export default function Login() {
                 closeOnEscape={false}
                 title={
                     <Group gap="xs">
-                        <KeyRound size={22} className="text-blue-600" />
+                        <KeyRound size={22} color="#1c7ed6" />
                         <Text fw={700} size="md">
                             Primeiro Acesso - Defina sua Nova Senha
                         </Text>

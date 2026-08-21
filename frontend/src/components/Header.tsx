@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
+import Footer from './Footer';
 
 // dynamic way to put new pages for Stock
 const stockNavItems = [
@@ -92,6 +93,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                 breakpoint: 'sm',
                 collapsed: { mobile: !opened },
             }}
+            footer={{ height: 48 }}
             padding="md"
         >
             {/* Top Header */}
@@ -112,7 +114,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                     {user && (
                         <Group gap="sm">
                             <Group gap="xs" visibleFrom="xs">
-                                <UserIcon size={18} className="text-gray-600" />
+                                <UserIcon size={18} color="#495057" />
                                 <Text size="sm" fw={600}>
                                     {user.name}
                                 </Text>
@@ -251,7 +253,14 @@ export default function Header({ children }: { children?: React.ReactNode }) {
             </AppShell.Navbar>
 
             {/* main content */}
-            <AppShell.Main>{children || <Outlet />}</AppShell.Main>
+            <AppShell.Main>
+                {children || <Outlet />}
+            </AppShell.Main>
+
+            {/* Footer pinned at bottom */}
+            <AppShell.Footer>
+                <Footer />
+            </AppShell.Footer>
 
             {/* logout modal confirmation */}
             <Modal
@@ -259,7 +268,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                 onClose={() => setLogoutOpened(false)}
                 title={
                     <Group gap="xs">
-                        <LogOut size={20} className="text-red-600" />
+                        <LogOut size={20} color="#fa5252" />
                         <Text fw={700}>Confirmar Saída</Text>
                     </Group>
                 }

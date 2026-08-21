@@ -86,7 +86,7 @@ export default function Families() {
             {successMessage && (
                 <Alert
                     icon={<CheckCircle2 size={18} />}
-                    color="blue"
+                    color="teal"
                     radius="md"
                     withCloseButton
                     onClose={() => setSuccessMessage('')}

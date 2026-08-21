@@ -28,7 +28,7 @@ public enum ExpirationStatus {
 
         if (daysUntilExpiration <= 0) {
             return EXPIRED;
-        } else if (daysUntilExpiration <= 180) {
+        } else if (daysUntilExpiration <= 540) {
             return NEAR_EXPIRATION;
         } else {
             return FAR_FROM_EXPIRING;

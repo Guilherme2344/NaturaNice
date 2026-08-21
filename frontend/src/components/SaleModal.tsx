@@ -119,7 +119,7 @@ export function SaleModal({
             onClose={onClose}
             title={
                 <Group gap="xs">
-                    <ShoppingCart size={22} className="text-teal-600" />
+                    <ShoppingCart size={22} color="#12b886" />
                     <Text fw={700} size="lg">
                         Efetivar Venda de Produto
                     </Text>
@@ -161,7 +161,7 @@ export function SaleModal({
                                 </Group>
                             </div>
                             <Group gap={4} align="center">
-                                <Package size={16} className="text-gray-500" />
+                                <Package size={16} color="#868e96" />
                                 <Text
                                     size="sm"
                                     fw={600}
@@ -269,7 +269,7 @@ export function SaleModal({
                                 <Group gap={6}>
                                     <DollarSign
                                         size={18}
-                                        className="text-teal-600"
+                                        color="#12b886"
                                     />
                                     <Text size="xs" fw={700} c="teal">
                                         Total da Venda

@@ -145,7 +145,7 @@ export default function AdminUsers() {
                 >
                     <div>
                         <Group gap="xs">
-                            <Shield size={24} className="text-blue-600" />
+                            <Shield size={24} color="#1c7ed6" />
                             <Title order={3}>Gerenciamento de Usuários</Title>
                         </Group>
                         <Text size="sm" c="dimmed" mt={2}>
@@ -174,7 +174,7 @@ export default function AdminUsers() {
             {successMessage && (
                 <Alert
                     icon={<CheckCircle2 size={18} />}
-                    color="blue"
+                    color="teal"
                     radius="md"
                     withCloseButton
                     onClose={() => setSuccessMessage('')}
@@ -228,7 +228,7 @@ export default function AdminUsers() {
                                             <Group gap="xs">
                                                 <User
                                                     size={16}
-                                                    className="text-gray-500"
+                                                    color="#868e96"
                                                 />
                                                 <Text size="sm">
                                                     {user.name}
@@ -308,7 +308,7 @@ export default function AdminUsers() {
                 onClose={() => setCreateOpened(false)}
                 title={
                     <Group gap="xs">
-                        <UserPlus size={20} className="text-blue-600" />
+                        <UserPlus size={20} color="#1c7ed6" />
                         <Text fw={700}>Cadastrar Novo Usuário</Text>
                     </Group>
                 }
@@ -380,7 +380,7 @@ export default function AdminUsers() {
                 onClose={() => setDeleteOpened(false)}
                 title={
                     <Group gap="xs">
-                        <AlertTriangle size={22} className="text-red-600" />
+                        <AlertTriangle size={22} color="#fa5252" />
                         <Text fw={700} c="red">
                             Confirmar Exclusão de Usuário
                         </Text>

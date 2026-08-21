@@ -1,16 +1,16 @@
 import axios from 'axios';
 
 export const api = axios.create({
-    // Quarkus connection
-    baseURL: 'http://localhost:8080',
+    // Quarkus API Base URL read from environment or localhost fallback
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
     headers: {
         'Content-Type': 'application/json',
     },
-    // Tempo limite da requisição (10 segundos)
+    // Timeout of 10 seconds
     timeout: 10000,
 });
 
-// Request Interceptor : sends X-User-Id of logged user
+// Request Interceptor: sends X-User-Id of logged user
 api.interceptors.request.use((config) => {
     const storedUser = localStorage.getItem('app_user');
     if (storedUser) {
@@ -28,8 +28,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        const status = error.response ? error.response.status : null;
+
+        // Redirect to 503 Error page if server is unavailable or network error
+        if (status === 503) {
+            if (window.location.pathname !== '/503') {
+                window.location.href = '/503';
+            }
+        }
+
         console.error(
-            'Erro na requisição da API:',
+            'API Request Error:',
             error.response || error.message
         );
         return Promise.reject(error);
