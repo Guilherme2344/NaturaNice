@@ -26,6 +26,7 @@ export default function Products() {
     const { data: categories = [] } = useCategoriesQuery();
     const { data: families = [] } = useFamiliesQuery();
 
+    // mutation used due to database modification
     const createProductMutation = useCreateProductMutation();
     const updateProductMutation = useUpdateProductMutation();
     const deleteProductMutation = useDeleteProductMutation();
@@ -44,7 +45,7 @@ export default function Products() {
         null
     );
 
-    // Mensagem Amigável de Sucesso
+    // friendly success message
     const [successMessage, setSuccessMessage] = useState('');
 
     const handleOpenAdd = () => {

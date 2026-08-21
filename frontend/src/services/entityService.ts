@@ -12,7 +12,7 @@ export interface UpdateEntityDTO {
 }
 
 export const entityService = {
-    // POST (Cadastro)
+    // POST
     createBrand: async (data: CreateEntityDTO): Promise<Entity> => {
         const response = await api.post<Entity>('/brands', data);
         return response.data;
@@ -26,25 +26,25 @@ export const entityService = {
         return response.data;
     },
 
-    // GET: Buscar todas as marcas
+    // GET: search all brands
     getBrands: async (): Promise<Entity[]> => {
         const response = await api.get<Entity[]>('/brands');
         return response.data;
     },
 
-    // GET: Buscar todas as categorias
+    // GET: search all categories
     getCategories: async (): Promise<Entity[]> => {
         const response = await api.get<Entity[]>('/categories');
         return response.data;
     },
 
-    // GET: Buscar todas as famílias
+    // GET: search all families
     getFamilies: async (): Promise<Entity[]> => {
         const response = await api.get<Entity[]>('/families');
         return response.data;
     },
 
-    // PUT (Atualização)
+    // PUT
     updateBrand: async (id: number, data: UpdateEntityDTO): Promise<Entity> => {
         const response = await api.put<Entity>(`/brands/${id}`, data);
         return response.data;
@@ -64,6 +64,7 @@ export const entityService = {
         return response.data;
     },
 
+    // DELETE
     deleteBrand: async (id: number): Promise<void> => {
         await api.delete(`/brands/${id}`);
     },

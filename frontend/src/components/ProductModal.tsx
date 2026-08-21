@@ -43,7 +43,7 @@ export function ProductModal({
     const [familyId, setFamilyId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    // Mensagens de erro por campo
+    // error messages for each field
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -105,6 +105,7 @@ export function ProductModal({
             sellingPrice: Number(sellingPrice),
         };
 
+        // field errors validated with yup
         const { isValid, errors: validationErrors } = await validateWithYup(
             productSchema,
             formData

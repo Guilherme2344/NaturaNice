@@ -13,19 +13,25 @@ import {
 } from '../hooks/useEntitiesQuery';
 
 export default function Categories() {
-    const { data: categories = [], isLoading: loadingCategories } = useCategoriesQuery();
+    const { data: categories = [], isLoading: loadingCategories } =
+        useCategoriesQuery();
 
+    // mutation used due to database modification
     const createCategoryMutation = useCreateCategoryMutation();
     const updateCategoryMutation = useUpdateCategoryMutation();
     const deleteCategoryMutation = useDeleteCategoryMutation();
 
     const [modalOpened, setModalOpened] = useState(false);
-    const [selectedCategory, setSelectedCategory] = useState<Entity | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<Entity | null>(
+        null
+    );
 
     const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-    const [categoryToDelete, setCategoryToDelete] = useState<Entity | null>(null);
+    const [categoryToDelete, setCategoryToDelete] = useState<Entity | null>(
+        null
+    );
 
-    // Mensagem Amigável de Sucesso
+    // friendly success message
     const [successMessage, setSuccessMessage] = useState('');
 
     const handleOpenAdd = () => {
@@ -41,11 +47,18 @@ export default function Categories() {
     const handleSubmit = async (values: { name: string }) => {
         setSuccessMessage('');
         if (selectedCategory) {
-            await updateCategoryMutation.mutateAsync({ id: selectedCategory.id, data: values });
-            setSuccessMessage(`Categoria "${values.name}" atualizada com sucesso!`);
+            await updateCategoryMutation.mutateAsync({
+                id: selectedCategory.id,
+                data: values,
+            });
+            setSuccessMessage(
+                `Categoria "${values.name}" atualizada com sucesso!`
+            );
         } else {
             await createCategoryMutation.mutateAsync(values);
-            setSuccessMessage(`Categoria "${values.name}" cadastrada com sucesso!`);
+            setSuccessMessage(
+                `Categoria "${values.name}" cadastrada com sucesso!`
+            );
         }
     };
 
@@ -63,7 +76,9 @@ export default function Categories() {
             setSuccessMessage('');
             await deleteCategoryMutation.mutateAsync(categoryToDelete.id);
             setDeleteModalOpened(false);
-            setSuccessMessage(`Categoria "${categoryToDelete.name}" excluída com sucesso!`);
+            setSuccessMessage(
+                `Categoria "${categoryToDelete.name}" excluída com sucesso!`
+            );
             setCategoryToDelete(null);
         } catch (err: any) {
             console.error('Erro ao excluir categoria:', err);
@@ -98,7 +113,11 @@ export default function Categories() {
             <EntityModal
                 opened={modalOpened}
                 onClose={() => setModalOpened(false)}
-                title={selectedCategory ? 'Editar Categoria' : 'Cadastrar Nova Categoria'}
+                title={
+                    selectedCategory
+                        ? 'Editar Categoria'
+                        : 'Cadastrar Nova Categoria'
+                }
                 showColor={false}
                 initialData={selectedCategory}
                 onSubmit={handleSubmit}
@@ -108,7 +127,11 @@ export default function Categories() {
                 opened={deleteModalOpened}
                 onClose={() => setDeleteModalOpened(false)}
                 onConfirm={handleConfirmDelete}
-                itemDescription={categoryToDelete?.name ? `a categoria "${categoryToDelete.name}"` : 'esta categoria'}
+                itemDescription={
+                    categoryToDelete?.name
+                        ? `a categoria "${categoryToDelete.name}"`
+                        : 'esta categoria'
+                }
                 loading={deleteCategoryMutation.isPending}
             />
         </Stack>

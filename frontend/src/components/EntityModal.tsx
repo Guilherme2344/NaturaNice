@@ -14,8 +14,8 @@ interface EntityModalProps {
     opened: boolean;
     onClose: () => void;
     title: string;
-    showColor?: boolean;
-    initialData?: Entity | null;
+    showColor?: boolean; // this modal is used for Brands (includes color data), Categories and Families pages
+    initialData?: Entity | null; // this modal is used for POST and PUT methods
     onSubmit: (values: { name: string; hexColor?: string }) => Promise<void>;
 }
 
@@ -55,6 +55,7 @@ export function EntityModal({
         }
     };
 
+    // the form is validated using yup
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 

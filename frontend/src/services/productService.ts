@@ -13,35 +13,36 @@ export interface CreateProductDTO {
 }
 
 export const productService = {
-    // POST (Cadastro)
+    // POST
     create: async (data: CreateProductDTO): Promise<Product> => {
         const response = await api.post<Product>('/products', data);
         return response.data;
     },
-    // GET: Buscar todos os produtos
+    // GET: search all products
     getAll: async (): Promise<Product[]> => {
         const response = await api.get<Product[]>('/products');
         return response.data;
     },
 
-    // GET: Buscar produtos perto de vencer
+    // GET: search products near expiration
     getNearExpiration: async (): Promise<Product[]> => {
         const response = await api.get<Product[]>('/products/near-expiration');
         return response.data;
     },
 
-    // GET: Buscar produtos vencidos
+    // GET: search expired products
     getExpired: async (): Promise<Product[]> => {
         const response = await api.get<Product[]>('/products/expired');
         return response.data;
     },
 
+    // PUT
     update: async (id: number, data: CreateProductDTO): Promise<Product> => {
         const response = await api.put<Product>(`/products/${id}`, data);
         return response.data;
     },
 
-    // DELETE (Exclusão)
+    // DELETE
     delete: async (id: number): Promise<void> => {
         await api.delete(`/products/${id}`);
     },

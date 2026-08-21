@@ -19,7 +19,7 @@ import { Edit, Trash2, Plus, Search } from 'lucide-react';
 export type Entity = {
     id: number;
     name: string;
-    hexColor?: string;
+    hexColor?: string; // this modal is used for Brands (includes color data), Categories and Families pages
 };
 
 interface EntityTableProps {
@@ -49,7 +49,7 @@ export default function EntityTable({
 
     const itemsPerPage = Number(pageSize) || 5;
 
-    // Filtra os itens com base na pesquisa
+    // filter items by searching
     const filteredItems = items.filter((item) => {
         const query = search.toLowerCase();
         return (
@@ -58,10 +58,10 @@ export default function EntityTable({
         );
     });
 
-    // Total de páginas
+    // total pages
     const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
 
-    // Fatiamento para a página atual
+    // slicing method to show only a quantity of products in the page
     const paginatedItems = filteredItems.slice(
         (activePage - 1) * itemsPerPage,
         activePage * itemsPerPage
@@ -69,7 +69,7 @@ export default function EntityTable({
 
     return (
         <Paper shadow="xs" p="md" radius="md" withBorder>
-            {/* Cabeçalho */}
+            {/* Header */}
             <Group justify="space-between" mb="md">
                 <div>
                     <Title order={3}>{title}</Title>
@@ -90,7 +90,7 @@ export default function EntityTable({
                 )}
             </Group>
 
-            {/* Pesquisa */}
+            {/* Search */}
             <TextInput
                 placeholder={`Pesquisar ${title.toLowerCase()}...`}
                 leftSection={<Search size={16} />}
@@ -102,6 +102,7 @@ export default function EntityTable({
                 mb="md"
             />
 
+            {/* Table */}
             <Table.ScrollContainer minWidth={400}>
                 <Table striped highlightOnHover verticalSpacing="sm">
                     <Table.Thead>
@@ -118,7 +119,10 @@ export default function EntityTable({
                             <Table.Tr>
                                 <Table.Td colSpan={2} align="center" py="xl">
                                     <Center
-                                        style={{ flexDirection: 'column', gap: 8 }}
+                                        style={{
+                                            flexDirection: 'column',
+                                            gap: 8,
+                                        }}
                                     >
                                         <Loader size="sm" color="blue" />
                                         <Text size="sm" c="dimmed">
@@ -159,7 +163,9 @@ export default function EntityTable({
                                                 variant="light"
                                                 color="red"
                                                 title="Excluir"
-                                                onClick={() => onDelete?.(item.id)}
+                                                onClick={() =>
+                                                    onDelete?.(item.id)
+                                                }
                                             >
                                                 <Trash2 size={16} />
                                             </ActionIcon>
@@ -180,7 +186,7 @@ export default function EntityTable({
                 </Table>
             </Table.ScrollContainer>
 
-            {/* Rodapé com Paginação */}
+            {/* Pagination */}
             {!loading && filteredItems.length > 0 && (
                 <Group
                     justify="space-between"

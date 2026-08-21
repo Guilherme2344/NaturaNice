@@ -84,6 +84,7 @@ export function SaleModal({
         }
     };
 
+    // form validated using yup
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 

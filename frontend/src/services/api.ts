@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export const api = axios.create({
-    // URL base da sua API Quarkus em desenvolvimento
+    // Quarkus connection
     baseURL: 'http://localhost:8080',
     headers: {
         'Content-Type': 'application/json',
@@ -10,7 +10,7 @@ export const api = axios.create({
     timeout: 10000,
 });
 
-// Interceptor de requisição: envia o X-User-Id do usuário logado
+// Request Interceptor : sends X-User-Id of logged user
 api.interceptors.request.use((config) => {
     const storedUser = localStorage.getItem('app_user');
     if (storedUser) {
@@ -24,7 +24,7 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
-// Interceptor de resposta: loga erros no console
+// Response Interceptor
 api.interceptors.response.use(
     (response) => response,
     (error) => {

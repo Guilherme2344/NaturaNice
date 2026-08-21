@@ -14,6 +14,7 @@ import MonthlyReport from '../pages/MonthlyReport';
 import AnnualReport from '../pages/AnnualReport';
 
 function ProtectedLayout() {
+    // simple middleware
     const { isAuthenticated } = useAuth();
     if (!isAuthenticated) {
         return <Navigate to="/login" replace />;

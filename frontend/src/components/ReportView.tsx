@@ -23,7 +23,10 @@ import {
     BarChart3,
     User,
 } from 'lucide-react';
-import type { DailySalesSummary, MonthlySalesSummary } from '../services/reportService';
+import type {
+    DailySalesSummary,
+    MonthlySalesSummary,
+} from '../services/reportService';
 import { customerService, type Customer } from '../services/customerService';
 
 const MONTH_NAMES = [
@@ -88,6 +91,7 @@ export function ReportView({
     const START_YEAR = 2026;
     const currentYear = new Date().getFullYear();
     const endYear = Math.max(START_YEAR, currentYear);
+    // as the yars pass by, it updates the available options
     const yearOptions = Array.from(
         { length: endYear - START_YEAR + 1 },
         (_, i) => String(START_YEAR + i)
@@ -96,7 +100,8 @@ export function ReportView({
     const [customers, setCustomers] = useState<Customer[]>([]);
 
     useEffect(() => {
-        customerService.getAll()
+        customerService
+            .getAll()
             .then(setCustomers)
             .catch((err) => console.error('Erro ao carregar clientes:', err));
     }, []);
@@ -111,16 +116,18 @@ export function ReportView({
         ...customers.map((c) => ({ value: c.name, label: c.name })),
     ];
 
+    // format currency of Brazil
     const formatCurrency = (val: number) =>
         `R$ ${(val || 0).toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         })}`;
 
+    // format date of Brazil
     const formatDate = (dateValue: any) => {
         if (!dateValue) return '-';
 
-        // Caso venha como Array do Jackson [ano, mês, dia, hora, minuto, segundo]
+        // date as array
         if (Array.isArray(dateValue)) {
             const [year, month, day, hour, minute, second] = dateValue;
             const pad = (n: number) => String(n || 0).padStart(2, '0');
@@ -132,7 +139,7 @@ export function ReportView({
 
         const str = String(dateValue).trim();
 
-        // Caso seja ISO string com data e hora ("2026-08-20T20:21:22.09099" ou "2026-08-20 20:21:22")
+        // datetime as ISO string
         if (str.includes('T') || str.includes(' ')) {
             const [datePart, timePart] = str.split(/[T ]/);
             const dateComponents = datePart.split('-');
@@ -143,7 +150,7 @@ export function ReportView({
             }
         }
 
-        // Caso seja apenas data YYYY-MM-DD
+        // date as 'YYYY-MM-DD'
         const parts = str.split('-');
         if (parts.length === 3) {
             return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
@@ -152,8 +159,11 @@ export function ReportView({
         return str;
     };
 
-    const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
+    //profit margin operation
+    const profitMargin =
+        totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
+    // depends on profit value (teal if profit, gray if no changes or red if loss)
     const getProfitIndicator = (profit: number) => {
         if (profit > 0) {
             return {
@@ -212,13 +222,21 @@ export function ReportView({
         <Stack gap="lg">
             {/* Top Bar with Title and Controls */}
             <Paper shadow="xs" p="md" radius="md" withBorder>
-                <Group justify="space-between" align="center" wrap="wrap" gap="md">
+                <Group
+                    justify="space-between"
+                    align="center"
+                    wrap="wrap"
+                    gap="md"
+                >
                     <div>
                         <Group gap="xs">
                             {type === 'monthly' ? (
                                 <Calendar className="text-teal-600" size={24} />
                             ) : (
-                                <BarChart3 className="text-blue-600" size={24} />
+                                <BarChart3
+                                    className="text-blue-600"
+                                    size={24}
+                                />
                             )}
                             <Title order={3}>{title}</Title>
                         </Group>
@@ -246,7 +264,9 @@ export function ReportView({
                                 label="Mês"
                                 data={monthOptions}
                                 value={String(selectedMonth)}
-                                onChange={(val) => val && onMonthChange(Number(val))}
+                                onChange={(val) =>
+                                    val && onMonthChange(Number(val))
+                                }
                                 style={{ width: 130 }}
                                 size="xs"
                             />
@@ -266,10 +286,21 @@ export function ReportView({
             {/* KPI Cards */}
             <Grid>
                 <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                    <Paper shadow="xs" p="md" radius="md" withBorder bg="var(--mantine-color-body)">
+                    <Paper
+                        shadow="xs"
+                        p="md"
+                        radius="md"
+                        withBorder
+                        bg="var(--mantine-color-body)"
+                    >
                         <Group justify="space-between" align="flex-start">
                             <div>
-                                <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                                <Text
+                                    size="xs"
+                                    c="dimmed"
+                                    fw={700}
+                                    tt="uppercase"
+                                >
                                     Faturamento Total
                                 </Text>
                                 <Text size="xl" fw={800} mt={4} c="blue">
@@ -277,17 +308,31 @@ export function ReportView({
                                 </Text>
                             </div>
                             <Paper p="xs" radius="md" bg="blue.0">
-                                <DollarSign size={22} className="text-blue-600" />
+                                <DollarSign
+                                    size={22}
+                                    className="text-blue-600"
+                                />
                             </Paper>
                         </Group>
                     </Paper>
                 </Grid.Col>
 
                 <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                    <Paper shadow="xs" p="md" radius="md" withBorder bg="var(--mantine-color-body)">
+                    <Paper
+                        shadow="xs"
+                        p="md"
+                        radius="md"
+                        withBorder
+                        bg="var(--mantine-color-body)"
+                    >
                         <Group justify="space-between" align="flex-start">
                             <div>
-                                <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                                <Text
+                                    size="xs"
+                                    c="dimmed"
+                                    fw={700}
+                                    tt="uppercase"
+                                >
                                     Custo Total
                                 </Text>
                                 <Text size="xl" fw={800} mt={4} c="orange">
@@ -295,45 +340,88 @@ export function ReportView({
                                 </Text>
                             </div>
                             <Paper p="xs" radius="md" bg="orange.0">
-                                <ShoppingBag size={22} className="text-orange-600" />
+                                <ShoppingBag
+                                    size={22}
+                                    className="text-orange-600"
+                                />
                             </Paper>
                         </Group>
                     </Paper>
                 </Grid.Col>
 
                 <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                    <Paper shadow="xs" p="md" radius="md" withBorder bg="var(--mantine-color-body)">
+                    <Paper
+                        shadow="xs"
+                        p="md"
+                        radius="md"
+                        withBorder
+                        bg="var(--mantine-color-body)"
+                    >
                         <Group justify="space-between" align="flex-start">
                             <div>
                                 <Group gap={6} align="center">
-                                    <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                                    <Text
+                                        size="xs"
+                                        c="dimmed"
+                                        fw={700}
+                                        tt="uppercase"
+                                    >
                                         Lucro Total
                                     </Text>
                                     <Badge
                                         size="xs"
                                         color={totalProfitMeta.badgeColor}
                                         variant="light"
-                                        leftSection={<TotalProfitIcon size={12} />}
+                                        leftSection={
+                                            <TotalProfitIcon size={12} />
+                                        }
                                     >
-                                        {totalProfit === 0 ? '-' : `${profitMargin.toFixed(1)}%`}
+                                        {totalProfit === 0
+                                            ? '-'
+                                            : `${profitMargin.toFixed(1)}%`}
                                     </Badge>
                                 </Group>
-                                <Text size="xl" fw={800} mt={4} c={totalProfitMeta.textColor}>
-                                    {totalProfit === 0 ? '-' : formatCurrency(totalProfit)}
+                                <Text
+                                    size="xl"
+                                    fw={800}
+                                    mt={4}
+                                    c={totalProfitMeta.textColor}
+                                >
+                                    {totalProfit === 0
+                                        ? '-'
+                                        : formatCurrency(totalProfit)}
                                 </Text>
                             </div>
-                            <Paper p="xs" radius="md" bg={totalProfitMeta.bgColor}>
-                                <TotalProfitIcon size={22} className={totalProfitMeta.iconClass} />
+                            <Paper
+                                p="xs"
+                                radius="md"
+                                bg={totalProfitMeta.bgColor}
+                            >
+                                <TotalProfitIcon
+                                    size={22}
+                                    className={totalProfitMeta.iconClass}
+                                />
                             </Paper>
                         </Group>
                     </Paper>
                 </Grid.Col>
 
                 <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
-                    <Paper shadow="xs" p="md" radius="md" withBorder bg="var(--mantine-color-body)">
+                    <Paper
+                        shadow="xs"
+                        p="md"
+                        radius="md"
+                        withBorder
+                        bg="var(--mantine-color-body)"
+                    >
                         <Group justify="space-between" align="flex-start">
                             <div>
-                                <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                                <Text
+                                    size="xs"
+                                    c="dimmed"
+                                    fw={700}
+                                    tt="uppercase"
+                                >
                                     Unidades Vendidas
                                 </Text>
                                 <Text size="xl" fw={800} mt={4} c="gray.8">
@@ -341,7 +429,10 @@ export function ReportView({
                                 </Text>
                             </div>
                             <Paper p="xs" radius="md" bg="violet.0">
-                                <Package size={22} className="text-violet-600" />
+                                <Package
+                                    size={22}
+                                    className="text-violet-600"
+                                />
                             </Paper>
                         </Group>
                     </Paper>
@@ -351,7 +442,9 @@ export function ReportView({
             {/* Breakdown Table */}
             <Paper shadow="xs" p="md" radius="md" withBorder>
                 <Title order={4} mb="md">
-                    {type === 'monthly' ? 'Detalhamento Diário das Vendas' : 'Detalhamento Mensal das Vendas'}
+                    {type === 'monthly'
+                        ? 'Detalhamento Diário das Vendas'
+                        : 'Detalhamento Mensal das Vendas'}
                 </Title>
 
                 {loading ? (
@@ -366,7 +459,11 @@ export function ReportView({
                         <Table striped highlightOnHover verticalSpacing="sm">
                             <Table.Thead>
                                 <Table.Tr>
-                                    <Table.Th>{type === 'monthly' ? 'Data e Hora' : 'Mês'}</Table.Th>
+                                    <Table.Th>
+                                        {type === 'monthly'
+                                            ? 'Data e Hora'
+                                            : 'Mês'}
+                                    </Table.Th>
                                     <Table.Th>Cliente</Table.Th>
                                     <Table.Th>Faturamento</Table.Th>
                                     <Table.Th>Custo</Table.Th>
@@ -377,29 +474,53 @@ export function ReportView({
                             </Table.Thead>
                             <Table.Tbody>
                                 {rows.map((row, index) => {
-                                    const rowMargin = row.revenue > 0 ? (row.profit / row.revenue) * 100 : 0;
-                                    const rowMeta = getProfitIndicator(row.profit);
+                                    const rowMargin =
+                                        row.revenue > 0
+                                            ? (row.profit / row.revenue) * 100
+                                            : 0;
+                                    const rowMeta = getProfitIndicator(
+                                        row.profit
+                                    );
                                     const RowIcon = rowMeta.Icon;
 
                                     return (
                                         <Table.Tr key={index}>
-                                            <Table.Td fw={600}>{row.label}</Table.Td>
-                                            <Table.Td fw={500} c="gray.7">{row.customerName}</Table.Td>
+                                            <Table.Td fw={600}>
+                                                {row.label}
+                                            </Table.Td>
+                                            <Table.Td fw={500} c="gray.7">
+                                                {row.customerName}
+                                            </Table.Td>
                                             <Table.Td fw={500} c="blue">
                                                 {formatCurrency(row.revenue)}
                                             </Table.Td>
-                                            <Table.Td c="orange">{formatCurrency(row.cost)}</Table.Td>
-                                            <Table.Td fw={700} c={rowMeta.textColor}>
-                                                {row.profit === 0 ? '-' : formatCurrency(row.profit)}
+                                            <Table.Td c="orange">
+                                                {formatCurrency(row.cost)}
                                             </Table.Td>
-                                            <Table.Td fw={500}>{row.itemsSold} un.</Table.Td>
+                                            <Table.Td
+                                                fw={700}
+                                                c={rowMeta.textColor}
+                                            >
+                                                {row.profit === 0
+                                                    ? '-'
+                                                    : formatCurrency(
+                                                          row.profit
+                                                      )}
+                                            </Table.Td>
+                                            <Table.Td fw={500}>
+                                                {row.itemsSold} un.
+                                            </Table.Td>
                                             <Table.Td>
                                                 <Badge
                                                     variant="light"
                                                     color={rowMeta.badgeColor}
-                                                    leftSection={<RowIcon size={12} />}
+                                                    leftSection={
+                                                        <RowIcon size={12} />
+                                                    }
                                                 >
-                                                    {row.profit === 0 ? '-' : `${rowMargin.toFixed(1)}%`}
+                                                    {row.profit === 0
+                                                        ? '-'
+                                                        : `${rowMargin.toFixed(1)}%`}
                                                 </Badge>
                                             </Table.Td>
                                         </Table.Tr>

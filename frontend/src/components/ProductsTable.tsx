@@ -81,6 +81,7 @@ export default function ProductsTable({
 
     const itemsPerPage = Number(pageSize) || 5;
 
+    // using currency of Brazil
     const formatCurrency = (val?: number) => {
         return (val || 0).toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
@@ -115,8 +116,10 @@ export default function ProductsTable({
         );
     });
 
+    // total pages
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
 
+    // slicing method to show only a quantity of products in the page
     const paginatedProducts = filteredProducts.slice(
         (activePage - 1) * itemsPerPage,
         activePage * itemsPerPage
@@ -144,6 +147,7 @@ export default function ProductsTable({
                 )}
             </Group>
 
+            {/* Search */}
             <TextInput
                 placeholder="Pesquisar por produto, marca, categoria ou família..."
                 leftSection={<Search size={16} />}
@@ -155,6 +159,7 @@ export default function ProductsTable({
                 mb="md"
             />
 
+            {/* Table */}
             <Table.ScrollContainer minWidth={900}>
                 <Table striped highlightOnHover verticalSpacing="sm">
                     <Table.Thead>
@@ -178,7 +183,10 @@ export default function ProductsTable({
                             <Table.Tr>
                                 <Table.Td colSpan={9} align="center" py="xl">
                                     <Center
-                                        style={{ flexDirection: 'column', gap: 8 }}
+                                        style={{
+                                            flexDirection: 'column',
+                                            gap: 8,
+                                        }}
                                     >
                                         <Loader size="sm" color="blue" />
                                         <Text size="sm" c="dimmed">
@@ -224,7 +232,9 @@ export default function ProductsTable({
                                     <Table.Td>
                                         <Stack gap={4} align="flex-start">
                                             <Text size="sm">
-                                                {formatDate(product.expirationDate)}
+                                                {formatDate(
+                                                    product.expirationDate
+                                                )}
                                             </Text>
                                             <Badge
                                                 color={getStatusBadgeColor(
@@ -241,12 +251,14 @@ export default function ProductsTable({
 
                                     {/* Preço de Compra com vírgula */}
                                     <Table.Td fw={400}>
-                                        R$ {formatCurrency(product.purchasePrice)}
+                                        R${' '}
+                                        {formatCurrency(product.purchasePrice)}
                                     </Table.Td>
 
                                     {/* Preço de Venda com vírgula */}
                                     <Table.Td fw={400}>
-                                        R$ {formatCurrency(product.sellingPrice)}
+                                        R${' '}
+                                        {formatCurrency(product.sellingPrice)}
                                     </Table.Td>
 
                                     {/* Resultado com vírgula */}
@@ -260,9 +272,17 @@ export default function ProductsTable({
                                                 <ActionIcon
                                                     variant="light"
                                                     color="teal"
-                                                    title={product.quantity > 0 ? 'Efetivar Venda' : 'Sem Estoque'}
-                                                    disabled={product.quantity <= 0}
-                                                    onClick={() => onSale(product)}
+                                                    title={
+                                                        product.quantity > 0
+                                                            ? 'Efetivar Venda'
+                                                            : 'Sem Estoque'
+                                                    }
+                                                    disabled={
+                                                        product.quantity <= 0
+                                                    }
+                                                    onClick={() =>
+                                                        onSale(product)
+                                                    }
                                                 >
                                                     <ShoppingCart size={16} />
                                                 </ActionIcon>
@@ -272,7 +292,9 @@ export default function ProductsTable({
                                                 variant="light"
                                                 color="blue"
                                                 title="Editar produto"
-                                                onClick={() => onEdit?.(product)}
+                                                onClick={() =>
+                                                    onEdit?.(product)
+                                                }
                                             >
                                                 <Edit size={16} />
                                             </ActionIcon>
@@ -304,6 +326,7 @@ export default function ProductsTable({
                 </Table>
             </Table.ScrollContainer>
 
+            {/* Pagination */}
             {!loading && filteredProducts.length > 0 && (
                 <Group
                     justify="space-between"

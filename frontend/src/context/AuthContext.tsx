@@ -1,7 +1,13 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import {
+    createContext,
+    useContext,
+    useState,
+    useEffect,
+    type ReactNode,
+} from 'react';
 import { authService, type User } from '../services/authService';
 
-const MAX_SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
+const MAX_SESSION_DURATION_MS = 60 * 60 * 1000; // 1 hour in miliseconds
 
 interface AuthContextType {
     user: User | null;
@@ -21,13 +27,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (loginTimeStr) {
             const loginTime = Number(loginTimeStr);
             if (Date.now() - loginTime > MAX_SESSION_DURATION_MS) {
-                // Token expirado (mais de 24 horas)
+                // expired token (more than 1 hour)
                 return false;
             }
         }
         return true;
     };
 
+    // when the browser starts, checks if session is still available
     const [user, setUser] = useState<User | null>(() => {
         if (!checkSessionValidity()) {
             localStorage.clear();
@@ -45,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return localStorage.getItem('app_token');
     });
 
-    // Verificação periódica da sessão (a cada 1 minuto)
+    // session check up (for each 1 minute)
     useEffect(() => {
         const interval = setInterval(() => {
             if (!checkSessionValidity()) {
@@ -55,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return () => clearInterval(interval);
     }, []);
 
+    // updated or reopened page: user and token will still be saved
     useEffect(() => {
         if (user) {
             localStorage.setItem('app_user', JSON.stringify(user));

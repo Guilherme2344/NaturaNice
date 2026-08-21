@@ -17,7 +17,11 @@ import {
 import { Lock, Mail, AlertCircle, KeyRound, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authService, type User } from '../services/authService';
-import { loginSchema, passwordResetSchema, validateWithYup } from '../schemas/validationSchemas';
+import {
+    loginSchema,
+    passwordResetSchema,
+    validateWithYup,
+} from '../schemas/validationSchemas';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -35,7 +39,9 @@ export default function Login() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [firstAccessError, setFirstAccessError] = useState('');
-    const [firstAccessFieldErrors, setFirstAccessFieldErrors] = useState<Record<string, string>>({});
+    const [firstAccessFieldErrors, setFirstAccessFieldErrors] = useState<
+        Record<string, string>
+    >({});
     const [firstAccessLoading, setFirstAccessLoading] = useState(false);
 
     const clearFieldError = (field: string) => {
@@ -231,7 +237,7 @@ export default function Login() {
                 </Stack>
             </Paper>
 
-            {/* Modal de Alteração de Senha de Primeiro Acesso */}
+            {/* First Access Modal */}
             <Modal
                 opened={firstAccessOpened}
                 onClose={() => {}}

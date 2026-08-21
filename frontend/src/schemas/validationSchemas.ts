@@ -1,5 +1,6 @@
 import * as yup from 'yup';
 
+// Validation schema for product creation and edition
 export const productSchema = yup.object().shape({
     name: yup
         .string()
@@ -38,6 +39,7 @@ export const productSchema = yup.object().shape({
         .required('Informe o preço de venda.'),
 });
 
+// Validation schema for brand, category, and family forms
 export const entitySchema = yup.object().shape({
     name: yup
         .string()
@@ -46,6 +48,7 @@ export const entitySchema = yup.object().shape({
         .min(2, 'O nome deve ter no mínimo 2 caracteres.'),
 });
 
+// Validation schema for sale registration with dynamic stock limit check
 export const saleSchema = (availableStock: number) =>
     yup.object().shape({
         quantity: yup
@@ -60,10 +63,14 @@ export const saleSchema = (availableStock: number) =>
         sellingPrice: yup
             .number()
             .typeError('Informe o preço de venda unitário.')
-            .moreThan(0, 'O preço de venda unitário deve ser maior que R$ 0,00.')
+            .moreThan(
+                0,
+                'O preço de venda unitário deve ser maior que R$ 0,00.'
+            )
             .required('Informe o preço de venda.'),
     });
 
+// Validation schema for user creation by admin
 export const userAdminSchema = yup.object().shape({
     name: yup
         .string()
@@ -74,20 +81,22 @@ export const userAdminSchema = yup.object().shape({
         .string()
         .trim()
         .required('Por favor, informe o e-mail de acesso.')
-        .email('Por favor, informe um endereço de e-mail válido (ex: nome@dominio.com).'),
+        .email(
+            'Por favor, informe um endereço de e-mail válido (ex: nome@dominio.com).'
+        ),
 });
 
+// Validation schema for user login
 export const loginSchema = yup.object().shape({
     email: yup
         .string()
         .trim()
         .required('Por favor, digite seu e-mail de acesso.')
         .email('Por favor, informe um endereço de e-mail válido.'),
-    password: yup
-        .string()
-        .required('Por favor, digite sua senha.'),
+    password: yup.string().required('Por favor, digite sua senha.'),
 });
 
+// Validation schema for password reset
 export const passwordResetSchema = yup.object().shape({
     newPassword: yup
         .string()
@@ -99,10 +108,7 @@ export const passwordResetSchema = yup.object().shape({
         .oneOf([yup.ref('newPassword')], 'As senhas informadas não coincidem.'),
 });
 
-/**
- * Função utilitária para validar dados de um formulário usando um Schema do Yup.
- * Retorna os erros mapeados por campo { [campo]: mensagemDeErro }.
- */
+// Helper function to validate form data against a Yup schema and return field errors
 export async function validateWithYup<T extends yup.AnyObject>(
     schema: yup.ObjectSchema<T>,
     data: any

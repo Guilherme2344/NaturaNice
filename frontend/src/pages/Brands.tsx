@@ -15,19 +15,20 @@ import {
 export default function Brands() {
     const { data: brands = [], isLoading: loadingBrands } = useBrandsQuery();
 
+    // mutation used due to database modification
     const createBrandMutation = useCreateBrandMutation();
     const updateBrandMutation = useUpdateBrandMutation();
     const deleteBrandMutation = useDeleteBrandMutation();
 
-    // Estados de Modal
+    // Modal states
     const [modalOpened, setModalOpened] = useState(false);
     const [selectedBrand, setSelectedBrand] = useState<Entity | null>(null);
 
-    // Estado de Exclusão
+    // Delete states
     const [deleteOpened, setDeleteOpened] = useState(false);
     const [brandToDelete, setBrandToDelete] = useState<Entity | null>(null);
 
-    // Mensagem Amigável de Sucesso
+    // friendly success message
     const [successMessage, setSuccessMessage] = useState('');
 
     const handleOpenAdd = () => {
@@ -48,10 +49,17 @@ export default function Brands() {
         }
     };
 
-    const handleSubmit = async (values: { name: string; hexColor?: string }) => {
+    // asynchronous operations
+    const handleSubmit = async (values: {
+        name: string;
+        hexColor?: string;
+    }) => {
         setSuccessMessage('');
         if (selectedBrand) {
-            await updateBrandMutation.mutateAsync({ id: selectedBrand.id, data: values });
+            await updateBrandMutation.mutateAsync({
+                id: selectedBrand.id,
+                data: values,
+            });
             setSuccessMessage(`Marca "${values.name}" atualizada com sucesso!`);
         } else {
             await createBrandMutation.mutateAsync(values);
@@ -65,7 +73,9 @@ export default function Brands() {
             setSuccessMessage('');
             await deleteBrandMutation.mutateAsync(brandToDelete.id);
             setDeleteOpened(false);
-            setSuccessMessage(`Marca "${brandToDelete.name}" excluída com sucesso!`);
+            setSuccessMessage(
+                `Marca "${brandToDelete.name}" excluída com sucesso!`
+            );
             setBrandToDelete(null);
         } catch (err) {
             console.error('Erro ao excluir marca:', err);
@@ -111,7 +121,11 @@ export default function Brands() {
                 onClose={() => setDeleteOpened(false)}
                 onConfirm={handleConfirmDelete}
                 title="Excluir Marca"
-                itemDescription={brandToDelete ? `a marca "${brandToDelete.name}"` : 'esta marca'}
+                itemDescription={
+                    brandToDelete
+                        ? `a marca "${brandToDelete.name}"`
+                        : 'esta marca'
+                }
                 loading={deleteBrandMutation.isPending}
             />
         </Stack>

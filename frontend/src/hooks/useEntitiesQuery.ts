@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { entityService } from '../services/entityService';
 
+// Fetch all brands
 export function useBrandsQuery() {
     return useQuery({
         queryKey: ['brands'],
@@ -8,6 +9,7 @@ export function useBrandsQuery() {
     });
 }
 
+// Fetch all categories
 export function useCategoriesQuery() {
     return useQuery({
         queryKey: ['categories'],
@@ -15,6 +17,7 @@ export function useCategoriesQuery() {
     });
 }
 
+// Fetch all product families
 export function useFamiliesQuery() {
     return useQuery({
         queryKey: ['families'],
@@ -22,6 +25,7 @@ export function useFamiliesQuery() {
     });
 }
 
+// Create new brand and invalidate brands cache
 export function useCreateBrandMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -32,6 +36,7 @@ export function useCreateBrandMutation() {
     });
 }
 
+// Update brand details
 export function useUpdateBrandMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -43,6 +48,7 @@ export function useUpdateBrandMutation() {
     });
 }
 
+// Delete brand by ID
 export function useDeleteBrandMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -53,6 +59,7 @@ export function useDeleteBrandMutation() {
     });
 }
 
+// Create new category
 export function useCreateCategoryMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -63,6 +70,7 @@ export function useCreateCategoryMutation() {
     });
 }
 
+// Update category
 export function useUpdateCategoryMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -74,6 +82,7 @@ export function useUpdateCategoryMutation() {
     });
 }
 
+// Delete category by ID
 export function useDeleteCategoryMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -84,6 +93,7 @@ export function useDeleteCategoryMutation() {
     });
 }
 
+// Create new family
 export function useCreateFamilyMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -94,6 +104,7 @@ export function useCreateFamilyMutation() {
     });
 }
 
+// Update family
 export function useUpdateFamilyMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -105,6 +116,7 @@ export function useUpdateFamilyMutation() {
     });
 }
 
+// Delete family by ID
 export function useDeleteFamilyMutation() {
     const queryClient = useQueryClient();
     return useMutation({

@@ -10,6 +10,7 @@ public record BrandRequestDTO(
 	    String name,
 	    
 	    @NotBlank(message = "A cor da marca é obrigatória.")
+		// hexadecimal validator
 	    @Pattern(regexp = "^#([A-Fa-f0-9]{6})$", message = "A cor deve estar em formato HEX válido (ex: #FF5733).")
 	    String hexColor
 ) {}

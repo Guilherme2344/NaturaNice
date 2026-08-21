@@ -27,6 +27,7 @@ import { authService } from '../services/authService';
 export default function ForgotPassword() {
     const navigate = useNavigate();
 
+    // prevents errors and it's easier to reuse tags (prevents a lot of coding)
     const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
     const [email, setEmail] = useState('');
     const [code, setCode] = useState('');
@@ -53,12 +54,16 @@ export default function ForgotPassword() {
         setError('');
 
         if (!email.trim()) {
-            setFieldErrors({ email: 'Por favor, informe o e-mail cadastrado.' });
+            setFieldErrors({
+                email: 'Por favor, informe o e-mail cadastrado.',
+            });
             return;
         }
 
         if (!/\S+@\S+\.\S+/.test(email.trim())) {
-            setFieldErrors({ email: 'Por favor, informe um endereço de e-mail válido.' });
+            setFieldErrors({
+                email: 'Por favor, informe um endereço de e-mail válido.',
+            });
             return;
         }
 
@@ -83,7 +88,9 @@ export default function ForgotPassword() {
         setError('');
 
         if (!code || code.length < 6) {
-            setError('Por favor, digite todos os 6 dígitos do código recebido.');
+            setError(
+                'Por favor, digite todos os 6 dígitos do código recebido.'
+            );
             return;
         }
 
@@ -108,7 +115,8 @@ export default function ForgotPassword() {
         const errors: Record<string, string> = {};
 
         if (!newPassword || newPassword.length < 6) {
-            errors.newPassword = 'A nova senha deve ter no mínimo 6 caracteres.';
+            errors.newPassword =
+                'A nova senha deve ter no mínimo 6 caracteres.';
         }
 
         if (newPassword !== confirmPassword) {
@@ -276,7 +284,9 @@ export default function ForgotPassword() {
                                     value={confirmPassword}
                                     error={fieldErrors.confirmPassword}
                                     onChange={(e) => {
-                                        setConfirmPassword(e.currentTarget.value);
+                                        setConfirmPassword(
+                                            e.currentTarget.value
+                                        );
                                         clearFieldError('confirmPassword');
                                     }}
                                     required

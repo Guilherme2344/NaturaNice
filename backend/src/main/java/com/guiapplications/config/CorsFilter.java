@@ -9,6 +9,7 @@ import jakarta.ws.rs.container.ContainerResponseFilter;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.Provider;
 
+// methods to set up allowed CORS
 @Provider
 public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilter {
 

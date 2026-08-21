@@ -13,8 +13,10 @@ import {
 } from '../hooks/useEntitiesQuery';
 
 export default function Families() {
-    const { data: families = [], isLoading: loadingFamilies } = useFamiliesQuery();
+    const { data: families = [], isLoading: loadingFamilies } =
+        useFamiliesQuery();
 
+    // mutation used due to database modification
     const createFamilyMutation = useCreateFamilyMutation();
     const updateFamilyMutation = useUpdateFamilyMutation();
     const deleteFamilyMutation = useDeleteFamilyMutation();
@@ -25,7 +27,7 @@ export default function Families() {
     const [deleteModalOpened, setDeleteModalOpened] = useState(false);
     const [familyToDelete, setFamilyToDelete] = useState<Entity | null>(null);
 
-    // Mensagem Amigável de Sucesso
+    // friendly success message
     const [successMessage, setSuccessMessage] = useState('');
 
     const handleOpenAdd = () => {
@@ -41,11 +43,18 @@ export default function Families() {
     const handleSubmit = async (values: { name: string }) => {
         setSuccessMessage('');
         if (selectedFamily) {
-            await updateFamilyMutation.mutateAsync({ id: selectedFamily.id, data: values });
-            setSuccessMessage(`Família "${values.name}" atualizada com sucesso!`);
+            await updateFamilyMutation.mutateAsync({
+                id: selectedFamily.id,
+                data: values,
+            });
+            setSuccessMessage(
+                `Família "${values.name}" atualizada com sucesso!`
+            );
         } else {
             await createFamilyMutation.mutateAsync(values);
-            setSuccessMessage(`Família "${values.name}" cadastrada com sucesso!`);
+            setSuccessMessage(
+                `Família "${values.name}" cadastrada com sucesso!`
+            );
         }
     };
 
@@ -63,7 +72,9 @@ export default function Families() {
             setSuccessMessage('');
             await deleteFamilyMutation.mutateAsync(familyToDelete.id);
             setDeleteModalOpened(false);
-            setSuccessMessage(`Família "${familyToDelete.name}" excluída com sucesso!`);
+            setSuccessMessage(
+                `Família "${familyToDelete.name}" excluída com sucesso!`
+            );
             setFamilyToDelete(null);
         } catch (err: any) {
             console.error('Erro ao excluir família:', err);
@@ -98,7 +109,9 @@ export default function Families() {
             <EntityModal
                 opened={modalOpened}
                 onClose={() => setModalOpened(false)}
-                title={selectedFamily ? 'Editar Família' : 'Cadastrar Nova Família'}
+                title={
+                    selectedFamily ? 'Editar Família' : 'Cadastrar Nova Família'
+                }
                 showColor={false}
                 initialData={selectedFamily}
                 onSubmit={handleSubmit}
@@ -108,7 +121,11 @@ export default function Families() {
                 opened={deleteModalOpened}
                 onClose={() => setDeleteModalOpened(false)}
                 onConfirm={handleConfirmDelete}
-                itemDescription={familyToDelete?.name ? `a família "${familyToDelete.name}"` : 'esta família'}
+                itemDescription={
+                    familyToDelete?.name
+                        ? `a família "${familyToDelete.name}"`
+                        : 'esta família'
+                }
                 loading={deleteFamilyMutation.isPending}
             />
         </Stack>

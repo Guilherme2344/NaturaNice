@@ -30,7 +30,7 @@ export default function AdminUsers() {
     const [users, setUsers] = useState<UserAdminDTO[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Modal de Cadastro
+    // Register modal
     const [createOpened, setCreateOpened] = useState(false);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -38,12 +38,12 @@ export default function AdminUsers() {
     const [createError, setCreateError] = useState('');
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-    // Modal de Exclusão
+    // Delete modal
     const [deleteOpened, setDeleteOpened] = useState(false);
     const [userToDelete, setUserToDelete] = useState<UserAdminDTO | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
-    // Alerta Amigável de Sucesso na Página
+    // friendly success alert
     const [successMessage, setSuccessMessage] = useState('');
 
     const fetchUsers = async () => {
@@ -72,6 +72,7 @@ export default function AdminUsers() {
         }
     };
 
+    // validated by yup
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setCreateError('');
@@ -89,20 +90,28 @@ export default function AdminUsers() {
 
         try {
             setCreateLoading(true);
-            const createdUser = await userService.create(name.trim(), email.trim());
+            const createdUser = await userService.create(
+                name.trim(),
+                email.trim()
+            );
             setCreateOpened(false);
             setName('');
             setEmail('');
             setFieldErrors({});
-            setSuccessMessage(`Usuário "${createdUser.name}" cadastrado com sucesso! A senha provisória de primeiro acesso foi enviada diretamente para o e-mail (${createdUser.email}).`);
+            setSuccessMessage(
+                `Usuário "${createdUser.name}" cadastrado com sucesso! A senha provisória de primeiro acesso foi enviada diretamente para o e-mail (${createdUser.email}).`
+            );
             fetchUsers();
         } catch (err: any) {
-            setCreateError(err?.response?.data?.message || 'Erro ao cadastrar usuário.');
+            setCreateError(
+                err?.response?.data?.message || 'Erro ao cadastrar usuário.'
+            );
         } finally {
             setCreateLoading(false);
         }
     };
 
+    // delete all user data from database
     const handleDeleteConfirm = async () => {
         if (!userToDelete) return;
 
@@ -112,7 +121,9 @@ export default function AdminUsers() {
             setSuccessMessage('');
             await userService.delete(userToDelete.id);
             setDeleteOpened(false);
-            setSuccessMessage(`Usuário "${deletedName}" e todos os seus dados vinculados foram excluídos com sucesso!`);
+            setSuccessMessage(
+                `Usuário "${deletedName}" e todos os seus dados vinculados foram excluídos com sucesso!`
+            );
             setUserToDelete(null);
             fetchUsers();
         } catch (error) {
@@ -126,14 +137,20 @@ export default function AdminUsers() {
         <Stack gap="lg">
             {/* Top Header Bar */}
             <Paper shadow="xs" p="md" radius="md" withBorder>
-                <Group justify="space-between" align="center" wrap="wrap" gap="md">
+                <Group
+                    justify="space-between"
+                    align="center"
+                    wrap="wrap"
+                    gap="md"
+                >
                     <div>
                         <Group gap="xs">
                             <Shield size={24} className="text-blue-600" />
                             <Title order={3}>Gerenciamento de Usuários</Title>
                         </Group>
                         <Text size="sm" c="dimmed" mt={2}>
-                            Cadastre novos usuários no sistema ou gerencie permissões de acesso
+                            Cadastre novos usuários no sistema ou gerencie
+                            permissões de acesso
                         </Text>
                     </div>
 
@@ -177,14 +194,25 @@ export default function AdminUsers() {
                                 <Table.Th>E-mail</Table.Th>
                                 <Table.Th>Papel</Table.Th>
                                 <Table.Th>Status de Acesso</Table.Th>
-                                <Table.Th style={{ textAlign: 'right' }}>Ações</Table.Th>
+                                <Table.Th style={{ textAlign: 'right' }}>
+                                    Ações
+                                </Table.Th>
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
                             {loading ? (
                                 <Table.Tr>
-                                    <Table.Td colSpan={6} align="center" py="xl">
-                                        <Center style={{ flexDirection: 'column', gap: 8 }}>
+                                    <Table.Td
+                                        colSpan={6}
+                                        align="center"
+                                        py="xl"
+                                    >
+                                        <Center
+                                            style={{
+                                                flexDirection: 'column',
+                                                gap: 8,
+                                            }}
+                                        >
                                             <Loader size="sm" color="blue" />
                                             <Text size="sm" c="dimmed">
                                                 Carregando usuários...
@@ -198,26 +226,43 @@ export default function AdminUsers() {
                                         <Table.Td fw={600}>#{user.id}</Table.Td>
                                         <Table.Td fw={500}>
                                             <Group gap="xs">
-                                                <User size={16} className="text-gray-500" />
-                                                <Text size="sm">{user.name}</Text>
+                                                <User
+                                                    size={16}
+                                                    className="text-gray-500"
+                                                />
+                                                <Text size="sm">
+                                                    {user.name}
+                                                </Text>
                                             </Group>
                                         </Table.Td>
                                         <Table.Td>{user.email}</Table.Td>
                                         <Table.Td>
                                             <Badge
-                                                color={user.role === 'ADMIN' ? 'blue' : 'gray'}
+                                                color={
+                                                    user.role === 'ADMIN'
+                                                        ? 'blue'
+                                                        : 'gray'
+                                                }
                                                 variant="light"
                                             >
-                                                {user.role === 'ADMIN' ? 'Administrador' : 'Comum'}
+                                                {user.role === 'ADMIN'
+                                                    ? 'Administrador'
+                                                    : 'Comum'}
                                             </Badge>
                                         </Table.Td>
                                         <Table.Td>
                                             {user.firstAccess ? (
-                                                <Badge color="orange" variant="light">
+                                                <Badge
+                                                    color="orange"
+                                                    variant="light"
+                                                >
                                                     Senha Provisória Enviada
                                                 </Badge>
                                             ) : (
-                                                <Badge color="green" variant="light">
+                                                <Badge
+                                                    color="green"
+                                                    variant="light"
+                                                >
                                                     Senha Definida
                                                 </Badge>
                                             )}
@@ -241,8 +286,14 @@ export default function AdminUsers() {
                                 ))
                             ) : (
                                 <Table.Tr>
-                                    <Table.Td colSpan={6} align="center" py="xl">
-                                        <Text c="dimmed">Nenhum usuário cadastrado.</Text>
+                                    <Table.Td
+                                        colSpan={6}
+                                        align="center"
+                                        py="xl"
+                                    >
+                                        <Text c="dimmed">
+                                            Nenhum usuário cadastrado.
+                                        </Text>
                                     </Table.Td>
                                 </Table.Tr>
                             )}
@@ -251,7 +302,7 @@ export default function AdminUsers() {
                 </Table.ScrollContainer>
             </Paper>
 
-            {/* Modal: Novo Usuário */}
+            {/* Modal: New User */}
             <Modal
                 opened={createOpened}
                 onClose={() => setCreateOpened(false)}
@@ -266,11 +317,15 @@ export default function AdminUsers() {
                 <form onSubmit={handleCreateSubmit} noValidate>
                     <Stack gap="sm">
                         <Text size="xs" c="dimmed">
-                            Uma senha provisória de primeiro acesso será gerada automaticamente e enviada ao e-mail informado.
+                            Uma senha provisória de primeiro acesso será gerada
+                            automaticamente e enviada ao e-mail informado.
                         </Text>
 
                         {createError && (
-                            <Alert icon={<AlertTriangle size={16} />} color="red">
+                            <Alert
+                                icon={<AlertTriangle size={16} />}
+                                color="red"
+                            >
                                 {createError}
                             </Alert>
                         )}
@@ -300,10 +355,18 @@ export default function AdminUsers() {
                         />
 
                         <Group justify="flex-end" mt="md">
-                            <Button variant="default" onClick={() => setCreateOpened(false)} disabled={createLoading}>
+                            <Button
+                                variant="default"
+                                onClick={() => setCreateOpened(false)}
+                                disabled={createLoading}
+                            >
                                 Cancelar
                             </Button>
-                            <Button type="submit" color="blue" loading={createLoading}>
+                            <Button
+                                type="submit"
+                                color="blue"
+                                loading={createLoading}
+                            >
                                 Cadastrar e Enviar E-mail
                             </Button>
                         </Group>
@@ -311,7 +374,7 @@ export default function AdminUsers() {
                 </form>
             </Modal>
 
-            {/* Modal: Exclusão de Usuário */}
+            {/* Modal: User Delete */}
             <Modal
                 opened={deleteOpened}
                 onClose={() => setDeleteOpened(false)}
@@ -327,11 +390,15 @@ export default function AdminUsers() {
             >
                 <Stack gap="md">
                     <Text size="sm">
-                        Tem certeza que deseja excluir a conta de <b>{userToDelete?.name}</b> ({userToDelete?.email})?
+                        Tem certeza que deseja excluir a conta de{' '}
+                        <b>{userToDelete?.name}</b> ({userToDelete?.email})?
                     </Text>
 
                     <Alert color="red" radius="md">
-                        Ao excluir este usuário, **todos os registros cadastrados por ele** (produtos, marcas, categorias, famílias, clientes e vendas) serão permanentemente removidos.
+                        Ao excluir este usuário, **todos os registros
+                        cadastrados por ele** (produtos, marcas, categorias,
+                        famílias, clientes e vendas) serão permanentemente
+                        removidos.
                     </Alert>
 
                     <Group justify="flex-end" mt="md">

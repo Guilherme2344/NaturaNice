@@ -28,6 +28,7 @@ import {
 import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 
+// dynamic way to put new pages for Stock
 const stockNavItems = [
     { label: 'Produtos', icon: Package, href: '/' },
     {
@@ -47,6 +48,7 @@ const stockNavItems = [
     { label: 'Famílias', icon: FolderTree, href: '/families' },
 ];
 
+// dynamic way to put new pages for Report
 const reportNavItems = [
     {
         label: 'Relatório Mensal',
@@ -75,7 +77,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
         navigate('/login');
     };
 
-    // Helper para fechar o menu mobile ao clicar em qualquer link
+    // close mobile menu when a page is selected
     const handleNavClick = () => {
         if (opened) {
             close();
@@ -142,8 +144,9 @@ export default function Header({ children }: { children?: React.ReactNode }) {
             {/* Sidebar Navigation */}
             <AppShell.Navbar p="md">
                 <Stack gap="xs">
+                    {/* Exclusive for admin */}
                     {isAdmin ? (
-                        /* Painel exclusivo do Admin */
+                        /* admin panel */
                         <div>
                             <Text
                                 size="xs"
@@ -167,7 +170,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                             />
                         </div>
                     ) : (
-                        /* Painel do Usuário Comum */
+                        /* common user panel */
                         <>
                             <div>
                                 <Text
@@ -247,10 +250,10 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                 </Stack>
             </AppShell.Navbar>
 
-            {/* Área Principal de Conteúdo */}
+            {/* main content */}
             <AppShell.Main>{children || <Outlet />}</AppShell.Main>
 
-            {/* Modal de Confirmação de Logout */}
+            {/* logout modal confirmation */}
             <Modal
                 opened={logoutOpened}
                 onClose={() => setLogoutOpened(false)}

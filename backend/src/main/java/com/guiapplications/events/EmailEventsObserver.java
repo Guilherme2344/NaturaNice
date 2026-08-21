@@ -6,12 +6,14 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
 
+// Asynchronous observer component for background email processing
 @ApplicationScoped
 public class EmailEventsObserver {
 
     @Inject
     Mailer mailer;
 
+    // Send temporary password email when a new user is created
     public void onUserCreated(@ObservesAsync UserCreatedEvent event) {
         String htmlBody = "<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 500px;'>" +
                           "<h2 style='color: #099268;'>Bem-vindo(a) ao Natura Nice!</h2>" +
@@ -31,6 +33,7 @@ public class EmailEventsObserver {
         }
     }
 
+    // Send password recovery verification code email
     public void onPasswordResetRequested(@ObservesAsync PasswordResetRequestedEvent event) {
         String htmlBody = "<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 500px;'>" +
                           "<h2 style='color: #099268;'>Recuperação de Senha - Natura Nice</h2>" +
