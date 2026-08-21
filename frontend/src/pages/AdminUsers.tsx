@@ -4,43 +4,47 @@ import {
     Title,
     Text,
     Group,
-    Button,
     Table,
+    Button,
     Badge,
     ActionIcon,
     Modal,
     TextInput,
     Stack,
     Alert,
-    Center,
     Loader,
-    Code,
-    CopyButton,
-    Tooltip,
+    Center,
 } from '@mantine/core';
-import { UserPlus, Trash2, Shield, User, Key, AlertTriangle, Copy, Check } from 'lucide-react';
-import { userService, type CreateUserResponse } from '../services/userService';
-import type { User as UserType } from '../services/authService';
+import {
+    Shield,
+    UserPlus,
+    Trash2,
+    AlertTriangle,
+    User,
+    CheckCircle2,
+} from 'lucide-react';
+import { userService, type UserAdminDTO } from '../services/userService';
+import { userAdminSchema, validateWithYup } from '../schemas/validationSchemas';
 
 export default function AdminUsers() {
-    const [users, setUsers] = useState<UserType[]>([]);
+    const [users, setUsers] = useState<UserAdminDTO[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Create Modal State
+    // Modal de Cadastro
     const [createOpened, setCreateOpened] = useState(false);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [createError, setCreateError] = useState('');
     const [createLoading, setCreateLoading] = useState(false);
+    const [createError, setCreateError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-    // Password Result Modal State
-    const [resultData, setResultData] = useState<CreateUserResponse | null>(null);
-    const [resultOpened, setResultOpened] = useState(false);
-
-    // Delete Modal State
-    const [userToDelete, setUserToDelete] = useState<UserType | null>(null);
+    // Modal de Exclusão
     const [deleteOpened, setDeleteOpened] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<UserAdminDTO | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+
+    // Alerta Amigável de Sucesso na Página
+    const [successMessage, setSuccessMessage] = useState('');
 
     const fetchUsers = async () => {
         try {
@@ -58,23 +62,39 @@ export default function AdminUsers() {
         fetchUsers();
     }, []);
 
+    const clearFieldError = (field: string) => {
+        if (fieldErrors[field]) {
+            setFieldErrors((prev) => {
+                const updated = { ...prev };
+                delete updated[field];
+                return updated;
+            });
+        }
+    };
+
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setCreateError('');
+        setSuccessMessage('');
 
-        if (!name.trim() || !email.trim()) {
-            setCreateError('Nome e E-mail são obrigatórios.');
+        const { isValid, errors } = await validateWithYup(userAdminSchema, {
+            name: name.trim(),
+            email: email.trim(),
+        });
+
+        if (!isValid) {
+            setFieldErrors(errors);
             return;
         }
 
         try {
             setCreateLoading(true);
-            const response = await userService.create(name.trim(), email.trim());
+            const createdUser = await userService.create(name.trim(), email.trim());
             setCreateOpened(false);
             setName('');
             setEmail('');
-            setResultData(response);
-            setResultOpened(true);
+            setFieldErrors({});
+            setSuccessMessage(`Usuário "${createdUser.name}" cadastrado com sucesso! A senha provisória de primeiro acesso foi enviada diretamente para o e-mail (${createdUser.email}).`);
             fetchUsers();
         } catch (err: any) {
             setCreateError(err?.response?.data?.message || 'Erro ao cadastrar usuário.');
@@ -86,10 +106,13 @@ export default function AdminUsers() {
     const handleDeleteConfirm = async () => {
         if (!userToDelete) return;
 
+        const deletedName = userToDelete.name;
         try {
             setDeleteLoading(true);
+            setSuccessMessage('');
             await userService.delete(userToDelete.id);
             setDeleteOpened(false);
+            setSuccessMessage(`Usuário "${deletedName}" e todos os seus dados vinculados foram excluídos com sucesso!`);
             setUserToDelete(null);
             fetchUsers();
         } catch (error) {
@@ -107,20 +130,21 @@ export default function AdminUsers() {
                     <div>
                         <Group gap="xs">
                             <Shield size={24} className="text-blue-600" />
-                            <Title order={3}>Gerenciamento de Usuários (Painel Admin)</Title>
+                            <Title order={3}>Gerenciamento de Usuários</Title>
                         </Group>
                         <Text size="sm" c="dimmed" mt={2}>
-                            Cadastre novos usuários no sistema ou remova contas com exclusão em cascata de dados.
+                            Cadastre novos usuários no sistema ou gerencie permissões de acesso
                         </Text>
                     </div>
 
                     <Button
-                        leftSection={<UserPlus size={16} />}
+                        leftSection={<UserPlus size={18} />}
                         color="blue"
                         onClick={() => {
                             setName('');
                             setEmail('');
                             setCreateError('');
+                            setFieldErrors({});
                             setCreateOpened(true);
                         }}
                     >
@@ -128,6 +152,19 @@ export default function AdminUsers() {
                     </Button>
                 </Group>
             </Paper>
+
+            {/* Success Alert Banner */}
+            {successMessage && (
+                <Alert
+                    icon={<CheckCircle2 size={18} />}
+                    color="blue"
+                    radius="md"
+                    withCloseButton
+                    onClose={() => setSuccessMessage('')}
+                >
+                    {successMessage}
+                </Alert>
+            )}
 
             {/* Users Table */}
             <Paper shadow="xs" p="md" radius="md" withBorder>
@@ -177,7 +214,7 @@ export default function AdminUsers() {
                                         <Table.Td>
                                             {user.firstAccess ? (
                                                 <Badge color="orange" variant="light">
-                                                    Senha Provisória
+                                                    Senha Provisória Enviada
                                                 </Badge>
                                             ) : (
                                                 <Badge color="green" variant="light">
@@ -226,10 +263,10 @@ export default function AdminUsers() {
                 }
                 centered
             >
-                <form onSubmit={handleCreateSubmit}>
+                <form onSubmit={handleCreateSubmit} noValidate>
                     <Stack gap="sm">
                         <Text size="xs" c="dimmed">
-                            Uma senha provisória de 8 caracteres será gerada automaticamente para o primeiro acesso deste usuário.
+                            Uma senha provisória de primeiro acesso será gerada automaticamente e enviada ao e-mail informado.
                         </Text>
 
                         {createError && (
@@ -242,7 +279,11 @@ export default function AdminUsers() {
                             label="Nome do Usuário"
                             placeholder="Ex: Maria Oliveira"
                             value={name}
-                            onChange={(e) => setName(e.currentTarget.value)}
+                            error={fieldErrors.name}
+                            onChange={(e) => {
+                                setName(e.currentTarget.value);
+                                clearFieldError('name');
+                            }}
                             required
                         />
 
@@ -250,7 +291,11 @@ export default function AdminUsers() {
                             label="E-mail de Acesso"
                             placeholder="maria@exemplo.com"
                             value={email}
-                            onChange={(e) => setEmail(e.currentTarget.value)}
+                            error={fieldErrors.email}
+                            onChange={(e) => {
+                                setEmail(e.currentTarget.value);
+                                clearFieldError('email');
+                            }}
                             required
                         />
 
@@ -259,72 +304,11 @@ export default function AdminUsers() {
                                 Cancelar
                             </Button>
                             <Button type="submit" color="blue" loading={createLoading}>
-                                Cadastrar Usuário
+                                Cadastrar e Enviar E-mail
                             </Button>
                         </Group>
                     </Stack>
                 </form>
-            </Modal>
-
-            {/* Modal: Exibição da Senha Provisória Gerada */}
-            <Modal
-                opened={resultOpened}
-                onClose={() => setResultOpened(false)}
-                title={
-                    <Group gap="xs">
-                        <Key size={20} className="text-green-600" />
-                        <Text fw={700}>Usuário Cadastrado com Sucesso!</Text>
-                    </Group>
-                }
-                centered
-            >
-                <Stack gap="md">
-                    <Text size="sm">
-                        O usuário <b>{resultData?.user.name}</b> foi criado. Forneça as credenciais abaixo para que ele possa efetuar o primeiro acesso:
-                    </Text>
-
-                    <Paper p="md" withBorder radius="md" bg="var(--mantine-color-gray-0)">
-                        <Stack gap="xs">
-                            <Group justify="space-between">
-                                <Text size="xs" c="dimmed" fw={700}>
-                                    E-MAIL:
-                                </Text>
-                                <Text size="sm" fw={600}>
-                                    {resultData?.user.email}
-                                </Text>
-                            </Group>
-
-                            <Group justify="space-between" align="center">
-                                <Text size="xs" c="dimmed" fw={700}>
-                                    SENHA PROVISÓRIA:
-                                </Text>
-                                <Group gap="xs">
-                                    <Code fw={700} style={{ fontSize: 16, letterSpacing: 1 }}>
-                                        {resultData?.generatedPassword}
-                                    </Code>
-
-                                    <CopyButton value={resultData?.generatedPassword || ''}>
-                                        {({ copied, copy }) => (
-                                            <Tooltip label={copied ? 'Copiado!' : 'Copiar Senha'}>
-                                                <ActionIcon color={copied ? 'teal' : 'gray'} variant="subtle" onClick={copy}>
-                                                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                                                </ActionIcon>
-                                            </Tooltip>
-                                        )}
-                                    </CopyButton>
-                                </Group>
-                            </Group>
-                        </Stack>
-                    </Paper>
-
-                    <Alert color="blue" radius="md">
-                        No primeiro login, o sistema solicitará automaticamente que este usuário altere esta senha provisória.
-                    </Alert>
-
-                    <Button color="blue" fullWidth onClick={() => setResultOpened(false)}>
-                        Entendi e Copiei a Senha
-                    </Button>
-                </Stack>
             </Modal>
 
             {/* Modal: Exclusão de Usuário */}
@@ -347,15 +331,24 @@ export default function AdminUsers() {
                     </Text>
 
                     <Alert color="red" radius="md">
-                        <b>Atenção:</b> Esta ação excluirá permanentemente <b>todos os produtos, clientes e histórico de vendas</b> pertencentes a este usuário!
+                        Ao excluir este usuário, **todos os registros cadastrados por ele** (produtos, marcas, categorias, famílias, clientes e vendas) serão permanentemente removidos.
                     </Alert>
 
-                    <Group justify="flex-end">
-                        <Button variant="default" onClick={() => setDeleteOpened(false)} disabled={deleteLoading}>
+                    <Group justify="flex-end" mt="md">
+                        <Button
+                            variant="default"
+                            onClick={() => setDeleteOpened(false)}
+                            disabled={deleteLoading}
+                        >
                             Cancelar
                         </Button>
-                        <Button color="red" loading={deleteLoading} onClick={handleDeleteConfirm}>
-                            Excluir Usuário e Dados
+                        <Button
+                            color="red"
+                            onClick={handleDeleteConfirm}
+                            loading={deleteLoading}
+                            leftSection={<Trash2 size={16} />}
+                        >
+                            Sim, Excluir Conta
                         </Button>
                     </Group>
                 </Stack>

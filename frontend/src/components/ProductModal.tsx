@@ -12,6 +12,7 @@ import {
 import type { CreateProductDTO } from '../services/productService';
 import type { Product } from '../components/ProductsTable';
 import type { Entity } from '../components/EntityTable';
+import { productSchema, validateWithYup } from '../schemas/validationSchemas';
 
 interface ProductModalProps {
     opened: boolean;
@@ -42,8 +43,12 @@ export function ProductModal({
     const [familyId, setFamilyId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
+    // Mensagens de erro por campo
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
     useEffect(() => {
         if (opened) {
+            setErrors({});
             if (initialData) {
                 setName(initialData.name || '');
                 setQuantity(initialData.quantity || 0);
@@ -76,21 +81,45 @@ export function ProductModal({
         }
     }, [opened, initialData]);
 
+    const clearError = (field: string) => {
+        if (errors[field]) {
+            setErrors((prev) => {
+                const updated = { ...prev };
+                delete updated[field];
+                return updated;
+            });
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        const numBrandId = Number(brandId);
-        const numCategoryId = Number(categoryId);
-        const numFamilyId = Number(familyId);
+        const formData = {
+            name: name.trim(),
+            brandId,
+            categoryId,
+            familyId,
+            quantity: Number(quantity),
+            expirationDate,
+            purchasePrice: Number(purchasePrice),
+            sellingPrice: Number(sellingPrice),
+        };
 
-        if (
-            !name.trim() ||
-            !numBrandId ||
-            !numCategoryId ||
-            !numFamilyId ||
-            !expirationDate
-        ) {
-            alert('Preencha todos os campos obrigatórios.');
+        const { isValid, errors: validationErrors } = await validateWithYup(
+            productSchema,
+            formData
+        );
+
+        // Warning check for selling price < purchase price
+        if (isValid && Number(sellingPrice) < Number(purchasePrice)) {
+            validationErrors.sellingPrice =
+                'Atenção: O preço de venda é inferior ao preço de compra (venda com prejuízo).';
+            setErrors(validationErrors);
+            return;
+        }
+
+        if (!isValid) {
+            setErrors(validationErrors);
             return;
         }
 
@@ -102,9 +131,9 @@ export function ProductModal({
                 expirationDate,
                 purchasePrice: Number(purchasePrice) || 0,
                 sellingPrice: Number(sellingPrice) || 0,
-                brandId: numBrandId,
-                categoryId: numCategoryId,
-                familyId: numFamilyId,
+                brandId: Number(brandId),
+                categoryId: Number(categoryId),
+                familyId: Number(familyId),
             };
 
             await onSubmit(payload);
@@ -114,7 +143,6 @@ export function ProductModal({
                 'Erro ao salvar produto:',
                 error.response?.data || error
             );
-            alert('Erro ao salvar produto.');
         } finally {
             setLoading(false);
         }
@@ -129,13 +157,17 @@ export function ProductModal({
             centered
             radius="md"
         >
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
                 <Stack gap="md">
                     <TextInput
                         label="Nome do Produto"
                         required
                         value={name}
-                        onChange={(e) => setName(e.currentTarget.value)}
+                        error={errors.name}
+                        onChange={(e) => {
+                            setName(e.currentTarget.value);
+                            clearError('name');
+                        }}
                     />
 
                     <Grid>
@@ -148,7 +180,11 @@ export function ProductModal({
                                     label: b.name,
                                 }))}
                                 value={brandId}
-                                onChange={setBrandId}
+                                error={errors.brandId}
+                                onChange={(val) => {
+                                    setBrandId(val);
+                                    clearError('brandId');
+                                }}
                                 searchable
                             />
                         </Grid.Col>
@@ -161,7 +197,11 @@ export function ProductModal({
                                     label: c.name,
                                 }))}
                                 value={categoryId}
-                                onChange={setCategoryId}
+                                error={errors.categoryId}
+                                onChange={(val) => {
+                                    setCategoryId(val);
+                                    clearError('categoryId');
+                                }}
                                 searchable
                             />
                         </Grid.Col>
@@ -174,7 +214,11 @@ export function ProductModal({
                                     label: f.name,
                                 }))}
                                 value={familyId}
-                                onChange={setFamilyId}
+                                error={errors.familyId}
+                                onChange={(val) => {
+                                    setFamilyId(val);
+                                    clearError('familyId');
+                                }}
                                 searchable
                             />
                         </Grid.Col>
@@ -187,7 +231,11 @@ export function ProductModal({
                                 required
                                 min={0}
                                 value={quantity}
-                                onChange={setQuantity}
+                                error={errors.quantity}
+                                onChange={(val) => {
+                                    setQuantity(val);
+                                    clearError('quantity');
+                                }}
                             />
                         </Grid.Col>
                         <Grid.Col span={6}>
@@ -196,9 +244,11 @@ export function ProductModal({
                                 label="Data de Vencimento"
                                 required
                                 value={expirationDate}
-                                onChange={(e) =>
-                                    setExpirationDate(e.currentTarget.value)
-                                }
+                                error={errors.expirationDate}
+                                onChange={(e) => {
+                                    setExpirationDate(e.currentTarget.value);
+                                    clearError('expirationDate');
+                                }}
                             />
                         </Grid.Col>
                     </Grid>
@@ -208,24 +258,36 @@ export function ProductModal({
                             <NumberInput
                                 label="Preço de Compra (R$)"
                                 decimalScale={2}
-                                fixedDecimalScale
+                                decimalSeparator=","
+                                thousandSeparator="."
+                                selectAllOnFocus
                                 min={0}
                                 prefix="R$ "
                                 required
                                 value={purchasePrice}
-                                onChange={setPurchasePrice}
+                                error={errors.purchasePrice}
+                                onChange={(val) => {
+                                    setPurchasePrice(val);
+                                    clearError('purchasePrice');
+                                }}
                             />
                         </Grid.Col>
                         <Grid.Col span={6}>
                             <NumberInput
                                 label="Preço de Venda (R$)"
                                 decimalScale={2}
-                                fixedDecimalScale
+                                decimalSeparator=","
+                                thousandSeparator="."
+                                selectAllOnFocus
                                 min={0}
                                 prefix="R$ "
                                 required
                                 value={sellingPrice}
-                                onChange={setSellingPrice}
+                                error={errors.sellingPrice}
+                                onChange={(val) => {
+                                    setSellingPrice(val);
+                                    clearError('sellingPrice');
+                                }}
                             />
                         </Grid.Col>
                     </Grid>

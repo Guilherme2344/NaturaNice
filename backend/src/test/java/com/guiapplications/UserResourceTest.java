@@ -2,16 +2,24 @@ package com.guiapplications;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.CreateUserRequestDTO;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
 
 @QuarkusTest
 public class UserResourceTest {
+
+    @BeforeEach
+    @Transactional
+    public void setup() {
+        User.delete("email", "carlos@teste.com");
+    }
 
     @Test
     public void testCreateAndDeleteUser() {
@@ -25,13 +33,12 @@ public class UserResourceTest {
           .post("/admin/users")
           .then()
              .statusCode(201)
-             .body("user.name", equalTo("Carlos Alberto"))
-             .body("user.email", equalTo("carlos@teste.com"))
-             .body("user.role", equalTo("USER"))
-             .body("user.firstAccess", equalTo(true))
-             .body("generatedPassword", notNullValue())
+             .body("name", equalTo("Carlos Alberto"))
+             .body("email", equalTo("carlos@teste.com"))
+             .body("role", equalTo("USER"))
+             .body("firstAccess", equalTo(true))
              .extract()
-             .path("user.id");
+             .path("id");
 
         // 2. Delete user
         given()

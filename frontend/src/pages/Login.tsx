@@ -17,6 +17,7 @@ import {
 import { Lock, Mail, AlertCircle, KeyRound, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authService, type User } from '../services/authService';
+import { loginSchema, passwordResetSchema, validateWithYup } from '../schemas/validationSchemas';
 
 export default function Login() {
     const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
 
     // First access password change state
@@ -33,20 +35,46 @@ export default function Login() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [firstAccessError, setFirstAccessError] = useState('');
+    const [firstAccessFieldErrors, setFirstAccessFieldErrors] = useState<Record<string, string>>({});
     const [firstAccessLoading, setFirstAccessLoading] = useState(false);
+
+    const clearFieldError = (field: string) => {
+        if (fieldErrors[field]) {
+            setFieldErrors((prev) => {
+                const updated = { ...prev };
+                delete updated[field];
+                return updated;
+            });
+        }
+    };
+
+    const clearFirstAccessFieldError = (field: string) => {
+        if (firstAccessFieldErrors[field]) {
+            setFirstAccessFieldErrors((prev) => {
+                const updated = { ...prev };
+                delete updated[field];
+                return updated;
+            });
+        }
+    };
 
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        if (!email.trim() || !password.trim()) {
-            setError('Por favor, preencha o e-mail e a senha.');
+        const { isValid, errors } = await validateWithYup(loginSchema, {
+            email: email.trim(),
+            password,
+        });
+
+        if (!isValid) {
+            setFieldErrors(errors);
             return;
         }
 
         try {
             setLoading(true);
-            const user = await login(email, password);
+            const user = await login(email.trim(), password);
 
             if (user.firstAccess) {
                 setLoggedUser(user);
@@ -67,15 +95,13 @@ export default function Login() {
         e.preventDefault();
         setFirstAccessError('');
 
-        if (!newPassword || newPassword.length < 6) {
-            setFirstAccessError(
-                'A nova senha deve possuir no mínimo 6 caracteres.'
-            );
-            return;
-        }
+        const { isValid, errors } = await validateWithYup(passwordResetSchema, {
+            newPassword,
+            confirmPassword,
+        });
 
-        if (newPassword !== confirmPassword) {
-            setFirstAccessError('As senhas não coincidem.');
+        if (!isValid) {
+            setFirstAccessFieldErrors(errors);
             return;
         }
 
@@ -125,10 +151,10 @@ export default function Login() {
                         <Paper
                             p="sm"
                             radius="xl"
-                            bg="teal.0"
+                            bg="blue.0"
                             style={{ display: 'inline-flex', marginBottom: 12 }}
                         >
-                            <Lock size={32} className="text-teal-600" />
+                            <Lock size={32} className="text-blue-600" />
                         </Paper>
                         <Title order={2} ta="center">
                             Acesso ao Sistema
@@ -148,16 +174,18 @@ export default function Login() {
                         </Alert>
                     )}
 
-                    <form onSubmit={handleLoginSubmit}>
+                    <form onSubmit={handleLoginSubmit} noValidate>
                         <Stack gap="sm">
                             <TextInput
                                 label="E-mail"
                                 placeholder="seu.email@exemplo.com"
                                 leftSection={<Mail size={16} />}
                                 value={email}
-                                onChange={(e) =>
-                                    setEmail(e.currentTarget.value)
-                                }
+                                error={fieldErrors.email}
+                                onChange={(e) => {
+                                    setEmail(e.currentTarget.value);
+                                    clearFieldError('email');
+                                }}
                                 required
                             />
 
@@ -166,9 +194,11 @@ export default function Login() {
                                 placeholder="Sua senha"
                                 leftSection={<Lock size={16} />}
                                 value={password}
-                                onChange={(e) =>
-                                    setPassword(e.currentTarget.value)
-                                }
+                                error={fieldErrors.password}
+                                onChange={(e) => {
+                                    setPassword(e.currentTarget.value);
+                                    clearFieldError('password');
+                                }}
                                 required
                             />
 
@@ -177,7 +207,7 @@ export default function Login() {
                                     component={Link}
                                     to="/forgot-password"
                                     size="xs"
-                                    c="teal"
+                                    c="blue"
                                     fw={600}
                                     style={{ textDecoration: 'none' }}
                                 >
@@ -187,7 +217,7 @@ export default function Login() {
 
                             <Button
                                 type="submit"
-                                color="teal"
+                                color="blue"
                                 fullWidth
                                 mt="xs"
                                 size="md"
@@ -210,7 +240,7 @@ export default function Login() {
                 closeOnEscape={false}
                 title={
                     <Group gap="xs">
-                        <KeyRound size={22} className="text-teal-600" />
+                        <KeyRound size={22} className="text-blue-600" />
                         <Text fw={700} size="md">
                             Primeiro Acesso - Defina sua Nova Senha
                         </Text>
@@ -218,7 +248,7 @@ export default function Login() {
                 }
                 centered
             >
-                <form onSubmit={handleFirstAccessSubmit}>
+                <form onSubmit={handleFirstAccessSubmit} noValidate>
                     <Stack gap="sm">
                         <Text size="sm" c="dimmed">
                             Você está acessando com uma senha temporária. Para
@@ -236,9 +266,11 @@ export default function Login() {
                             label="Nova Senha"
                             placeholder="Mínimo 6 caracteres"
                             value={newPassword}
-                            onChange={(e) =>
-                                setNewPassword(e.currentTarget.value)
-                            }
+                            error={firstAccessFieldErrors.newPassword}
+                            onChange={(e) => {
+                                setNewPassword(e.currentTarget.value);
+                                clearFirstAccessFieldError('newPassword');
+                            }}
                             required
                         />
 
@@ -246,15 +278,17 @@ export default function Login() {
                             label="Confirme a Nova Senha"
                             placeholder="Repita a nova senha"
                             value={confirmPassword}
-                            onChange={(e) =>
-                                setConfirmPassword(e.currentTarget.value)
-                            }
+                            error={firstAccessFieldErrors.confirmPassword}
+                            onChange={(e) => {
+                                setConfirmPassword(e.currentTarget.value);
+                                clearFirstAccessFieldError('confirmPassword');
+                            }}
                             required
                         />
 
                         <Button
                             type="submit"
-                            color="teal"
+                            color="blue"
                             fullWidth
                             mt="md"
                             loading={firstAccessLoading}

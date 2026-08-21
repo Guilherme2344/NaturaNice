@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.guiapplications.entities.dto.CreateUserRequestDTO;
-import com.guiapplications.entities.dto.CreateUserResponseDTO;
 import com.guiapplications.entities.dto.UserResponseDTO;
 import com.guiapplications.services.UserService;
 
@@ -35,8 +34,8 @@ public class UserResource {
     @POST
     public Response createUser(CreateUserRequestDTO dto) {
         try {
-            CreateUserResponseDTO response = userService.createUser(dto);
-            return Response.status(Response.Status.CREATED).entity(response).build();
+            UserResponseDTO user = userService.createUser(dto);
+            return Response.status(Response.Status.CREATED).entity(user).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Map.of("message", e.getMessage()))

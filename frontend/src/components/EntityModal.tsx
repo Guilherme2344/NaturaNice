@@ -8,6 +8,7 @@ import {
     Stack,
 } from '@mantine/core';
 import type { Entity } from '../components/EntityTable';
+import { entitySchema, validateWithYup } from '../schemas/validationSchemas';
 
 interface EntityModalProps {
     opened: boolean;
@@ -29,24 +30,40 @@ export function EntityModal({
     const [name, setName] = useState('');
     const [hexColor, setHexColor] = useState('#206095');
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (opened) {
+            setErrors({});
             if (initialData) {
                 setName(initialData.name);
                 setHexColor(initialData.hexColor || '#206095');
             } else {
                 setName('');
-                setHexColor('#206095');
+                setHexColor('206095');
             }
         }
     }, [opened, initialData]);
 
+    const clearError = (field: string) => {
+        if (errors[field]) {
+            setErrors((prev) => {
+                const updated = { ...prev };
+                delete updated[field];
+                return updated;
+            });
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        if (!name.trim()) {
-            alert('Por favor, informe o nome.');
+        const { isValid, errors: validationErrors } = await validateWithYup(
+            entitySchema,
+            { name: name.trim() }
+        );
+        if (!isValid) {
+            setErrors(validationErrors);
             return;
         }
 
@@ -62,10 +79,6 @@ export function EntityModal({
                 'Erro ao salvar registro:',
                 error.response?.data || error
             );
-            alert(
-                'Erro ao salvar: ' +
-                    (error.response?.data?.message || 'Verifique os dados.')
-            );
         } finally {
             setLoading(false);
         }
@@ -79,14 +92,18 @@ export function EntityModal({
             centered
             radius="md"
         >
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
                 <Stack gap="md">
                     <TextInput
                         label="Nome"
                         placeholder="Digite o nome..."
                         required
                         value={name}
-                        onChange={(e) => setName(e.currentTarget.value)}
+                        error={errors.name}
+                        onChange={(e) => {
+                            setName(e.currentTarget.value);
+                            clearError('name');
+                        }}
                     />
 
                     {showColor && (

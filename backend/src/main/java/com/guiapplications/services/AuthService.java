@@ -15,11 +15,11 @@ import com.guiapplications.entities.dto.LoginResponseDTO;
 import com.guiapplications.entities.dto.ResetPasswordRequestDTO;
 import com.guiapplications.entities.dto.UserResponseDTO;
 import com.guiapplications.entities.dto.VerifyCodeRequestDTO;
+import com.guiapplications.events.PasswordResetRequestedEvent;
 import com.guiapplications.exceptions.ResourceNotFoundException;
 
-import io.quarkus.mailer.Mail;
-import io.quarkus.mailer.Mailer;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -27,7 +27,7 @@ import jakarta.transaction.Transactional;
 public class AuthService {
 
     @Inject
-    Mailer mailer;
+    Event<PasswordResetRequestedEvent> passwordResetEvent;
 
     @Transactional
     public LoginResponseDTO login(LoginRequestDTO dto) {
@@ -108,23 +108,8 @@ public class AuthService {
         token.expirationTime = LocalDateTime.now().plusMinutes(15);
         token.persist();
 
-        // Disparo do E-mail Real via Protocolo SMTP (Quarkus Mailer)
-        String htmlBody = "<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 500px;'>" +
-                          "<h2 style='color: #099268;'>Recuperação de Senha - Natura Nice</h2>" +
-                          "<p>Olá,</p>" +
-                          "<p>Você solicitou a redefinição de senha da sua conta. Utilize o código de 6 dígitos abaixo para prosseguir:</p>" +
-                          "<div style='background-color: #f4f6f8; padding: 15px; text-align: center; border-radius: 6px; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #1c7ed6; margin: 20px 0;'>" +
-                          code +
-                          "</div>" +
-                          "<p style='font-size: 12px; color: #888;'>Este código expira em 15 minutos. Caso não tenha solicitado esta alteração, desconsidere esta mensagem.</p>" +
-                          "</div>";
-
-        try {
-            mailer.send(Mail.withHtml(dto.email().trim().toLowerCase(), "Código de Recuperação de Senha - Natura Nice", htmlBody));
-            System.out.println("[SMTP MAILER] E-mail de recuperação enviado para: " + dto.email());
-        } catch (Exception e) {
-            System.err.println("[SMTP MAILER WARNING] Erro ao disparar e-mail SMTP real: " + e.getMessage());
-        }
+        // Dispara o evento assíncrono via Quarkus Observer (CDI Event Bus) sem bloquear a resposta HTTP
+        passwordResetEvent.fireAsync(new PasswordResetRequestedEvent(token.email, code));
     }
 
     @Transactional

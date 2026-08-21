@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type { Product } from './ProductsTable';
 import { customerService, type Customer } from '../services/customerService';
+import { saleSchema, validateWithYup } from '../schemas/validationSchemas';
 
 interface SaleModalProps {
     opened: boolean;
@@ -44,9 +45,11 @@ export function SaleModal({
     const [customerName, setCustomerName] = useState<string>('');
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (opened) {
+            setErrors({});
             customerService
                 .getAll()
                 .then((data) => setCustomers(data))
@@ -68,12 +71,35 @@ export function SaleModal({
     const purchasePrice = product.purchasePrice || 0;
     const currentSellingPrice = sellingPrice || 0;
 
-    const totalAmount = quantity * currentSellingPrice;
-    const totalProfit = quantity * (currentSellingPrice - purchasePrice);
+    const totalAmount = (quantity || 0) * currentSellingPrice;
+    const totalProfit = (quantity || 0) * (currentSellingPrice - purchasePrice);
+
+    const clearError = (field: string) => {
+        if (errors[field]) {
+            setErrors((prev) => {
+                const updated = { ...prev };
+                delete updated[field];
+                return updated;
+            });
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (quantity <= 0 || quantity > availableStock) return;
+
+        const schema = saleSchema(availableStock);
+        const { isValid, errors: validationErrors } = await validateWithYup(
+            schema,
+            {
+                quantity: Number(quantity),
+                sellingPrice: Number(sellingPrice),
+            }
+        );
+
+        if (!isValid) {
+            setErrors(validationErrors);
+            return;
+        }
 
         try {
             setLoading(true);
@@ -102,7 +128,7 @@ export function SaleModal({
             size="md"
             radius="md"
         >
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
                 <Stack gap="md">
                     <Paper
                         p="sm"
@@ -161,9 +187,11 @@ export function SaleModal({
                                 label="Vendido"
                                 placeholder="Informe a quantidade"
                                 value={quantity}
-                                onChange={(val) =>
-                                    setQuantity(Number(val) || 1)
-                                }
+                                error={errors.quantity}
+                                onChange={(val) => {
+                                    setQuantity(Number(val) || 0);
+                                    clearError('quantity');
+                                }}
                                 min={1}
                                 max={availableStock}
                                 required
@@ -174,14 +202,18 @@ export function SaleModal({
                         <Grid.Col span={6}>
                             <NumberInput
                                 label="Preço de Venda Unitário"
-                                placeholder="0.00"
+                                placeholder="0,00"
                                 value={sellingPrice}
-                                onChange={(val) =>
-                                    setSellingPrice(Number(val) || 0)
-                                }
+                                error={errors.sellingPrice}
+                                onChange={(val) => {
+                                    setSellingPrice(Number(val) || 0);
+                                    clearError('sellingPrice');
+                                }}
                                 prefix="R$ "
                                 decimalScale={2}
-                                fixedDecimalScale
+                                decimalSeparator=","
+                                thousandSeparator="."
+                                selectAllOnFocus
                                 required
                                 min={0}
                             />
@@ -200,7 +232,11 @@ export function SaleModal({
                                     Preço de Custo Unit.
                                 </Text>
                                 <Text fw={600} size="sm">
-                                    R$ {purchasePrice.toFixed(2)}
+                                    R${' '}
+                                    {purchasePrice.toLocaleString('pt-BR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })}
                                 </Text>
                             </Paper>
                         </Grid.Col>
@@ -210,7 +246,14 @@ export function SaleModal({
                                     Preço de Venda Unit.
                                 </Text>
                                 <Text fw={600} size="sm">
-                                    R$ {currentSellingPrice.toFixed(2)}
+                                    R${' '}
+                                    {currentSellingPrice.toLocaleString(
+                                        'pt-BR',
+                                        {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                        }
+                                    )}
                                 </Text>
                             </Paper>
                         </Grid.Col>
@@ -232,7 +275,11 @@ export function SaleModal({
                                     </Text>
                                 </Group>
                                 <Text fw={800} size="lg" c="teal" mt={4}>
-                                    R$ {totalAmount.toFixed(2)}
+                                    R${' '}
+                                    {totalAmount.toLocaleString('pt-BR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })}
                                 </Text>
                             </Paper>
                         </Grid.Col>
@@ -243,7 +290,7 @@ export function SaleModal({
                                 style={{
                                     backgroundColor:
                                         totalProfit >= 0
-                                            ? 'rgba(43, 138, 62, 0.08)'
+                                            ? 'rgba(9, 146, 104, 0.08)'
                                             : 'rgba(224, 49, 49, 0.08)',
                                 }}
                             >
@@ -251,13 +298,13 @@ export function SaleModal({
                                     <TrendingUp
                                         size={18}
                                         color={
-                                            totalProfit >= 0 ? 'green' : 'red'
+                                            totalProfit >= 0 ? '#099268' : 'red'
                                         }
                                     />
                                     <Text
                                         size="xs"
                                         fw={700}
-                                        c={totalProfit >= 0 ? 'green' : 'red'}
+                                        c={totalProfit >= 0 ? 'teal' : 'red'}
                                     >
                                         Lucro Estimado
                                     </Text>
@@ -265,10 +312,14 @@ export function SaleModal({
                                 <Text
                                     fw={800}
                                     size="lg"
-                                    c={totalProfit >= 0 ? 'green' : 'red'}
+                                    c={totalProfit >= 0 ? 'teal' : 'red'}
                                     mt={4}
                                 >
-                                    R$ {totalProfit.toFixed(2)}
+                                    R${' '}
+                                    {totalProfit.toLocaleString('pt-BR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })}
                                 </Text>
                             </Paper>
                         </Grid.Col>

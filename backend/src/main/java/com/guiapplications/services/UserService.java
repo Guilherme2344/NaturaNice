@@ -6,12 +6,14 @@ import java.util.stream.Collectors;
 
 import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.CreateUserRequestDTO;
-import com.guiapplications.entities.dto.CreateUserResponseDTO;
 import com.guiapplications.entities.dto.UserResponseDTO;
 import com.guiapplications.enums.Role;
+import com.guiapplications.events.UserCreatedEvent;
 import com.guiapplications.exceptions.ResourceNotFoundException;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.event.Event;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 @ApplicationScoped
@@ -20,6 +22,9 @@ public class UserService {
     private static final String ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    @Inject
+    Event<UserCreatedEvent> userCreatedEvent;
+
     public List<UserResponseDTO> getAllUsers() {
         return User.<User>listAllSorted().stream()
                 .map(u -> new UserResponseDTO(u.id, u.name, u.email, u.role.name(), u.firstAccess))
@@ -27,7 +32,7 @@ public class UserService {
     }
 
     @Transactional
-    public CreateUserResponseDTO createUser(CreateUserRequestDTO dto) {
+    public UserResponseDTO createUser(CreateUserRequestDTO dto) {
         if (dto.name() == null || dto.name().isBlank()) {
             throw new IllegalArgumentException("Nome do usuário é obrigatório.");
         }
@@ -52,15 +57,16 @@ public class UserService {
 
         user.persist();
 
-        UserResponseDTO userDTO = new UserResponseDTO(
+        // Dispara o evento assíncrono via Quarkus Observer (CDI Event Bus) sem bloquear a resposta HTTP
+        userCreatedEvent.fireAsync(new UserCreatedEvent(user.name, user.email, randomPassword));
+
+        return new UserResponseDTO(
             user.id,
             user.name,
             user.email,
             user.role.name(),
             user.firstAccess
         );
-
-        return new CreateUserResponseDTO(userDTO, randomPassword);
     }
 
     @Transactional

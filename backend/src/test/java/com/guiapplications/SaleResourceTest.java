@@ -2,12 +2,19 @@ package com.guiapplications;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
+import jakarta.transaction.Transactional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.guiapplications.entities.Brand;
+import com.guiapplications.entities.Category;
+import com.guiapplications.entities.Family;
 import com.guiapplications.entities.Product;
+import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.SaleRequestDTO;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -17,6 +24,29 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 @QuarkusTest
 public class SaleResourceTest {
+
+    @BeforeEach
+    @Transactional
+    public void setup() {
+        if (Product.count() == 0) {
+            User admin = User.findByEmail("admin@sistema.com");
+            Brand brand = Brand.findAll().firstResult();
+            Category category = Category.findAll().firstResult();
+            Family family = Family.findAll().firstResult();
+
+            Product p = new Product();
+            p.name = "Produto Teste Venda";
+            p.quantity = 10;
+            p.expirationDate = LocalDate.now().plusMonths(6);
+            p.purchasePrice = new BigDecimal("10.00");
+            p.sellingPrice = new BigDecimal("20.00");
+            p.brand = brand;
+            p.category = category;
+            p.family = family;
+            p.user = admin;
+            p.persist();
+        }
+    }
 
     @Test
     public void testCreateSaleDecrementsStock() {

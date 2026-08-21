@@ -14,7 +14,7 @@ import jakarta.persistence.Table;
 @Table(name = "customers")
 public class Customer extends PanacheEntity {
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false, length = 100)
     public String name;
 
     @ManyToOne(fetch = FetchType.LAZY)

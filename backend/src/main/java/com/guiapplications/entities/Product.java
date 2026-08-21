@@ -16,33 +16,43 @@ import jakarta.persistence.ManyToOne;
 
 @Entity
 public class Product extends PanacheEntity {
-	
-	public String name;
-	public Integer quantity;
-	public LocalDate expirationDate;
-	@Column(nullable = true)
-	public BigDecimal purchasePrice;
-	public BigDecimal sellingPrice;
-	public BigDecimal profit;
-	
-	@ManyToOne
-	@JoinColumn(name = "family_id")
-	public Family family;
-	
-	@ManyToOne
-	@JoinColumn(name = "brand_id")
-	public Brand brand;
-	
-	@ManyToOne
-	@JoinColumn(name = "category_id")
-	public Category category;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "user_id", nullable = true)
-	public User user;
-	
-	// search products by name
-	public static List<Product> findByName(String name) {
+    @Column(name = "name", nullable = false, length = 100)
+    public String name;
+
+    @Column(name = "quantity", nullable = false)
+    public Integer quantity;
+
+    @Column(name = "expirationDate", nullable = false)
+    public LocalDate expirationDate;
+
+    @Column(name = "purchasePrice", nullable = true)
+    public BigDecimal purchasePrice;
+
+    @Column(name = "sellingPrice", nullable = false)
+    public BigDecimal sellingPrice;
+
+    @Column(name = "profit", nullable = true)
+    public BigDecimal profit;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_id", nullable = false)
+    public Family family;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "brand_id", nullable = false)
+    public Brand brand;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    public Category category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
+    public User user;
+
+    // search products by name
+    public static List<Product> findByName(String name) {
         return list("LOWER(name) LIKE LOWER(?1)", "%" + name + "%");
     }
 
@@ -51,18 +61,18 @@ public class Product extends PanacheEntity {
         LocalDate limitDate = LocalDate.now().plusDays(days);
         return list("expirationDate <= ?1 AND expirationDate >= ?2", limitDate, LocalDate.now());
     }
-   
+
     // dynamic search
     public static List<Product> findWithFilters(
             String query, String familyName, String brandName, String categoryName, LocalDate maxExpDate, User user
     ) {
-    	StringBuilder hql = new StringBuilder(
-    	        "SELECT DISTINCT p FROM Product p " +
-    	        "LEFT JOIN FETCH p.brand b " +
-    	        "LEFT JOIN FETCH p.category c " +
-    	        "LEFT JOIN FETCH p.family f " +
-    	        "WHERE 1=1"
-    	    );
+        StringBuilder hql = new StringBuilder(
+                "SELECT DISTINCT p FROM Product p " +
+                "LEFT JOIN FETCH p.brand b " +
+                "LEFT JOIN FETCH p.category c " +
+                "LEFT JOIN FETCH p.family f " +
+                "WHERE 1=1"
+            );
         Map<String, Object> params = new HashMap<>();
 
         if (user != null) {
@@ -72,30 +82,28 @@ public class Product extends PanacheEntity {
 
         // wide search
         if (query != null && !query.isBlank()) {
-        	hql.append(" AND (CAST(unaccent(LOWER(p.name)) AS String) LIKE :query")
-	            .append(" OR CAST(unaccent(LOWER(b.name)) AS String) LIKE :query")
-	            .append(" OR CAST(unaccent(LOWER(c.name)) AS String) LIKE :query")
-	            .append(" OR CAST(unaccent(LOWER(f.name)) AS String) LIKE :query)");
+            hql.append(" AND (CAST(unaccent(LOWER(p.name)) AS String) LIKE :query")
+                .append(" OR CAST(unaccent(LOWER(b.name)) AS String) LIKE :query")
+                .append(" OR CAST(unaccent(LOWER(c.name)) AS String) LIKE :query")
+                .append(" OR CAST(unaccent(LOWER(f.name)) AS String) LIKE :query)");
             params.put("query", "%" + normalizeText(query) + "%");
         }
 
-        // FILTERS START
-        
         // search by family
         if (familyName != null && !familyName.isBlank()) {
-        	hql.append(" AND CAST(unaccent(LOWER(f.name)) AS String) LIKE :familyName");
+            hql.append(" AND CAST(unaccent(LOWER(f.name)) AS String) LIKE :familyName");
             params.put("familyName", "%" + normalizeText(familyName) + "%");
         }
 
         // search by brand
         if (brandName != null && !brandName.isBlank()) {
-        	hql.append(" AND CAST(unaccent(LOWER(b.name)) AS String) LIKE :brandName");
+            hql.append(" AND CAST(unaccent(LOWER(b.name)) AS String) LIKE :brandName");
             params.put("brandName", "%" + normalizeText(brandName) + "%");
         }
 
         // search by category
         if (categoryName != null && !categoryName.isBlank()) {
-        	hql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :categoryName");
+            hql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :categoryName");
             params.put("categoryName", "%" + normalizeText(categoryName) + "%");
         }
 
@@ -105,10 +113,9 @@ public class Product extends PanacheEntity {
             params.put("maxExpDate", maxExpDate);
         }
 
-        // return data
         return list(hql.toString(), params);
     }
-    
+
     // list all products with relations fetched in a single query (prevents N+1)
     public static List<Product> listAllWithRelations(User user) {
         if (user == null) {
@@ -134,7 +141,7 @@ public class Product extends PanacheEntity {
         }
         return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate > CURRENT_DATE AND p.expirationDate <= ?1 AND p.user = ?2 ORDER BY p.expirationDate ASC", limitDate, user);
     }
-    
+
     // remove accents from words
     private static String normalizeText(String input) {
         if (input == null || input.isBlank()) {

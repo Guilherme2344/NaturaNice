@@ -81,6 +81,13 @@ export default function ProductsTable({
 
     const itemsPerPage = Number(pageSize) || 5;
 
+    const formatCurrency = (val?: number) => {
+        return (val || 0).toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+    };
+
     const getStatusBadgeColor = (status: ExpirationStatus) => {
         switch (status) {
             case 'EXPIRED':
@@ -232,21 +239,19 @@ export default function ProductsTable({
                                         </Stack>
                                     </Table.Td>
 
-                                    {/* Preço de Compra */}
+                                    {/* Preço de Compra com vírgula */}
                                     <Table.Td fw={400}>
-                                        R${' '}
-                                        {product.purchasePrice?.toFixed(2) ||
-                                            '0.00'}
+                                        R$ {formatCurrency(product.purchasePrice)}
                                     </Table.Td>
 
-                                    {/* Preço de Venda */}
+                                    {/* Preço de Venda com vírgula */}
                                     <Table.Td fw={400}>
-                                        R${' '}
-                                        {product.sellingPrice?.toFixed(2) || '0.00'}
+                                        R$ {formatCurrency(product.sellingPrice)}
                                     </Table.Td>
 
+                                    {/* Resultado com vírgula */}
                                     <Table.Td fw={600}>
-                                        R$ {product.profit?.toFixed(2) || '0.00'}
+                                        R$ {formatCurrency(product.profit)}
                                     </Table.Td>
 
                                     <Table.Td align="right">

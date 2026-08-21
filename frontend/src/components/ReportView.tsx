@@ -117,13 +117,39 @@ export function ReportView({
             maximumFractionDigits: 2,
         })}`;
 
-    const formatDate = (dateStr: string) => {
-        if (!dateStr) return '-';
-        const parts = dateStr.split('-');
-        if (parts.length === 3) {
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    const formatDate = (dateValue: any) => {
+        if (!dateValue) return '-';
+
+        // Caso venha como Array do Jackson [ano, mês, dia, hora, minuto, segundo]
+        if (Array.isArray(dateValue)) {
+            const [year, month, day, hour, minute, second] = dateValue;
+            const pad = (n: number) => String(n || 0).padStart(2, '0');
+            if (hour !== undefined && minute !== undefined) {
+                return `${pad(day)}/${pad(month)}/${year} ${pad(hour)}:${pad(minute)}:${pad(second || 0)}`;
+            }
+            return `${pad(day)}/${pad(month)}/${year}`;
         }
-        return dateStr;
+
+        const str = String(dateValue).trim();
+
+        // Caso seja ISO string com data e hora ("2026-08-20T20:21:22.09099" ou "2026-08-20 20:21:22")
+        if (str.includes('T') || str.includes(' ')) {
+            const [datePart, timePart] = str.split(/[T ]/);
+            const dateComponents = datePart.split('-');
+            if (dateComponents.length === 3) {
+                const [year, month, day] = dateComponents;
+                const cleanTime = timePart ? timePart.split('.')[0] : '';
+                return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year} ${cleanTime}`;
+            }
+        }
+
+        // Caso seja apenas data YYYY-MM-DD
+        const parts = str.split('-');
+        if (parts.length === 3) {
+            return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        }
+
+        return str;
     };
 
     const profitMargin = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
@@ -132,7 +158,7 @@ export function ReportView({
         if (profit > 0) {
             return {
                 Icon: TrendingUp,
-                badgeColor: 'green',
+                badgeColor: 'teal',
                 textColor: 'teal',
                 bgColor: 'teal.0',
                 iconClass: 'text-teal-600',
@@ -340,7 +366,7 @@ export function ReportView({
                         <Table striped highlightOnHover verticalSpacing="sm">
                             <Table.Thead>
                                 <Table.Tr>
-                                    <Table.Th>{type === 'monthly' ? 'Data' : 'Mês'}</Table.Th>
+                                    <Table.Th>{type === 'monthly' ? 'Data e Hora' : 'Mês'}</Table.Th>
                                     <Table.Th>Cliente</Table.Th>
                                     <Table.Th>Faturamento</Table.Th>
                                     <Table.Th>Custo</Table.Th>

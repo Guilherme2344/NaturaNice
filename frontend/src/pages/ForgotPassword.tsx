@@ -34,7 +34,18 @@ export default function ForgotPassword() {
     const [confirmPassword, setConfirmPassword] = useState('');
 
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(false);
+
+    const clearFieldError = (field: string) => {
+        if (fieldErrors[field]) {
+            setFieldErrors((prev) => {
+                const updated = { ...prev };
+                delete updated[field];
+                return updated;
+            });
+        }
+    };
 
     // Step 1: Send 6-digit code via email
     const handleStep1Submit = async (e: React.FormEvent) => {
@@ -42,13 +53,19 @@ export default function ForgotPassword() {
         setError('');
 
         if (!email.trim()) {
-            setError('Por favor, informe o e-mail cadastrado.');
+            setFieldErrors({ email: 'Por favor, informe o e-mail cadastrado.' });
+            return;
+        }
+
+        if (!/\S+@\S+\.\S+/.test(email.trim())) {
+            setFieldErrors({ email: 'Por favor, informe um endereço de e-mail válido.' });
             return;
         }
 
         try {
             setLoading(true);
             await authService.forgotPassword(email.trim());
+            setFieldErrors({});
             setStep(2);
         } catch (err: any) {
             setError(
@@ -66,13 +83,14 @@ export default function ForgotPassword() {
         setError('');
 
         if (!code || code.length < 6) {
-            setError('Digite os 6 dígitos do código recebido.');
+            setError('Por favor, digite todos os 6 dígitos do código recebido.');
             return;
         }
 
         try {
             setLoading(true);
             await authService.verifyCode(email.trim(), code);
+            setError('');
             setStep(3);
         } catch (err: any) {
             setError(
@@ -87,20 +105,25 @@ export default function ForgotPassword() {
     const handleStep3Submit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        const errors: Record<string, string> = {};
 
         if (!newPassword || newPassword.length < 6) {
-            setError('A nova senha deve ter no mínimo 6 caracteres.');
-            return;
+            errors.newPassword = 'A nova senha deve ter no mínimo 6 caracteres.';
         }
 
         if (newPassword !== confirmPassword) {
-            setError('As senhas não coincidem.');
+            errors.confirmPassword = 'As senhas informadas não coincidem.';
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setFieldErrors(errors);
             return;
         }
 
         try {
             setLoading(true);
             await authService.resetPassword(email.trim(), code, newPassword);
+            setFieldErrors({});
             setStep(4);
         } catch (err: any) {
             setError(
@@ -129,10 +152,10 @@ export default function ForgotPassword() {
                         <Paper
                             p="sm"
                             radius="xl"
-                            bg="teal.0"
+                            bg="blue.0"
                             style={{ display: 'inline-flex', marginBottom: 12 }}
                         >
-                            <KeyRound size={32} className="text-teal-600" />
+                            <KeyRound size={32} className="text-blue-600" />
                         </Paper>
                         <Title order={3} ta="center">
                             Recuperação de Senha
@@ -158,7 +181,7 @@ export default function ForgotPassword() {
                     )}
 
                     {step === 1 && (
-                        <form onSubmit={handleStep1Submit}>
+                        <form onSubmit={handleStep1Submit} noValidate>
                             <Stack gap="sm">
                                 <Text size="sm">
                                     Insira o e-mail associado à sua conta.
@@ -170,14 +193,16 @@ export default function ForgotPassword() {
                                     placeholder="seu.email@exemplo.com"
                                     leftSection={<Mail size={16} />}
                                     value={email}
-                                    onChange={(e) =>
-                                        setEmail(e.currentTarget.value)
-                                    }
+                                    error={fieldErrors.email}
+                                    onChange={(e) => {
+                                        setEmail(e.currentTarget.value);
+                                        clearFieldError('email');
+                                    }}
                                     required
                                 />
                                 <Button
                                     type="submit"
-                                    color="teal"
+                                    color="blue"
                                     fullWidth
                                     mt="xs"
                                     loading={loading}
@@ -190,7 +215,7 @@ export default function ForgotPassword() {
                     )}
 
                     {step === 2 && (
-                        <form onSubmit={handleStep2Submit}>
+                        <form onSubmit={handleStep2Submit} noValidate>
                             <Stack gap="md">
                                 <Text size="sm" ta="center">
                                     Informe o código de 6 dígitos enviado para{' '}
@@ -210,7 +235,7 @@ export default function ForgotPassword() {
 
                                 <Button
                                     type="submit"
-                                    color="teal"
+                                    color="blue"
                                     fullWidth
                                     loading={loading}
                                     disabled={code.length < 6}
@@ -232,31 +257,33 @@ export default function ForgotPassword() {
                     )}
 
                     {step === 3 && (
-                        <form onSubmit={handleStep3Submit}>
+                        <form onSubmit={handleStep3Submit} noValidate>
                             <Stack gap="sm">
                                 <PasswordInput
                                     label="Nova Senha"
                                     placeholder="Mínimo 6 caracteres"
                                     value={newPassword}
-                                    onChange={(e) =>
-                                        setNewPassword(e.currentTarget.value)
-                                    }
+                                    error={fieldErrors.newPassword}
+                                    onChange={(e) => {
+                                        setNewPassword(e.currentTarget.value);
+                                        clearFieldError('newPassword');
+                                    }}
                                     required
                                 />
                                 <PasswordInput
                                     label="Confirme a Nova Senha"
                                     placeholder="Repita a nova senha"
                                     value={confirmPassword}
-                                    onChange={(e) =>
-                                        setConfirmPassword(
-                                            e.currentTarget.value
-                                        )
-                                    }
+                                    error={fieldErrors.confirmPassword}
+                                    onChange={(e) => {
+                                        setConfirmPassword(e.currentTarget.value);
+                                        clearFieldError('confirmPassword');
+                                    }}
                                     required
                                 />
                                 <Button
                                     type="submit"
-                                    color="teal"
+                                    color="blue"
                                     fullWidth
                                     mt="xs"
                                     loading={loading}
@@ -272,14 +299,14 @@ export default function ForgotPassword() {
                         <Stack gap="md" align="center">
                             <Alert
                                 icon={<CheckCircle2 size={20} />}
-                                color="green"
+                                color="blue"
                                 radius="md"
                             >
                                 Sua senha foi redefinida com sucesso! Você já
                                 pode efetuar o login com a nova senha.
                             </Alert>
                             <Button
-                                color="teal"
+                                color="blue"
                                 fullWidth
                                 onClick={() => navigate('/login')}
                             >

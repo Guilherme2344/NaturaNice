@@ -8,6 +8,7 @@ import com.guiapplications.entities.dto.MonthlySalesSummaryDTO;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
@@ -17,24 +18,26 @@ import jakarta.persistence.TypedQuery;
 
 @Entity
 public class Sale extends PanacheEntity {
-	public LocalDateTime saleDate;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "customer_id", nullable = true)
-	public Customer customer;
+    @Column(name = "saleDate", nullable = false)
+    public LocalDateTime saleDate;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "user_id", nullable = true)
-	public User user;
-	
-	@OneToMany(mappedBy = "sale", cascade = CascadeType.ALL)
-	public List<SaleItem> items;
-	
-	// daily sales summary
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", nullable = true)
+    public Customer customer;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
+    public User user;
+    
+    @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL)
+    public List<SaleItem> items;
+    
+    // daily sales summary
     public static List<DailySalesSummaryDTO> getDailySummaries(LocalDateTime start, LocalDateTime end, String customerName, User user) {
         StringBuilder jpql = new StringBuilder(
             "SELECT new com.guiapplications.entities.dto.DailySalesSummaryDTO(" +
-            "  CAST(s.saleDate AS date), " +
+            "  s.saleDate, " +
             "  COALESCE(c.name, 'Cliente não informado'), " +
             "  SUM(i.sellingPrice * i.quantity), " +
             "  SUM(i.purchasePrice * i.quantity), " +
@@ -53,8 +56,8 @@ public class Sale extends PanacheEntity {
             jpql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :customerName ");
         }
 
-        jpql.append("GROUP BY CAST(s.saleDate AS date), COALESCE(c.name, 'Cliente não informado') ");
-        jpql.append("ORDER BY CAST(s.saleDate AS date) ASC, COALESCE(c.name, 'Cliente não informado') ASC");
+        jpql.append("GROUP BY s.saleDate, COALESCE(c.name, 'Cliente não informado'), s.id ");
+        jpql.append("ORDER BY s.saleDate DESC");
 
         TypedQuery<DailySalesSummaryDTO> query = getEntityManager()
                 .createQuery(jpql.toString(), DailySalesSummaryDTO.class)

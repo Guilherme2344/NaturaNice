@@ -1,23 +1,36 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { Alert, Stack } from '@mantine/core';
+import { CheckCircle2 } from 'lucide-react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
 import { ProductModal } from '../components/ProductModal';
 import { SaleModal } from '../components/SaleModal';
 import { DeleteModal } from '../components/DeleteModal';
+import type { CreateProductDTO } from '../services/productService';
 import {
-    productService,
-    type CreateProductDTO,
-} from '../services/productService';
-import { saleService } from '../services/saleService';
-import { entityService } from '../services/entityService';
-import type { Entity } from '../components/EntityTable';
+    useProductsQuery,
+    useCreateProductMutation,
+    useUpdateProductMutation,
+    useDeleteProductMutation,
+    useCreateSaleMutation,
+} from '../hooks/useProductsQuery';
+import {
+    useBrandsQuery,
+    useCategoriesQuery,
+    useFamiliesQuery,
+} from '../hooks/useEntitiesQuery';
 
 export default function Products() {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [brands, setBrands] = useState<Entity[]>([]);
-    const [categories, setCategories] = useState<Entity[]>([]);
-    const [families, setFamilies] = useState<Entity[]>([]);
+    const { data: products = [], isLoading: loadingProducts } =
+        useProductsQuery();
+    const { data: brands = [] } = useBrandsQuery();
+    const { data: categories = [] } = useCategoriesQuery();
+    const { data: families = [] } = useFamiliesQuery();
 
-    const [loading, setLoading] = useState(true);
+    const createProductMutation = useCreateProductMutation();
+    const updateProductMutation = useUpdateProductMutation();
+    const deleteProductMutation = useDeleteProductMutation();
+    const createSaleMutation = useCreateSaleMutation();
+
     const [modalOpened, setModalOpened] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(
         null
@@ -27,34 +40,12 @@ export default function Products() {
     const [productToSell, setProductToSell] = useState<Product | null>(null);
 
     const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
-    const [deleting, setDeleting] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(
+        null
+    );
 
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const [prodsData, brandsData, categoriesData, familiesData] =
-                await Promise.all([
-                    productService.getAll(),
-                    entityService.getBrands(),
-                    entityService.getCategories(),
-                    entityService.getFamilies(),
-                ]);
-
-            setProducts(prodsData);
-            setBrands(brandsData);
-            setCategories(categoriesData);
-            setFamilies(familiesData);
-        } catch (err) {
-            console.error('Erro ao buscar dados:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-    }, []);
+    // Mensagem Amigável de Sucesso
+    const [successMessage, setSuccessMessage] = useState('');
 
     const handleOpenAdd = () => {
         setSelectedProduct(null);
@@ -80,46 +71,75 @@ export default function Products() {
     };
 
     const handleSubmitProduct = async (data: CreateProductDTO) => {
+        setSuccessMessage('');
         if (selectedProduct) {
-            await productService.update(selectedProduct.id, data);
+            await updateProductMutation.mutateAsync({
+                id: selectedProduct.id,
+                data,
+            });
+            setSuccessMessage(`Produto "${data.name}" atualizado com sucesso!`);
         } else {
-            await productService.create(data);
+            await createProductMutation.mutateAsync(data);
+            setSuccessMessage(`Produto "${data.name}" cadastrado com sucesso!`);
         }
-        await fetchData();
     };
 
-    const handleConfirmSale = async (quantity: number, sellingPrice: number, customerName?: string) => {
+    const handleConfirmSale = async (
+        quantity: number,
+        sellingPrice: number,
+        customerName?: string
+    ) => {
         if (!productToSell) return;
-        await saleService.createSale({
+        setSuccessMessage('');
+        await createSaleMutation.mutateAsync({
             productId: productToSell.id,
             quantity,
             sellingPrice,
             customerName,
         });
-        await fetchData();
+
+        const now = new Date();
+        const formattedTime = now.toLocaleTimeString('pt-BR');
+        const formattedDate = now.toLocaleDateString('pt-BR');
+
+        setSuccessMessage(
+            `Venda do produto "${productToSell.name}" (${quantity} un.) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
+        );
     };
 
     const handleConfirmDelete = async () => {
         if (!productToDelete) return;
         try {
-            setDeleting(true);
-            await productService.delete(productToDelete.id);
+            setSuccessMessage('');
+            await deleteProductMutation.mutateAsync(productToDelete.id);
             setDeleteModalOpened(false);
+            setSuccessMessage(
+                `Produto "${productToDelete.name}" excluído com sucesso!`
+            );
             setProductToDelete(null);
-            await fetchData();
         } catch (err) {
             console.error('Erro ao excluir produto:', err);
-        } finally {
-            setDeleting(false);
         }
     };
 
     return (
-        <>
+        <Stack gap="md">
+            {successMessage && (
+                <Alert
+                    icon={<CheckCircle2 size={18} />}
+                    color="blue"
+                    radius="md"
+                    withCloseButton
+                    onClose={() => setSuccessMessage('')}
+                >
+                    {successMessage}
+                </Alert>
+            )}
+
             <ProductsTable
-                title="Todos os Produtos"
+                title="Produtos"
                 products={products}
-                loading={loading}
+                loading={loadingProducts}
                 onAdd={handleOpenAdd}
                 onEdit={handleOpenEdit}
                 onDelete={handleOpenDelete}
@@ -148,9 +168,13 @@ export default function Products() {
                 onClose={() => setDeleteModalOpened(false)}
                 onConfirm={handleConfirmDelete}
                 title="Excluir Produto"
-                itemDescription={productToDelete ? `o produto "${productToDelete.name}"` : 'este produto'}
-                loading={deleting}
+                itemDescription={
+                    productToDelete
+                        ? `o produto "${productToDelete.name}"`
+                        : 'este produto'
+                }
+                loading={deleteProductMutation.isPending}
             />
-        </>
+        </Stack>
     );
 }

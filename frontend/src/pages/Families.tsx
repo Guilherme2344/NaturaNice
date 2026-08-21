@@ -1,65 +1,54 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { Alert, Stack } from '@mantine/core';
+import { CheckCircle2 } from 'lucide-react';
 import EntityTable from '../components/EntityTable';
 import type { Entity } from '../components/EntityTable';
 import { EntityModal } from '../components/EntityModal';
 import { DeleteModal } from '../components/DeleteModal';
-import { entityService } from '../services/entityService';
+import {
+    useFamiliesQuery,
+    useCreateFamilyMutation,
+    useUpdateFamilyMutation,
+    useDeleteFamilyMutation,
+} from '../hooks/useEntitiesQuery';
 
 export default function Families() {
-    const [families, setFamilies] = useState<Entity[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: families = [], isLoading: loadingFamilies } = useFamiliesQuery();
 
-    // Estados do Modal de Formulário (POST / PUT)
+    const createFamilyMutation = useCreateFamilyMutation();
+    const updateFamilyMutation = useUpdateFamilyMutation();
+    const deleteFamilyMutation = useDeleteFamilyMutation();
+
     const [modalOpened, setModalOpened] = useState(false);
     const [selectedFamily, setSelectedFamily] = useState<Entity | null>(null);
 
-    // Estados do Modal de Confirmação de Exclusão (DELETE)
     const [deleteModalOpened, setDeleteModalOpened] = useState(false);
     const [familyToDelete, setFamilyToDelete] = useState<Entity | null>(null);
-    const [deleteLoading, setDeleteLoading] = useState(false);
 
-    // Busca a lista de famílias do backend
-    const fetchFamilies = async () => {
-        try {
-            setLoading(true);
-            const data = await entityService.getFamilies();
-            setFamilies(data);
-        } catch (err) {
-            console.error('Erro ao buscar famílias:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Mensagem Amigável de Sucesso
+    const [successMessage, setSuccessMessage] = useState('');
 
-    useEffect(() => {
-        fetchFamilies();
-    }, []);
-
-    // Abertura do modal para Cadastro
     const handleOpenAdd = () => {
         setSelectedFamily(null);
         setModalOpened(true);
     };
 
-    // Abertura do modal para Edição
     const handleOpenEdit = (family: Entity) => {
         setSelectedFamily(family);
         setModalOpened(true);
     };
 
-    // Submissão do formulário (Decide entre POST e PUT)
     const handleSubmit = async (values: { name: string }) => {
+        setSuccessMessage('');
         if (selectedFamily) {
-            // PUT
-            await entityService.updateFamily(selectedFamily.id, values);
+            await updateFamilyMutation.mutateAsync({ id: selectedFamily.id, data: values });
+            setSuccessMessage(`Família "${values.name}" atualizada com sucesso!`);
         } else {
-            // POST
-            await entityService.createFamily(values);
+            await createFamilyMutation.mutateAsync(values);
+            setSuccessMessage(`Família "${values.name}" cadastrada com sucesso!`);
         }
-        await fetchFamilies();
     };
 
-    // Abertura do modal de confirmação de exclusão
     const handleOpenDelete = (id: number) => {
         const family = families.find((f) => f.id === id);
         if (family) {
@@ -68,32 +57,38 @@ export default function Families() {
         }
     };
 
-    // Confirmação de exclusão (DELETE)
     const handleConfirmDelete = async () => {
         if (!familyToDelete) return;
         try {
-            setDeleteLoading(true);
-            await entityService.deleteFamily(familyToDelete.id);
+            setSuccessMessage('');
+            await deleteFamilyMutation.mutateAsync(familyToDelete.id);
             setDeleteModalOpened(false);
-            await fetchFamilies();
+            setSuccessMessage(`Família "${familyToDelete.name}" excluída com sucesso!`);
+            setFamilyToDelete(null);
         } catch (err: any) {
-            alert(
-                'Erro ao excluir família: ' +
-                    (err.response?.data?.message ||
-                        'Verifique se não existem produtos vinculados a esta família.')
-            );
-        } finally {
-            setDeleteLoading(false);
+            console.error('Erro ao excluir família:', err);
         }
     };
 
     return (
-        <>
+        <Stack gap="md">
+            {successMessage && (
+                <Alert
+                    icon={<CheckCircle2 size={18} />}
+                    color="blue"
+                    radius="md"
+                    withCloseButton
+                    onClose={() => setSuccessMessage('')}
+                >
+                    {successMessage}
+                </Alert>
+            )}
+
             <EntityTable
                 title="Famílias"
                 subtitle="Famílias e subgrupos de produtos cadastrados"
                 items={families}
-                loading={loading}
+                loading={loadingFamilies}
                 showColor={false}
                 onAdd={handleOpenAdd}
                 onEdit={handleOpenEdit}
@@ -103,9 +98,7 @@ export default function Families() {
             <EntityModal
                 opened={modalOpened}
                 onClose={() => setModalOpened(false)}
-                title={
-                    selectedFamily ? 'Editar Família' : 'Cadastrar Nova Família'
-                }
+                title={selectedFamily ? 'Editar Família' : 'Cadastrar Nova Família'}
                 showColor={false}
                 initialData={selectedFamily}
                 onSubmit={handleSubmit}
@@ -115,13 +108,9 @@ export default function Families() {
                 opened={deleteModalOpened}
                 onClose={() => setDeleteModalOpened(false)}
                 onConfirm={handleConfirmDelete}
-                itemDescription={
-                    familyToDelete?.name
-                        ? `a família "${familyToDelete.name}"`
-                        : 'esta família'
-                }
-                loading={deleteLoading}
+                itemDescription={familyToDelete?.name ? `a família "${familyToDelete.name}"` : 'esta família'}
+                loading={deleteFamilyMutation.isPending}
             />
-        </>
+        </Stack>
     );
 }

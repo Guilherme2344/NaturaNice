@@ -15,14 +15,14 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "families")
 public class Family extends PanacheEntity {
-	
-	@Column(nullable = false)
-	public String name;
 
-	@ManyToOne(fetch = FetchType.LAZY)
-	@JoinColumn(name = "user_id", nullable = true)
-	public User user;
-	
+    @Column(name = "name", nullable = false, length = 100)
+    public String name;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = true)
+    public User user;
+
     // search families by name and user
     public static List<Family> findByNameAndUser(String name, User user) {
         if (user == null) {
@@ -51,7 +51,7 @@ public class Family extends PanacheEntity {
         }
         return list("user = ?1", user);
     }
-    
+
     // remove accents from words
     private static String normalizeText(String input) {
         if (input == null || input.isBlank()) return "";

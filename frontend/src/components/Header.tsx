@@ -29,7 +29,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 
 const stockNavItems = [
-    { label: 'Todos os Produtos', icon: Package, href: '/' },
+    { label: 'Produtos', icon: Package, href: '/' },
     {
         label: 'Produtos À Vencer',
         icon: Clock,
@@ -52,13 +52,13 @@ const reportNavItems = [
         label: 'Relatório Mensal',
         icon: Calendar,
         href: '/reports/monthly',
-        color: '#099268', // teal
+        color: '#1c7ed6', // blue
     },
     {
         label: 'Relatório Anual',
         icon: BarChart3,
         href: '/reports/annual',
-        color: '#1c7ed6', // blue
+        color: '#099268', // teal
     },
 ];
 
@@ -116,7 +116,9 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                 </Text>
                                 <Badge
                                     size="sm"
-                                    color={user.role === 'ADMIN' ? 'blue' : 'gray'}
+                                    color={
+                                        user.role === 'ADMIN' ? 'blue' : 'gray'
+                                    }
                                     variant="light"
                                 >
                                     {user.role === 'ADMIN' ? 'ADMIN' : 'Comum'}
@@ -156,7 +158,9 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                 component={Link}
                                 to="/admin/users"
                                 label="Gerenciar Usuários"
-                                leftSection={<Shield size={18} color="#1c7ed6" />}
+                                leftSection={
+                                    <Shield size={18} color="#1c7ed6" />
+                                }
                                 active={location.pathname === '/admin/users'}
                                 onClick={handleNavClick}
                                 style={{ borderRadius: '6px' }}
@@ -177,7 +181,8 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                 </Text>
                                 {stockNavItems.map((item) => {
                                     const Icon = item.icon;
-                                    const isActive = location.pathname === item.href;
+                                    const isActive =
+                                        location.pathname === item.href;
 
                                     return (
                                         <NavLink
@@ -186,7 +191,10 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                             to={item.href}
                                             label={item.label}
                                             leftSection={
-                                                <Icon size={18} color={item.color} />
+                                                <Icon
+                                                    size={18}
+                                                    color={item.color}
+                                                />
                                             }
                                             active={isActive}
                                             onClick={handleNavClick}
@@ -211,7 +219,8 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                 </Text>
                                 {reportNavItems.map((item) => {
                                     const Icon = item.icon;
-                                    const isActive = location.pathname === item.href;
+                                    const isActive =
+                                        location.pathname === item.href;
 
                                     return (
                                         <NavLink
@@ -220,7 +229,10 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                                             to={item.href}
                                             label={item.label}
                                             leftSection={
-                                                <Icon size={18} color={item.color} />
+                                                <Icon
+                                                    size={18}
+                                                    color={item.color}
+                                                />
                                             }
                                             active={isActive}
                                             onClick={handleNavClick}
@@ -262,10 +274,7 @@ export default function Header({ children }: { children?: React.ReactNode }) {
                         >
                             Cancelar
                         </Button>
-                        <Button
-                            color="red"
-                            onClick={handleConfirmLogout}
-                        >
+                        <Button color="red" onClick={handleConfirmLogout}>
                             Sair da Conta
                         </Button>
                     </Group>
