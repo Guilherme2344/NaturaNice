@@ -6,7 +6,8 @@ export const productSchema = yup.object().shape({
         .string()
         .trim()
         .required('Por favor, informe o nome do produto.')
-        .min(2, 'O nome do produto deve ter no mínimo 2 caracteres.'),
+        .min(2, 'O nome do produto deve ter no mínimo 2 caracteres.')
+        .max(255, 'O nome do produto deve ter no máximo 255 caracteres.'),
     brandId: yup
         .string()
         .nullable()
@@ -45,7 +46,8 @@ export const entitySchema = yup.object().shape({
         .string()
         .trim()
         .required('Por favor, informe o nome.')
-        .min(2, 'O nome deve ter no mínimo 2 caracteres.'),
+        .min(2, 'O nome deve ter no mínimo 2 caracteres.')
+        .max(100, 'O nome deve ter no máximo 100 caracteres.'),
 });
 
 // Validation schema for sale registration with dynamic stock limit check
@@ -76,14 +78,16 @@ export const userAdminSchema = yup.object().shape({
         .string()
         .trim()
         .required('Por favor, informe o nome do usuário.')
-        .min(2, 'O nome deve conter pelo menos 2 caracteres.'),
+        .min(2, 'O nome deve conter pelo menos 2 caracteres.')
+        .max(100, 'O nome deve conter no máximo 100 caracteres.'),
     email: yup
         .string()
         .trim()
         .required('Por favor, informe o e-mail de acesso.')
         .email(
             'Por favor, informe um endereço de e-mail válido (ex: nome@dominio.com).'
-        ),
+        )
+        .max(255, 'O e-mail deve conter no máximo 255 caracteres.'),
 });
 
 // Validation schema for user login
@@ -92,7 +96,8 @@ export const loginSchema = yup.object().shape({
         .string()
         .trim()
         .required('Por favor, digite seu e-mail de acesso.')
-        .email('Por favor, informe um endereço de e-mail válido.'),
+        .email('Por favor, informe um endereço de e-mail válido.')
+        .max(150, 'O e-mail deve conter no máximo 150 caracteres.'),
     password: yup.string().required('Por favor, digite sua senha.'),
 });
 
@@ -101,7 +106,8 @@ export const passwordResetSchema = yup.object().shape({
     newPassword: yup
         .string()
         .required('Informe a nova senha.')
-        .min(6, 'A nova senha deve possuir no mínimo 6 caracteres.'),
+        .min(6, 'A nova senha deve possuir no mínimo 6 caracteres.')
+        .max(100, 'A nova senha deve possuir no máximo 100 caracteres.'),
     confirmPassword: yup
         .string()
         .required('Confirme a nova senha.')

@@ -14,13 +14,13 @@ import jakarta.persistence.Table;
 @Table(name = "password_reset_tokens")
 public class PasswordResetToken extends PanacheEntity {
 
-    @Column(nullable = false)
+    @Column(name = "email", nullable = false, length = 255)
     public String email;
 
-    @Column(nullable = false, length = 6)
+    @Column(name = "code", nullable = false, length = 6)
     public String code;
 
-    @Column(nullable = false)
+    @Column(name = "expirationTime", nullable = false)
     public LocalDateTime expirationTime;
 
     @ManyToOne(fetch = FetchType.LAZY)

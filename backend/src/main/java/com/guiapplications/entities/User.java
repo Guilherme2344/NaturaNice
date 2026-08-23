@@ -18,20 +18,20 @@ import jakarta.persistence.Table;
 @Table(name = "users")
 public class User extends PanacheEntity {
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false, length = 100)
     public String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "email", nullable = false, unique = true, length = 255)
     public String email;
 
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false, length = 255)
     public String password;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "role", nullable = false, length = 20)
     public Role role = Role.USER;
 
-    @Column(nullable = false)
+    @Column(name = "firstAccess", nullable = false)
     public boolean firstAccess = false;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
