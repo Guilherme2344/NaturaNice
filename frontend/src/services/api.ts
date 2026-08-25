@@ -30,17 +30,21 @@ api.interceptors.response.use(
     (error) => {
         const status = error.response ? error.response.status : null;
 
-        // Redirect to 503 Error page if server is unavailable or network error
+        // Redirect to 503 Error page if server is unavailable
         if (status === 503) {
             if (window.location.pathname !== '/503') {
                 window.location.href = '/503';
             }
         }
 
-        console.error(
-            'API Request Error:',
-            error.response || error.message
-        );
+        // Only log severe server errors (5xx) to keep console clean for standard 400 validation messages
+        if (!status || status >= 500) {
+            console.error(
+                'API Server Error:',
+                error.response?.data || error.message
+            );
+        }
+
         return Promise.reject(error);
     }
 );

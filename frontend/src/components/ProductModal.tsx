@@ -4,15 +4,21 @@ import {
     TextInput,
     NumberInput,
     Select,
+    Autocomplete,
     Button,
     Group,
     Stack,
     Grid,
+    ActionIcon,
+    Text,
+    ColorInput,
 } from '@mantine/core';
+import { Plus, Layers, FolderTree } from 'lucide-react';
 import type { CreateProductDTO } from '../services/productService';
 import type { Product } from '../components/ProductsTable';
 import type { Entity } from '../components/EntityTable';
 import { productSchema, validateWithYup } from '../schemas/validationSchemas';
+import { useCreateBrandMutation } from '../hooks/useEntitiesQuery';
 
 interface ProductModalProps {
     opened: boolean;
@@ -39,9 +45,19 @@ export function ProductModal({
     const [purchasePrice, setPurchasePrice] = useState<number | string>(0);
     const [sellingPrice, setSellingPrice] = useState<number | string>(0);
     const [brandId, setBrandId] = useState<string | null>(null);
-    const [categoryId, setCategoryId] = useState<string | null>(null);
-    const [familyId, setFamilyId] = useState<string | null>(null);
+    const [categoryName, setCategoryName] = useState('');
+    const [familyName, setFamilyName] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Mutation for quick Brand creation
+    const createBrandMutation = useCreateBrandMutation();
+
+    // Quick Brand creation sub-modal states
+    const [quickBrandModalOpened, setQuickBrandModalOpened] = useState(false);
+    const [quickBrandName, setQuickBrandName] = useState('');
+    const [quickBrandColor, setQuickBrandColor] = useState('#1c7ed6');
+    const [quickBrandLoading, setQuickBrandLoading] = useState(false);
+    const [quickBrandError, setQuickBrandError] = useState('');
 
     // error messages for each field
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -58,16 +74,8 @@ export function ProductModal({
                 setBrandId(
                     initialData.brand?.id ? String(initialData.brand.id) : null
                 );
-                setCategoryId(
-                    initialData.category?.id
-                        ? String(initialData.category.id)
-                        : null
-                );
-                setFamilyId(
-                    initialData.family?.id
-                        ? String(initialData.family.id)
-                        : null
-                );
+                setCategoryName(initialData.category?.name || '');
+                setFamilyName(initialData.family?.name || '');
             } else {
                 setName('');
                 setQuantity(1);
@@ -75,8 +83,8 @@ export function ProductModal({
                 setPurchasePrice(0);
                 setSellingPrice(0);
                 setBrandId(null);
-                setCategoryId(null);
-                setFamilyId(null);
+                setCategoryName('');
+                setFamilyName('');
             }
         }
     }, [opened, initialData]);
@@ -91,14 +99,56 @@ export function ProductModal({
         }
     };
 
+    const handleOpenQuickBrand = () => {
+        setQuickBrandName('');
+        setQuickBrandColor('#1c7ed6');
+        setQuickBrandError('');
+        setQuickBrandModalOpened(true);
+    };
+
+    const handleSaveQuickBrand = async () => {
+        const trimmed = quickBrandName.trim();
+        if (!trimmed) {
+            setQuickBrandError('O nome da marca é obrigatório.');
+            return;
+        }
+        if (trimmed.length < 2) {
+            setQuickBrandError('O nome deve ter no mínimo 2 caracteres.');
+            return;
+        }
+
+        try {
+            setQuickBrandLoading(true);
+            setQuickBrandError('');
+
+            const res = await createBrandMutation.mutateAsync({
+                name: trimmed,
+                hexColor: quickBrandColor || '#1c7ed6',
+            });
+
+            if (res?.id) {
+                setBrandId(String(res.id));
+                clearError('brandId');
+            }
+
+            setQuickBrandModalOpened(false);
+        } catch (err: any) {
+            setQuickBrandError(
+                err?.response?.data?.message || 'Erro ao cadastrar marca.'
+            );
+        } finally {
+            setQuickBrandLoading(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         const formData = {
             name: name.trim(),
             brandId,
-            categoryId,
-            familyId,
+            categoryName: categoryName.trim(),
+            familyName: familyName.trim(),
             quantity: Number(quantity),
             expirationDate,
             purchasePrice: Number(purchasePrice),
@@ -126,6 +176,15 @@ export function ProductModal({
 
         try {
             setLoading(true);
+
+            // Find matching category/family ID if selected, or send string name for auto-creation
+            const matchedCategory = categories.find(
+                (c) => c.name.toLowerCase() === categoryName.trim().toLowerCase()
+            );
+            const matchedFamily = families.find(
+                (f) => f.name.toLowerCase() === familyName.trim().toLowerCase()
+            );
+
             const payload: CreateProductDTO = {
                 name: name.trim(),
                 quantity: Number(quantity) || 0,
@@ -133,8 +192,10 @@ export function ProductModal({
                 purchasePrice: Number(purchasePrice) || 0,
                 sellingPrice: Number(sellingPrice) || 0,
                 brandId: Number(brandId),
-                categoryId: Number(categoryId),
-                familyId: Number(familyId),
+                categoryId: matchedCategory ? matchedCategory.id : undefined,
+                categoryName: categoryName.trim(),
+                familyId: matchedFamily ? matchedFamily.id : undefined,
+                familyName: familyName.trim(),
             };
 
             await onSubmit(payload);
@@ -150,165 +211,241 @@ export function ProductModal({
     };
 
     return (
-        <Modal
-            opened={opened}
-            onClose={onClose}
-            title={initialData ? 'Editar Produto' : 'Cadastrar Novo Produto'}
-            size="lg"
-            centered
-            radius="md"
-        >
-            <form onSubmit={handleSubmit} noValidate>
+        <>
+            <Modal
+                opened={opened}
+                onClose={onClose}
+                title={initialData ? 'Editar Produto' : 'Cadastrar Novo Produto'}
+                size="lg"
+                centered
+                radius="md"
+            >
+                <form onSubmit={handleSubmit} noValidate>
+                    <Stack gap="md">
+                        <TextInput
+                            label="Nome do Produto"
+                            required
+                            value={name}
+                            error={errors.name}
+                            onChange={(e) => {
+                                setName(e.currentTarget.value);
+                                clearError('name');
+                            }}
+                        />
+
+                        <Grid>
+                            <Grid.Col span={4}>
+                                <Stack gap={4}>
+                                    <Group justify="space-between" align="center">
+                                        <Text size="sm" fw={500}>
+                                            Marca <Text component="span" c="red">*</Text>
+                                        </Text>
+                                        <ActionIcon
+                                            size="xs"
+                                            variant="light"
+                                            color="blue"
+                                            title="Cadastrar Nova Marca"
+                                            onClick={handleOpenQuickBrand}
+                                        >
+                                            <Plus size={12} />
+                                        </ActionIcon>
+                                    </Group>
+                                    <Select
+                                        data={brands.map((b) => ({
+                                            value: String(b.id),
+                                            label: b.name,
+                                        }))}
+                                        value={brandId}
+                                        error={errors.brandId}
+                                        onChange={(val) => {
+                                            setBrandId(val);
+                                            clearError('brandId');
+                                        }}
+                                        searchable
+                                        placeholder="Selecione a marca"
+                                    />
+                                </Stack>
+                            </Grid.Col>
+
+                            <Grid.Col span={4}>
+                                <Autocomplete
+                                    label="Categoria"
+                                    placeholder="Digite ou escolha uma categoria"
+                                    data={categories.map((c) => c.name)}
+                                    value={categoryName}
+                                    error={errors.categoryName}
+                                    onChange={(val) => {
+                                        setCategoryName(val);
+                                        clearError('categoryName');
+                                    }}
+                                    required
+                                    leftSection={<Layers size={16} />}
+                                />
+                            </Grid.Col>
+
+                            <Grid.Col span={4}>
+                                <Autocomplete
+                                    label="Família"
+                                    placeholder="Digite ou escolha uma família"
+                                    data={families.map((f) => f.name)}
+                                    value={familyName}
+                                    error={errors.familyName}
+                                    onChange={(val) => {
+                                        setFamilyName(val);
+                                        clearError('familyName');
+                                    }}
+                                    required
+                                    leftSection={<FolderTree size={16} />}
+                                />
+                            </Grid.Col>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.Col span={6}>
+                                <NumberInput
+                                    label="Quantidade"
+                                    required
+                                    min={0}
+                                    value={quantity}
+                                    error={errors.quantity}
+                                    onChange={(val) => {
+                                        setQuantity(val);
+                                        clearError('quantity');
+                                    }}
+                                />
+                            </Grid.Col>
+                            <Grid.Col span={6}>
+                                <TextInput
+                                    type="date"
+                                    label="Data de Vencimento"
+                                    required
+                                    value={expirationDate}
+                                    error={errors.expirationDate}
+                                    onChange={(e) => {
+                                        setExpirationDate(e.currentTarget.value);
+                                        clearError('expirationDate');
+                                    }}
+                                />
+                            </Grid.Col>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.Col span={6}>
+                                <NumberInput
+                                    label="Preço de Compra (R$)"
+                                    decimalScale={2}
+                                    decimalSeparator=","
+                                    thousandSeparator="."
+                                    selectAllOnFocus
+                                    min={0}
+                                    prefix="R$ "
+                                    required
+                                    value={purchasePrice}
+                                    error={errors.purchasePrice}
+                                    onChange={(val) => {
+                                        setPurchasePrice(val);
+                                        clearError('purchasePrice');
+                                    }}
+                                />
+                            </Grid.Col>
+                            <Grid.Col span={6}>
+                                <NumberInput
+                                    label="Preço de Venda (R$)"
+                                    decimalScale={2}
+                                    decimalSeparator=","
+                                    thousandSeparator="."
+                                    selectAllOnFocus
+                                    min={0}
+                                    prefix="R$ "
+                                    required
+                                    value={sellingPrice}
+                                    error={errors.sellingPrice}
+                                    onChange={(val) => {
+                                        setSellingPrice(val);
+                                        clearError('sellingPrice');
+                                    }}
+                                />
+                            </Grid.Col>
+                        </Grid>
+
+                        <Group justify="flex-end" mt="md">
+                            <Button
+                                variant="default"
+                                onClick={onClose}
+                                disabled={loading}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button type="submit" color="blue" loading={loading}>
+                                {initialData
+                                    ? 'Salvar Alterações'
+                                    : 'Cadastrar Produto'}
+                            </Button>
+                        </Group>
+                    </Stack>
+                </form>
+            </Modal>
+
+            {/* Quick Brand Creation Sub-Modal */}
+            <Modal
+                opened={quickBrandModalOpened}
+                onClose={() => setQuickBrandModalOpened(false)}
+                title="Cadastrar Nova Marca"
+                size="sm"
+                centered
+                radius="md"
+            >
                 <Stack gap="md">
                     <TextInput
-                        label="Nome do Produto"
+                        label="Nome da Marca"
+                        placeholder="Ex: Natura"
                         required
-                        value={name}
-                        error={errors.name}
+                        value={quickBrandName}
+                        error={quickBrandError}
                         onChange={(e) => {
-                            setName(e.currentTarget.value);
-                            clearError('name');
+                            setQuickBrandName(e.currentTarget.value);
+                            setQuickBrandError('');
                         }}
                     />
 
-                    <Grid>
-                        <Grid.Col span={4}>
-                            <Select
-                                label="Marca"
-                                required
-                                data={brands.map((b) => ({
-                                    value: String(b.id),
-                                    label: b.name,
-                                }))}
-                                value={brandId}
-                                error={errors.brandId}
-                                onChange={(val) => {
-                                    setBrandId(val);
-                                    clearError('brandId');
-                                }}
-                                searchable
-                            />
-                        </Grid.Col>
-                        <Grid.Col span={4}>
-                            <Select
-                                label="Categoria"
-                                required
-                                data={categories.map((c) => ({
-                                    value: String(c.id),
-                                    label: c.name,
-                                }))}
-                                value={categoryId}
-                                error={errors.categoryId}
-                                onChange={(val) => {
-                                    setCategoryId(val);
-                                    clearError('categoryId');
-                                }}
-                                searchable
-                            />
-                        </Grid.Col>
-                        <Grid.Col span={4}>
-                            <Select
-                                label="Família"
-                                required
-                                data={families.map((f) => ({
-                                    value: String(f.id),
-                                    label: f.name,
-                                }))}
-                                value={familyId}
-                                error={errors.familyId}
-                                onChange={(val) => {
-                                    setFamilyId(val);
-                                    clearError('familyId');
-                                }}
-                                searchable
-                            />
-                        </Grid.Col>
-                    </Grid>
+                    <ColorInput
+                        label="Cor da Marca (opcional)"
+                        placeholder="Escolha uma cor"
+                        value={quickBrandColor}
+                        onChange={setQuickBrandColor}
+                        format="hex"
+                        swatches={[
+                            '#1c7ed6',
+                            '#099268',
+                            '#f59f00',
+                            '#e03131',
+                            '#748ffc',
+                            '#f783ac',
+                            '#ae3ec9',
+                            '#4263eb',
+                        ]}
+                    />
 
-                    <Grid>
-                        <Grid.Col span={6}>
-                            <NumberInput
-                                label="Quantidade"
-                                required
-                                min={0}
-                                value={quantity}
-                                error={errors.quantity}
-                                onChange={(val) => {
-                                    setQuantity(val);
-                                    clearError('quantity');
-                                }}
-                            />
-                        </Grid.Col>
-                        <Grid.Col span={6}>
-                            <TextInput
-                                type="date"
-                                label="Data de Vencimento"
-                                required
-                                value={expirationDate}
-                                error={errors.expirationDate}
-                                onChange={(e) => {
-                                    setExpirationDate(e.currentTarget.value);
-                                    clearError('expirationDate');
-                                }}
-                            />
-                        </Grid.Col>
-                    </Grid>
-
-                    <Grid>
-                        <Grid.Col span={6}>
-                            <NumberInput
-                                label="Preço de Compra (R$)"
-                                decimalScale={2}
-                                decimalSeparator=","
-                                thousandSeparator="."
-                                selectAllOnFocus
-                                min={0}
-                                prefix="R$ "
-                                required
-                                value={purchasePrice}
-                                error={errors.purchasePrice}
-                                onChange={(val) => {
-                                    setPurchasePrice(val);
-                                    clearError('purchasePrice');
-                                }}
-                            />
-                        </Grid.Col>
-                        <Grid.Col span={6}>
-                            <NumberInput
-                                label="Preço de Venda (R$)"
-                                decimalScale={2}
-                                decimalSeparator=","
-                                thousandSeparator="."
-                                selectAllOnFocus
-                                min={0}
-                                prefix="R$ "
-                                required
-                                value={sellingPrice}
-                                error={errors.sellingPrice}
-                                onChange={(val) => {
-                                    setSellingPrice(val);
-                                    clearError('sellingPrice');
-                                }}
-                            />
-                        </Grid.Col>
-                    </Grid>
-
-                    <Group justify="flex-end" mt="md">
+                    <Group justify="flex-end" mt="sm">
                         <Button
                             variant="default"
-                            onClick={onClose}
-                            disabled={loading}
+                            size="xs"
+                            onClick={() => setQuickBrandModalOpened(false)}
+                            disabled={quickBrandLoading}
                         >
                             Cancelar
                         </Button>
-                        <Button type="submit" color="blue" loading={loading}>
-                            {initialData
-                                ? 'Salvar Alterações'
-                                : 'Cadastrar Produto'}
+                        <Button
+                            size="xs"
+                            color="blue"
+                            loading={quickBrandLoading}
+                            onClick={handleSaveQuickBrand}
+                        >
+                            Cadastrar
                         </Button>
                     </Group>
                 </Stack>
-            </form>
-        </Modal>
+            </Modal>
+        </>
     );
 }

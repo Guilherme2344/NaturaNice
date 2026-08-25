@@ -16,7 +16,6 @@ export default function Categories() {
     const { data: categories = [], isLoading: loadingCategories } =
         useCategoriesQuery();
 
-    // mutation used due to database modification
     const createCategoryMutation = useCreateCategoryMutation();
     const updateCategoryMutation = useUpdateCategoryMutation();
     const deleteCategoryMutation = useDeleteCategoryMutation();
@@ -26,12 +25,12 @@ export default function Categories() {
         null
     );
 
-    const [deleteModalOpened, setDeleteModalOpened] = useState(false);
+    const [deleteOpened, setDeleteOpened] = useState(false);
     const [categoryToDelete, setCategoryToDelete] = useState<Entity | null>(
         null
     );
+    const [deleteError, setDeleteError] = useState('');
 
-    // friendly success message
     const [successMessage, setSuccessMessage] = useState('');
 
     const handleOpenAdd = () => {
@@ -39,9 +38,18 @@ export default function Categories() {
         setModalOpened(true);
     };
 
-    const handleOpenEdit = (category: Entity) => {
-        setSelectedCategory(category);
+    const handleOpenEdit = (item: Entity) => {
+        setSelectedCategory(item);
         setModalOpened(true);
+    };
+
+    const handleOpenDelete = (id: number) => {
+        const item = categories.find((c) => c.id === id);
+        if (item) {
+            setCategoryToDelete(item);
+            setDeleteError('');
+            setDeleteOpened(true);
+        }
     };
 
     const handleSubmit = async (values: { name: string }) => {
@@ -62,26 +70,28 @@ export default function Categories() {
         }
     };
 
-    const handleOpenDelete = (id: number) => {
-        const category = categories.find((c) => c.id === id);
-        if (category) {
-            setCategoryToDelete(category);
-            setDeleteModalOpened(true);
-        }
-    };
-
     const handleConfirmDelete = async () => {
         if (!categoryToDelete) return;
         try {
             setSuccessMessage('');
+            setDeleteError('');
             await deleteCategoryMutation.mutateAsync(categoryToDelete.id);
-            setDeleteModalOpened(false);
+            setDeleteOpened(false);
             setSuccessMessage(
                 `Categoria "${categoryToDelete.name}" excluída com sucesso!`
             );
             setCategoryToDelete(null);
         } catch (err: any) {
-            console.error('Erro ao excluir categoria:', err);
+            if (err?.response?.status === 409) {
+                const serverMsg = err?.response?.data?.details || err?.response?.data?.message;
+                setDeleteError(
+                    serverMsg || 'Não é possível excluir esta categoria pois existem produtos associados a ela.'
+                );
+            } else {
+                setDeleteError(
+                    err?.response?.data?.message || 'Erro ao excluir o registro.'
+                );
+            }
         }
     };
 
@@ -101,10 +111,10 @@ export default function Categories() {
 
             <EntityTable
                 title="Categorias"
-                subtitle="Categorias cadastradas no sistema"
+                subtitle="Categorias de produtos no estoque"
+                addButtonLabel="Nova Categoria"
                 items={categories}
                 loading={loadingCategories}
-                showColor={false}
                 onAdd={handleOpenAdd}
                 onEdit={handleOpenEdit}
                 onDelete={handleOpenDelete}
@@ -118,21 +128,22 @@ export default function Categories() {
                         ? 'Editar Categoria'
                         : 'Cadastrar Nova Categoria'
                 }
-                showColor={false}
                 initialData={selectedCategory}
                 onSubmit={handleSubmit}
             />
 
             <DeleteModal
-                opened={deleteModalOpened}
-                onClose={() => setDeleteModalOpened(false)}
+                opened={deleteOpened}
+                onClose={() => setDeleteOpened(false)}
                 onConfirm={handleConfirmDelete}
+                title="Excluir Categoria"
                 itemDescription={
-                    categoryToDelete?.name
+                    categoryToDelete
                         ? `a categoria "${categoryToDelete.name}"`
                         : 'esta categoria'
                 }
                 loading={deleteCategoryMutation.isPending}
+                error={deleteError}
             />
         </Stack>
     );

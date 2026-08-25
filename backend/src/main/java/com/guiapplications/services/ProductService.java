@@ -10,7 +10,6 @@ import com.guiapplications.entities.Product;
 import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.ProductRequestDTO;
 import com.guiapplications.entities.dto.ProductResponseDTO;
-import com.guiapplications.exceptions.ResourceAlreadyExistsException;
 import com.guiapplications.exceptions.ResourceNotFoundException;
 
 import jakarta.enterprise.context.ApplicationScoped;
@@ -18,45 +17,85 @@ import jakarta.transaction.Transactional;
 
 @ApplicationScoped
 public class ProductService {
-	
-	// create a product
-	@Transactional
+
+    // Helper method to resolve or auto-create Brand
+    private Brand resolveBrand(Long brandId, String brandName, User user) {
+        if (brandId != null) {
+            Brand b = Brand.findById(brandId);
+            if (b != null) return b;
+        }
+        if (brandName != null && !brandName.isBlank()) {
+            String trimmed = brandName.trim();
+            List<Brand> existing = Brand.findByNameAndUser(trimmed, user);
+            if (!existing.isEmpty()) {
+                return existing.get(0);
+            }
+            Brand newBrand = new Brand();
+            newBrand.name = trimmed;
+            newBrand.hexColor = "#1c7ed6";
+            newBrand.user = user;
+            newBrand.persist();
+            return newBrand;
+        }
+        throw new ResourceNotFoundException("A marca do produto é obrigatória.");
+    }
+
+    // Helper method to resolve or auto-create Category
+    private Category resolveCategory(Long categoryId, String categoryName, User user) {
+        if (categoryId != null) {
+            Category c = Category.findById(categoryId);
+            if (c != null) return c;
+        }
+        if (categoryName != null && !categoryName.isBlank()) {
+            String trimmed = categoryName.trim();
+            List<Category> existing = Category.findByNameAndUser(trimmed, user);
+            if (!existing.isEmpty()) {
+                return existing.get(0);
+            }
+            Category newCategory = new Category();
+            newCategory.name = trimmed;
+            newCategory.user = user;
+            newCategory.persist();
+            return newCategory;
+        }
+        throw new ResourceNotFoundException("A categoria do produto é obrigatória.");
+    }
+
+    // Helper method to resolve or auto-create Family
+    private Family resolveFamily(Long familyId, String familyName, User user) {
+        if (familyId != null) {
+            Family f = Family.findById(familyId);
+            if (f != null) return f;
+        }
+        if (familyName != null && !familyName.isBlank()) {
+            String trimmed = familyName.trim();
+            List<Family> existing = Family.findByNameAndUser(trimmed, user);
+            if (!existing.isEmpty()) {
+                return existing.get(0);
+            }
+            Family newFamily = new Family();
+            newFamily.name = trimmed;
+            newFamily.user = user;
+            newFamily.persist();
+            return newFamily;
+        }
+        throw new ResourceNotFoundException("A família do produto é obrigatória.");
+    }
+
+    // create a product
+    @Transactional
     public ProductResponseDTO create(ProductRequestDTO dto) {
         return create(dto, null);
     }
 
-	@Transactional
+    @Transactional
     public ProductResponseDTO create(ProductRequestDTO dto, Long userId) {
-		String trimmedName = dto.name().trim();
-
+        String trimmedName = dto.name().trim();
         User user = userId != null ? User.findById(userId) : null;
-		
-		// check if already exists the typed name for this user
-		long duplicateCount;
-        if (user != null) {
-            duplicateCount = Product.count("unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND (user = ?2 OR user IS NULL)", trimmedName, user);
-        } else {
-            duplicateCount = Product.count("unaccent(LOWER(name)) = unaccent(LOWER(?1))", trimmedName);
-        }
 
-		if (duplicateCount > 0) {
-			throw new ResourceAlreadyExistsException("Já existe um produto cadastrado com o nome: " + trimmedName);
-		}
-		
-        Brand brand = Brand.findById(dto.brandId());
-        if (brand == null) {
-            throw new ResourceNotFoundException("Marca não encontrada com o ID: " + dto.brandId());
-        }
-
-        Category category = Category.findById(dto.categoryId());
-        if (category == null) {
-            throw new ResourceNotFoundException("Categoria não encontrada com o ID: " + dto.categoryId());
-        }
-
-        Family family = Family.findById(dto.familyId());
-        if (family == null) {
-            throw new ResourceNotFoundException("Família não encontrada com o ID: " + dto.familyId());
-        }
+        Brand brand = resolveBrand(dto.brandId(), dto.brandName(), user);
+        Category category = resolveCategory(dto.categoryId(), dto.categoryName(), user);
+        Family family = resolveFamily(dto.familyId(), dto.familyName(), user);
 
         Product product = new Product();
         product.name = trimmedName;
@@ -73,18 +112,18 @@ public class ProductService {
 
         return ProductResponseDTO.fromEntity(product);
     }
-	
-	// list all products
-	public List<ProductResponseDTO> listAll(Long userId) {
+
+    // list all products
+    public List<ProductResponseDTO> listAll(Long userId) {
         User user = userId != null ? User.findById(userId) : null;
-		List<Product> products = Product.listAllWithRelations(user);
-		return products.stream()
-				.map(ProductResponseDTO::fromEntity)
-				.toList();
-	}
-	
-	// search products by any criterion
-	public List<ProductResponseDTO> searchProducts(
+        List<Product> products = Product.listAllWithRelations(user);
+        return products.stream()
+                .map(ProductResponseDTO::fromEntity)
+                .toList();
+    }
+
+    // search products by any criterion
+    public List<ProductResponseDTO> searchProducts(
             String query, String familyName, String brandName, String categoryName, LocalDate maxExpDate, Long userId
     ) {
         User user = userId != null ? User.findById(userId) : null;
@@ -93,27 +132,27 @@ public class ProductService {
                 .map(ProductResponseDTO::fromEntity)
                 .toList();
     }
-	
-	// list all expired products
-	public List<ProductResponseDTO> findExpired(Long userId) {
-        User user = userId != null ? User.findById(userId) : null;
-	    return Product.findExpired(user)
-	            .stream()
-	            .map(ProductResponseDTO::fromEntity)
-	            .toList();
-	}
 
-	// list all near expiration products
-	public List<ProductResponseDTO> findNearExpiration(Long userId) {
+    // list all expired products
+    public List<ProductResponseDTO> findExpired(Long userId) {
         User user = userId != null ? User.findById(userId) : null;
-	    return Product.findNearExpiration(user)
-	            .stream()
-	            .map(ProductResponseDTO::fromEntity)
-	            .toList();
-	}
-	
-	// update a product
-	@Transactional
+        return Product.findExpired(user)
+                .stream()
+                .map(ProductResponseDTO::fromEntity)
+                .toList();
+    }
+
+    // list all near expiration products
+    public List<ProductResponseDTO> findNearExpiration(Long userId) {
+        User user = userId != null ? User.findById(userId) : null;
+        return Product.findNearExpiration(user)
+                .stream()
+                .map(ProductResponseDTO::fromEntity)
+                .toList();
+    }
+
+    // update a product
+    @Transactional
     public ProductResponseDTO update(Long id, ProductRequestDTO dto) {
         Product product = Product.findById(id);
         if (product == null) {
@@ -121,30 +160,11 @@ public class ProductService {
         }
 
         String trimmedName = dto.name().trim();
+        User user = product.user;
 
-        // check if there are duplicated names
-        long duplicateCount = Product.count(
-            "unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND id != ?2", 
-            trimmedName, id
-        );
-        if (duplicateCount > 0) {
-            throw new ResourceAlreadyExistsException("Já existe outro produto cadastrado com o nome: " + trimmedName);
-        }
-
-        Brand brand = Brand.findById(dto.brandId());
-        if (brand == null) {
-            throw new ResourceNotFoundException("Marca não encontrada com o ID: " + dto.brandId());
-        }
-
-        Category category = Category.findById(dto.categoryId());
-        if (category == null) {
-            throw new ResourceNotFoundException("Categoria não encontrada com o ID: " + dto.categoryId());
-        }
-
-        Family family = Family.findById(dto.familyId());
-        if (family == null) {
-            throw new ResourceNotFoundException("Família não encontrada com o ID: " + dto.familyId());
-        }
+        Brand brand = resolveBrand(dto.brandId(), dto.brandName(), user);
+        Category category = resolveCategory(dto.categoryId(), dto.categoryName(), user);
+        Family family = resolveFamily(dto.familyId(), dto.familyName(), user);
 
         // update data
         product.name = trimmedName;
@@ -158,11 +178,11 @@ public class ProductService {
 
         return ProductResponseDTO.fromEntity(product);
     }
-	
-	@Transactional
+
+    @Transactional
     public void delete(Long id) {
         Product product = Product.findById(id);
-        
+
         if (product == null) {
             throw new ResourceNotFoundException("Produto com ID " + id + " não encontrado.");
         }

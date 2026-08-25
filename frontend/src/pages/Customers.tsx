@@ -6,82 +6,84 @@ import type { Entity } from '../components/EntityTable';
 import { EntityModal } from '../components/EntityModal';
 import { DeleteModal } from '../components/DeleteModal';
 import {
-    useFamiliesQuery,
-    useCreateFamilyMutation,
-    useUpdateFamilyMutation,
-    useDeleteFamilyMutation,
+    useCustomersQuery,
+    useCreateCustomerMutation,
+    useUpdateCustomerMutation,
+    useDeleteCustomerMutation,
 } from '../hooks/useEntitiesQuery';
 
-export default function Families() {
-    const { data: families = [], isLoading: loadingFamilies } =
-        useFamiliesQuery();
+export default function Customers() {
+    const { data: customers = [], isLoading: loadingCustomers } = useCustomersQuery();
 
-    const createFamilyMutation = useCreateFamilyMutation();
-    const updateFamilyMutation = useUpdateFamilyMutation();
-    const deleteFamilyMutation = useDeleteFamilyMutation();
+    // mutations for database operations
+    const createCustomerMutation = useCreateCustomerMutation();
+    const updateCustomerMutation = useUpdateCustomerMutation();
+    const deleteCustomerMutation = useDeleteCustomerMutation();
 
+    // Modal states
     const [modalOpened, setModalOpened] = useState(false);
-    const [selectedFamily, setSelectedFamily] = useState<Entity | null>(null);
+    const [selectedCustomer, setSelectedCustomer] = useState<Entity | null>(null);
 
+    // Delete states
     const [deleteOpened, setDeleteOpened] = useState(false);
-    const [familyToDelete, setFamilyToDelete] = useState<Entity | null>(null);
+    const [customerToDelete, setCustomerToDelete] = useState<Entity | null>(null);
     const [deleteError, setDeleteError] = useState('');
 
+    // friendly success message
     const [successMessage, setSuccessMessage] = useState('');
 
     const handleOpenAdd = () => {
-        setSelectedFamily(null);
+        setSelectedCustomer(null);
         setModalOpened(true);
     };
 
     const handleOpenEdit = (item: Entity) => {
-        setSelectedFamily(item);
+        setSelectedCustomer(item);
         setModalOpened(true);
     };
 
     const handleOpenDelete = (id: number) => {
-        const item = families.find((f) => f.id === id);
+        const item = customers.find((c) => c.id === id);
         if (item) {
-            setFamilyToDelete(item);
+            setCustomerToDelete(item);
             setDeleteError('');
             setDeleteOpened(true);
         }
     };
 
-    const handleSubmit = async (values: { name: string }) => {
+    // asynchronous operations
+    const handleSubmit = async (values: {
+        name: string;
+    }) => {
         setSuccessMessage('');
-        if (selectedFamily) {
-            await updateFamilyMutation.mutateAsync({
-                id: selectedFamily.id,
+        if (selectedCustomer) {
+            await updateCustomerMutation.mutateAsync({
+                id: selectedCustomer.id,
                 data: values,
             });
-            setSuccessMessage(
-                `Família "${values.name}" atualizada com sucesso!`
-            );
+            setSuccessMessage(`Cliente "${values.name}" atualizado com sucesso!`);
         } else {
-            await createFamilyMutation.mutateAsync(values);
-            setSuccessMessage(
-                `Família "${values.name}" cadastrada com sucesso!`
-            );
+            await createCustomerMutation.mutateAsync(values);
+            setSuccessMessage(`Cliente "${values.name}" cadastrado com sucesso!`);
         }
     };
 
     const handleConfirmDelete = async () => {
-        if (!familyToDelete) return;
+        if (!customerToDelete) return;
         try {
             setSuccessMessage('');
             setDeleteError('');
-            await deleteFamilyMutation.mutateAsync(familyToDelete.id);
+            await deleteCustomerMutation.mutateAsync(customerToDelete.id);
             setDeleteOpened(false);
             setSuccessMessage(
-                `Família "${familyToDelete.name}" excluída com sucesso!`
+                `Cliente "${customerToDelete.name}" excluído com sucesso!`
             );
-            setFamilyToDelete(null);
+            setCustomerToDelete(null);
         } catch (err: any) {
             if (err?.response?.status === 409) {
                 const serverMsg = err?.response?.data?.details || err?.response?.data?.message;
                 setDeleteError(
-                    serverMsg || 'Não é possível excluir esta família pois existem produtos associados a ela.'
+                    serverMsg || 'Não é possível excluir este cliente pois existem vendas associadas a ele.'
                 );
             } else {
                 setDeleteError(
@@ -106,11 +108,12 @@ export default function Families() {
             )}
 
             <EntityTable
-                title="Famílias"
-                subtitle="Famílias olfativas ou de linhas de produtos"
-                addButtonLabel="Nova Família"
-                items={families}
-                loading={loadingFamilies}
+                title="Clientes"
+                subtitle="Clientes cadastrados no sistema"
+                addButtonLabel="Novo Cliente"
+                items={customers}
+                loading={loadingCustomers}
+                showColor={false}
                 onAdd={handleOpenAdd}
                 onEdit={handleOpenEdit}
                 onDelete={handleOpenDelete}
@@ -119,12 +122,9 @@ export default function Families() {
             <EntityModal
                 opened={modalOpened}
                 onClose={() => setModalOpened(false)}
-                title={
-                    selectedFamily
-                        ? 'Editar Família'
-                        : 'Cadastrar Nova Família'
-                }
-                initialData={selectedFamily}
+                title={selectedCustomer ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}
+                showColor={false}
+                initialData={selectedCustomer}
                 onSubmit={handleSubmit}
             />
 
@@ -132,13 +132,13 @@ export default function Families() {
                 opened={deleteOpened}
                 onClose={() => setDeleteOpened(false)}
                 onConfirm={handleConfirmDelete}
-                title="Excluir Família"
+                title="Excluir Cliente"
                 itemDescription={
-                    familyToDelete
-                        ? `a família "${familyToDelete.name}"`
-                        : 'esta família'
+                    customerToDelete
+                        ? `o cliente "${customerToDelete.name}"`
+                        : 'este cliente'
                 }
-                loading={deleteFamilyMutation.isPending}
+                loading={deleteCustomerMutation.isPending}
                 error={deleteError}
             />
         </Stack>

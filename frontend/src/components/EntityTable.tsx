@@ -19,7 +19,7 @@ import { Edit, Trash2, Plus, Search } from 'lucide-react';
 export type Entity = {
     id: number;
     name: string;
-    hexColor?: string; // this modal is used for Brands (includes color data), Categories and Families pages
+    hexColor?: string; // used for Brands, Categories, Families, Customers
 };
 
 interface EntityTableProps {
@@ -28,6 +28,7 @@ interface EntityTableProps {
     items?: Entity[];
     loading?: boolean;
     showColor?: boolean;
+    addButtonLabel?: string;
     onEdit?: (item: Entity) => void;
     onDelete?: (id: number) => void;
     onAdd?: () => void;
@@ -39,6 +40,7 @@ export default function EntityTable({
     items = [],
     loading = false,
     showColor = false,
+    addButtonLabel,
     onEdit,
     onDelete,
     onAdd,
@@ -61,7 +63,7 @@ export default function EntityTable({
     // total pages
     const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
 
-    // slicing method to show only a quantity of products in the page
+    // slicing method to show only a quantity of items in the page
     const paginatedItems = filteredItems.slice(
         (activePage - 1) * itemsPerPage,
         activePage * itemsPerPage
@@ -85,7 +87,7 @@ export default function EntityTable({
                         color="blue"
                         onClick={onAdd}
                     >
-                        Novo Cadastrar
+                        {addButtonLabel || 'Cadastrar'}
                     </Button>
                 )}
             </Group>

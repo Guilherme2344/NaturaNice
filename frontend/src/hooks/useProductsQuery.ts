@@ -31,18 +31,19 @@ export function useNearExpirationProductsQuery() {
     });
 }
 
-// Create new product and invalidate products cache
+// Create new product and invalidate products & reports cache
 export function useCreateProductMutation() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (data: CreateProductDTO) => productService.create(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
+            queryClient.invalidateQueries({ queryKey: ['reports'] });
         },
     });
 }
 
-// Update existing product
+// Update existing product and invalidate products & reports cache
 export function useUpdateProductMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -50,22 +51,24 @@ export function useUpdateProductMutation() {
             productService.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
+            queryClient.invalidateQueries({ queryKey: ['reports'] });
         },
     });
 }
 
-// Delete product by ID
+// Delete product by ID and invalidate products & reports cache
 export function useDeleteProductMutation() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: (id: number) => productService.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
+            queryClient.invalidateQueries({ queryKey: ['reports'] });
         },
     });
 }
 
-// Register a product sale and update products & reports cache
+// Register a product sale and invalidate products, reports, and customers cache
 export function useCreateSaleMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -73,6 +76,7 @@ export function useCreateSaleMutation() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['reports'] });
+            queryClient.invalidateQueries({ queryKey: ['customers'] });
         },
     });
 }

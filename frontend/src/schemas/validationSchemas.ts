@@ -12,14 +12,14 @@ export const productSchema = yup.object().shape({
         .string()
         .nullable()
         .required('Por favor, selecione uma marca.'),
-    categoryId: yup
+    categoryName: yup
         .string()
-        .nullable()
-        .required('Por favor, selecione uma categoria.'),
-    familyId: yup
+        .trim()
+        .required('Por favor, informe ou selecione uma categoria.'),
+    familyName: yup
         .string()
-        .nullable()
-        .required('Por favor, selecione uma família.'),
+        .trim()
+        .required('Por favor, informe ou selecione uma família.'),
     quantity: yup
         .number()
         .typeError('A quantidade deve ser um número.')

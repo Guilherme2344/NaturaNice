@@ -135,7 +135,7 @@ export default function Login() {
         if (user.role === 'ADMIN') {
             navigate('/admin/users');
         } else {
-            navigate('/products');
+            navigate('/');
         }
     };
 

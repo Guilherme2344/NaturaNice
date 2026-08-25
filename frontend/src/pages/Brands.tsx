@@ -27,6 +27,7 @@ export default function Brands() {
     // Delete states
     const [deleteOpened, setDeleteOpened] = useState(false);
     const [brandToDelete, setBrandToDelete] = useState<Entity | null>(null);
+    const [deleteError, setDeleteError] = useState('');
 
     // friendly success message
     const [successMessage, setSuccessMessage] = useState('');
@@ -45,6 +46,7 @@ export default function Brands() {
         const item = brands.find((b) => b.id === id);
         if (item) {
             setBrandToDelete(item);
+            setDeleteError('');
             setDeleteOpened(true);
         }
     };
@@ -71,14 +73,24 @@ export default function Brands() {
         if (!brandToDelete) return;
         try {
             setSuccessMessage('');
+            setDeleteError('');
             await deleteBrandMutation.mutateAsync(brandToDelete.id);
             setDeleteOpened(false);
             setSuccessMessage(
                 `Marca "${brandToDelete.name}" excluída com sucesso!`
             );
             setBrandToDelete(null);
-        } catch (err) {
-            console.error('Erro ao excluir marca:', err);
+        } catch (err: any) {
+            if (err?.response?.status === 409) {
+                const serverMsg = err?.response?.data?.details || err?.response?.data?.message;
+                setDeleteError(
+                    serverMsg || 'Não é possível excluir esta marca pois existem produtos associados a ela.'
+                );
+            } else {
+                setDeleteError(
+                    err?.response?.data?.message || 'Erro ao excluir o registro.'
+                );
+            }
         }
     };
 
@@ -99,6 +111,7 @@ export default function Brands() {
             <EntityTable
                 title="Marcas"
                 subtitle="Marcas cadastradas no estoque"
+                addButtonLabel="Nova Marca"
                 items={brands}
                 loading={loadingBrands}
                 showColor={true}
@@ -127,6 +140,7 @@ export default function Brands() {
                         : 'esta marca'
                 }
                 loading={deleteBrandMutation.isPending}
+                error={deleteError}
             />
         </Stack>
     );

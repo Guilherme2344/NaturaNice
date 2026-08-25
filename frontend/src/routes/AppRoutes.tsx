@@ -13,6 +13,7 @@ import NearExpirationProducts from '../pages/NearExpirationProducts';
 import ExpiredProducts from '../pages/ExpiredProducts';
 import MonthlyReport from '../pages/MonthlyReport';
 import AnnualReport from '../pages/AnnualReport';
+import Customers from '../pages/Customers';
 import NotFound from '../pages/errors/NotFound';
 import Forbidden from '../pages/errors/Forbidden';
 import ServerError from '../pages/errors/ServerError';
@@ -27,6 +28,7 @@ const PAGE_TITLES: Record<string, string> = {
     '/brands': 'Marcas',
     '/categories': 'Categorias',
     '/families': 'Famílias',
+    '/customers': 'Clientes',
     '/reports/monthly': 'Relatório Mensal',
     '/reports/annual': 'Relatório Anual',
     '/admin/users': 'Gerenciar Usuários',
@@ -90,6 +92,7 @@ export default function AppRoutes() {
                 { path: '/brands', element: <Brands /> },
                 { path: '/categories', element: <Categories /> },
                 { path: '/families', element: <Families /> },
+                { path: '/customers', element: <Customers /> },
                 { path: '/reports/monthly', element: <MonthlyReport /> },
                 { path: '/reports/annual', element: <AnnualReport /> },
                 {

@@ -19,6 +19,7 @@ import {
     Tag,
     Layers,
     FolderTree,
+    Users,
     Calendar,
     BarChart3,
     Shield,
@@ -47,6 +48,7 @@ const stockNavItems = [
     { label: 'Marcas', icon: Tag, href: '/brands' },
     { label: 'Categorias', icon: Layers, href: '/categories' },
     { label: 'Famílias', icon: FolderTree, href: '/families' },
+    { label: 'Clientes', icon: Users, href: '/customers' },
 ];
 
 // dynamic way to put new pages for Report
