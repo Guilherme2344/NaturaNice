@@ -36,6 +36,7 @@ export default function NearExpirationProducts() {
     const handleConfirmSale = async (
         quantity: number,
         sellingPrice: number,
+        amountPaid?: number,
         customerName?: string
     ) => {
         if (!productToSell) return;
@@ -44,6 +45,7 @@ export default function NearExpirationProducts() {
             productId: productToSell.id,
             quantity,
             sellingPrice,
+            amountPaid,
             customerName,
         });
 
@@ -56,7 +58,7 @@ export default function NearExpirationProducts() {
         );
     };
 
-    const handleOpenDelete = (id: number) => {
+    const handleOpenDelete = (id: string) => {
         const prod = products.find((p) => p.id === id);
         if (prod) {
             setProductToDelete(prod);

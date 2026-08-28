@@ -18,6 +18,7 @@ import {
     TrendingUp,
     Package,
     User,
+    Wallet,
 } from 'lucide-react';
 import type { Product } from './ProductsTable';
 import { customerService, type Customer } from '../services/customerService';
@@ -30,6 +31,7 @@ interface SaleModalProps {
     onConfirmSale: (
         quantity: number,
         sellingPrice: number,
+        amountPaid?: number,
         customerName?: string
     ) => Promise<void>;
 }
@@ -42,6 +44,7 @@ export function SaleModal({
 }: SaleModalProps) {
     const [quantity, setQuantity] = useState<number>(1);
     const [sellingPrice, setSellingPrice] = useState<number>(0);
+    const [amountPaid, setAmountPaid] = useState<number | string>(0);
     const [customerName, setCustomerName] = useState<string>('');
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(false);
@@ -59,11 +62,21 @@ export function SaleModal({
 
     useEffect(() => {
         if (product) {
-            setQuantity(1);
-            setSellingPrice(product.sellingPrice || 0);
+            const initialQty = 1;
+            const initialPrice = product.sellingPrice || 0;
+            setQuantity(initialQty);
+            setSellingPrice(initialPrice);
+            setAmountPaid(initialQty * initialPrice);
             setCustomerName('');
         }
     }, [product]);
+
+    // Recalculate amountPaid when quantity or sellingPrice changes, if user hasn't modified it manually
+    const handleQuantityOrPriceChange = (newQty: number, newPrice: number) => {
+        setQuantity(newQty);
+        setSellingPrice(newPrice);
+        setAmountPaid(newQty * newPrice);
+    };
 
     if (!product) return null;
 
@@ -72,6 +85,8 @@ export function SaleModal({
     const currentSellingPrice = sellingPrice || 0;
 
     const totalAmount = (quantity || 0) * currentSellingPrice;
+    const currentAmountPaid = Number(amountPaid) || 0;
+    const remainingBalance = Math.max(0, totalAmount - currentAmountPaid);
     const totalProfit = (quantity || 0) * (currentSellingPrice - purchasePrice);
 
     const clearError = (field: string) => {
@@ -104,7 +119,12 @@ export function SaleModal({
 
         try {
             setLoading(true);
-            await onConfirmSale(quantity, currentSellingPrice, customerName);
+            await onConfirmSale(
+                quantity,
+                currentSellingPrice,
+                currentAmountPaid,
+                customerName
+            );
             onClose();
         } catch (error) {
             console.error('Erro ao registrar venda:', error);
@@ -190,7 +210,8 @@ export function SaleModal({
                                 value={quantity}
                                 error={errors.quantity}
                                 onChange={(val) => {
-                                    setQuantity(Number(val) || 0);
+                                    const newQty = Number(val) || 0;
+                                    handleQuantityOrPriceChange(newQty, sellingPrice);
                                     clearError('quantity');
                                 }}
                                 min={1}
@@ -207,7 +228,8 @@ export function SaleModal({
                                 value={sellingPrice}
                                 error={errors.sellingPrice}
                                 onChange={(val) => {
-                                    setSellingPrice(Number(val) || 0);
+                                    const newPrice = Number(val) || 0;
+                                    handleQuantityOrPriceChange(quantity, newPrice);
                                     clearError('sellingPrice');
                                 }}
                                 prefix="R$ "
@@ -220,6 +242,52 @@ export function SaleModal({
                             />
                         </Grid.Col>
                     </Grid>
+
+                    <Paper p="xs" withBorder radius="md" bg="blue.0">
+                        <Stack gap="xs">
+                            <Group justify="space-between">
+                                <Group gap={6}>
+                                    <Wallet size={18} color="#1c7ed6" />
+                                    <Text size="sm" fw={700} c="blue.9">
+                                        Pagamento pelo Cliente
+                                    </Text>
+                                </Group>
+                                <Badge
+                                    color={remainingBalance === 0 ? 'teal' : 'orange'}
+                                    variant="filled"
+                                    size="sm"
+                                >
+                                    {remainingBalance === 0
+                                        ? 'Totalmente Pago'
+                                        : 'Parcialmente Pago'}
+                                </Badge>
+                            </Group>
+
+                            <NumberInput
+                                label="Valor Já Pago pelo Cliente (R$)"
+                                placeholder="0,00"
+                                value={amountPaid}
+                                onChange={(val) => setAmountPaid(val !== '' ? Number(val) : 0)}
+                                prefix="R$ "
+                                decimalScale={2}
+                                decimalSeparator=","
+                                thousandSeparator="."
+                                selectAllOnFocus
+                                min={0}
+                                max={totalAmount}
+                            />
+
+                            {remainingBalance > 0 && (
+                                <Text size="xs" c="orange.8" fw={600}>
+                                    ⚠️ Restante a Pagar / Devedor: R${' '}
+                                    {remainingBalance.toLocaleString('pt-BR', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })}
+                                </Text>
+                            )}
+                        </Stack>
+                    </Paper>
 
                     <Divider
                         label="Resumo Financeiro da Transação"

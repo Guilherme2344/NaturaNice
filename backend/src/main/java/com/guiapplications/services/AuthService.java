@@ -2,9 +2,9 @@ package com.guiapplications.services;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
-import java.util.Random;
 
 import com.guiapplications.entities.PasswordResetToken;
 import com.guiapplications.entities.User;
@@ -17,7 +17,9 @@ import com.guiapplications.entities.dto.UserResponseDTO;
 import com.guiapplications.entities.dto.VerifyCodeRequestDTO;
 import com.guiapplications.events.PasswordResetRequestedEvent;
 import com.guiapplications.exceptions.ResourceNotFoundException;
+import com.guiapplications.utils.JwtUtil;
 
+import io.vertx.core.http.HttpServerRequest;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Event;
 import jakarta.inject.Inject;
@@ -26,11 +28,16 @@ import jakarta.transaction.Transactional;
 @ApplicationScoped
 public class AuthService {
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     @Inject
     Event<PasswordResetRequestedEvent> passwordResetEvent;
 
+    @Inject
+    LoginSecurityService loginSecurityService;
+
     @Transactional
-    public LoginResponseDTO login(LoginRequestDTO dto) {
+    public LoginResponseDTO login(LoginRequestDTO dto, HttpServerRequest request) {
         if (dto.email() == null || dto.email().isBlank()) {
             throw new IllegalArgumentException("E-mail é obrigatório.");
         }
@@ -38,15 +45,29 @@ public class AuthService {
             throw new IllegalArgumentException("Senha é obrigatória.");
         }
 
-        User user = User.findByEmail(dto.email());
+        String emailKey = dto.email().trim().toLowerCase();
+
+        // 1. Inspect Proxy/VPN headers and extract client IP
+        loginSecurityService.inspectProxyAndVpn(request, emailKey);
+        String clientIp = loginSecurityService.extractClientIp(request);
+
+        // 2. Check Rate Limit (Max 5 attempts, 15-minute lock)
+        loginSecurityService.checkRateLimit(emailKey, clientIp);
+
+        User user = User.findByEmail(emailKey);
         if (user == null) {
+            loginSecurityService.recordFailedAttempt(emailKey, clientIp);
             throw new IllegalArgumentException("E-mail ou senha inválidos.");
         }
 
         String hashedPassword = hashPassword(dto.password());
         if (!user.password.equals(hashedPassword)) {
+            loginSecurityService.recordFailedAttempt(emailKey, clientIp);
             throw new IllegalArgumentException("E-mail ou senha inválidos.");
         }
+
+        // Login successful: reset rate limit attempts
+        loginSecurityService.recordSuccess(emailKey, clientIp);
 
         UserResponseDTO userDTO = new UserResponseDTO(
             user.id,
@@ -56,9 +77,10 @@ public class AuthService {
             user.firstAccess
         );
 
-        String fakeToken = "mock-jwt-token-for-user-" + user.id;
+        // Generate signed JWT Bearer Token
+        String jwtToken = JwtUtil.generateToken(user);
 
-        return new LoginResponseDTO(fakeToken, userDTO);
+        return new LoginResponseDTO(jwtToken, userDTO);
     }
 
     @Transactional
@@ -101,14 +123,17 @@ public class AuthService {
 
         PasswordResetToken.deleteByEmail(dto.email());
 
-        String code = String.format("%06d", new Random().nextInt(900000) + 100000);
+        // Generate a 6-digit secure random code
+        int codeInt = SECURE_RANDOM.nextInt(900000) + 100000;
+        String code = String.valueOf(codeInt);
+
         PasswordResetToken token = new PasswordResetToken();
         token.email = dto.email().trim().toLowerCase();
         token.code = code;
-        token.expirationTime = LocalDateTime.now().plusMinutes(15);
+        token.expirationTime = LocalDateTime.now().plusMinutes(15); // 15-minute expiration
+        token.user = user;
         token.persist();
 
-        // Dispara o evento assíncrono via Quarkus Observer (CDI Event Bus) sem bloquear a resposta HTTP
         passwordResetEvent.fireAsync(new PasswordResetRequestedEvent(token.email, code));
     }
 
@@ -137,7 +162,7 @@ public class AuthService {
 
         PasswordResetToken token = PasswordResetToken.findByEmailAndCode(dto.email(), dto.code());
         if (token == null || token.isExpired()) {
-            throw new IllegalArgumentException("Código de verificação inválido ou expirado.");
+            throw new IllegalArgumentException("O código de verificação expirou (validade de 15 minutos). Solicite um novo código.");
         }
 
         User user = User.findByEmail(dto.email());

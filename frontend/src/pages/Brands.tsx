@@ -42,7 +42,7 @@ export default function Brands() {
         setModalOpened(true);
     };
 
-    const handleOpenDelete = (id: number) => {
+    const handleOpenDelete = (id: string) => {
         const item = brands.find((b) => b.id === id);
         if (item) {
             setBrandToDelete(item);

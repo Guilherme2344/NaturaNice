@@ -1,10 +1,13 @@
 package com.guiapplications.resources;
 
 import java.util.List;
+import java.util.UUID;
 
+import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.CategoryRequestDTO;
 import com.guiapplications.entities.dto.CategoryResponseDTO;
 import com.guiapplications.services.CategoryService;
+import com.guiapplications.utils.UserResolver;
 
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -25,45 +28,59 @@ import jakarta.ws.rs.core.Response;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class CategoryResource {
-	
+
 	@Inject
 	CategoryService categoryService;
 	
-	// create a category
+	// create Category
 	@POST
-	public Response create(@Valid CategoryRequestDTO dto, @HeaderParam("X-User-Id") Long userId) {
-	    CategoryResponseDTO createdCategory = categoryService.create(dto, userId);
-	    return Response.status(Response.Status.CREATED)
-	                   .entity(createdCategory)
-	                   .build();
+	public Response create(
+			@Valid CategoryRequestDTO dto,
+			@HeaderParam("Authorization") String authHeader,
+			@HeaderParam("X-User-Id") String userIdHeader
+	) {
+		User user = UserResolver.resolveUser(authHeader, userIdHeader);
+		CategoryResponseDTO createdCategory = categoryService.create(dto, user);
+		return Response.status(Response.Status.CREATED)
+				       .entity(createdCategory)
+				       .build();
 	}
 	
-	// get all categories
+	// get all Categories
 	@GET
-    public Response getAll(@HeaderParam("X-User-Id") Long userId) {
-        return Response.ok(categoryService.listAll(userId)).build();
-    }
-	
-	// get category by name
+	public Response getAll(
+			@HeaderParam("Authorization") String authHeader,
+			@HeaderParam("X-User-Id") String userIdHeader
+	) {
+		User user = UserResolver.resolveUser(authHeader, userIdHeader);
+		return Response.ok(categoryService.listAll(user)).build();
+	}
+
+	// search Category by name
 	@GET
 	@Path("/search")
-	public Response search(@QueryParam("name") String name, @HeaderParam("X-User-Id") Long userId) {
-	    List<CategoryResponseDTO> categories = categoryService.search(name, userId);
-	    return Response.ok(categories).build();
+	public Response search(
+			@QueryParam("name") String name,
+			@HeaderParam("Authorization") String authHeader,
+			@HeaderParam("X-User-Id") String userIdHeader
+	) {
+		User user = UserResolver.resolveUser(authHeader, userIdHeader);
+		List<CategoryResponseDTO> categories = categoryService.search(name, user);
+		return Response.ok(categories).build();
 	}
 	
-	// update a category
+	// update a Category
 	@PUT
 	@Path("/{id}")
-	public Response update(@PathParam("id") Long id, @Valid CategoryRequestDTO dto) {
-	    CategoryResponseDTO updatedCategory = categoryService.update(id, dto);
-	    return Response.ok(updatedCategory).build();
+	public Response update(@PathParam("id") UUID id, @Valid CategoryRequestDTO dto) {
+		CategoryResponseDTO updatedCategory = categoryService.update(id, dto);
+		return Response.ok(updatedCategory).build();
 	}
 	
-	// delete category by id
+	// delete Category by id
 	@DELETE
 	@Path("/{id}")
-	public Response delete(@PathParam("id") Long id) {
+	public Response delete(@PathParam("id") UUID id) {
 		categoryService.delete(id);
 		return Response.noContent().build();
 	}

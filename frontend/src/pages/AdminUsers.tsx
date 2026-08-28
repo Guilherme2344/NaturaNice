@@ -268,19 +268,27 @@ export default function AdminUsers() {
                                             )}
                                         </Table.Td>
                                         <Table.Td align="right">
-                                            {user.role !== 'ADMIN' && (
-                                                <ActionIcon
-                                                    variant="light"
-                                                    color="red"
-                                                    title="Excluir Usuário"
-                                                    onClick={() => {
-                                                        setUserToDelete(user);
-                                                        setDeleteOpened(true);
-                                                    }}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </ActionIcon>
-                                            )}
+                                            <ActionIcon
+                                                variant="light"
+                                                color="red"
+                                                title={
+                                                    user.role === 'ADMIN'
+                                                        ? 'Administradores não podem ser excluídos'
+                                                        : user.canDelete === false
+                                                        ? 'Não é possível excluir este usuário'
+                                                        : 'Excluir Usuário'
+                                                }
+                                                disabled={
+                                                    user.role === 'ADMIN' ||
+                                                    user.canDelete === false
+                                                }
+                                                onClick={() => {
+                                                    setUserToDelete(user);
+                                                    setDeleteOpened(true);
+                                                }}
+                                            >
+                                                <Trash2 size={16} />
+                                            </ActionIcon>
                                         </Table.Td>
                                     </Table.Tr>
                                 ))

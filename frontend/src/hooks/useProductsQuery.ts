@@ -47,7 +47,7 @@ export function useCreateProductMutation() {
 export function useUpdateProductMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, data }: { id: number; data: CreateProductDTO }) =>
+        mutationFn: ({ id, data }: { id: string; data: CreateProductDTO }) =>
             productService.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -60,7 +60,7 @@ export function useUpdateProductMutation() {
 export function useDeleteProductMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => productService.delete(id),
+        mutationFn: (id: string) => productService.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['reports'] });

@@ -2,11 +2,12 @@ import { api } from './api';
 
 // DTO interface for user management in admin panel
 export interface UserAdminDTO {
-    id: number;
+    id: string;
     name: string;
     email: string;
     role: string;
     firstAccess: boolean;
+    canDelete?: boolean;
 }
 
 // Service to handle user administration API requests
@@ -24,7 +25,7 @@ export const userService = {
     },
 
     // Delete a user account by ID
-    delete: async (id: number): Promise<void> => {
+    delete: async (id: string): Promise<void> => {
         await api.delete(`/admin/users/${id}`);
     },
 };

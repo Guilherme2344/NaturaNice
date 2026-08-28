@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatExpirationStatus } from '../utils/expirationUtils';
 import {
     Table,
     Badge,
@@ -24,23 +25,23 @@ export type ExpirationStatus =
     | 'EXPIRED';
 
 export type Brand = {
-    id: number;
+    id: string;
     name: string;
     hexColor?: string;
 };
 
 export type Category = {
-    id: number;
+    id: string;
     name: string;
 };
 
 export type Family = {
-    id: number;
+    id: string;
     name: string;
 };
 
 export type Product = {
-    id: number;
+    id: string;
     name: string;
     quantity: number;
     expirationDate: string;
@@ -52,6 +53,7 @@ export type Product = {
     family: Family;
     expirationStatus: ExpirationStatus;
     expirationStatusDescription: string;
+    canDelete?: boolean;
 };
 
 interface ProductsTableProps {
@@ -60,7 +62,7 @@ interface ProductsTableProps {
     products?: Product[];
     loading?: boolean;
     onEdit?: (product: Product) => void;
-    onDelete?: (id: number) => void;
+    onDelete?: (id: string) => void;
     onAdd?: () => void;
     onSale?: (product: Product) => void;
 }
@@ -236,16 +238,28 @@ export default function ProductsTable({
                                                     product.expirationDate
                                                 )}
                                             </Text>
-                                            <Badge
-                                                color={getStatusBadgeColor(
-                                                    product.expirationStatus
-                                                )}
-                                                variant="light"
-                                            >
-                                                {
-                                                    product.expirationStatusDescription
+                                            {(() => {
+                                                const status = formatExpirationStatus(product.expirationDate);
+                                                if (status.type === 'EXPIRED') {
+                                                    return (
+                                                        <Text size="xs" fw={700} bg="red.6" c="white" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block' }}>
+                                                            {status.text}
+                                                        </Text>
+                                                    );
                                                 }
-                                            </Badge>
+                                                if (status.type === 'NEAR_EXPIRATION') {
+                                                    return (
+                                                        <Text size="xs" fw={700} bg="yellow.4" c="dark" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block' }}>
+                                                            {status.text}
+                                                        </Text>
+                                                    );
+                                                }
+                                                return (
+                                                    <Text size="xs" fw={700}>
+                                                        {status.text}
+                                                    </Text>
+                                                );
+                                            })()}
                                         </Stack>
                                     </Table.Td>
 
@@ -302,7 +316,12 @@ export default function ProductsTable({
                                             <ActionIcon
                                                 variant="light"
                                                 color="red"
-                                                title="Excluir produto"
+                                                title={
+                                                    product.canDelete === false
+                                                        ? 'Não é possível excluir: existem vendas associadas a este produto'
+                                                        : 'Excluir produto'
+                                                }
+                                                disabled={product.canDelete === false}
                                                 onClick={() =>
                                                     onDelete?.(product.id)
                                                 }

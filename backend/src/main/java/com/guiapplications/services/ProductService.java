@@ -2,6 +2,7 @@ package com.guiapplications.services;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import com.guiapplications.entities.Brand;
 import com.guiapplications.entities.Category;
@@ -19,7 +20,7 @@ import jakarta.transaction.Transactional;
 public class ProductService {
 
     // Helper method to resolve or auto-create Brand
-    private Brand resolveBrand(Long brandId, String brandName, User user) {
+    private Brand resolveBrand(UUID brandId, String brandName, User user) {
         if (brandId != null) {
             Brand b = Brand.findById(brandId);
             if (b != null) return b;
@@ -32,16 +33,16 @@ public class ProductService {
             }
             Brand newBrand = new Brand();
             newBrand.name = trimmed;
-            newBrand.hexColor = "#1c7ed6";
+            newBrand.hexColor = "#1C7ED6";
             newBrand.user = user;
             newBrand.persist();
             return newBrand;
         }
-        throw new ResourceNotFoundException("A marca do produto é obrigatória.");
+        throw new IllegalArgumentException("A marca do produto é obrigatória.");
     }
 
     // Helper method to resolve or auto-create Category
-    private Category resolveCategory(Long categoryId, String categoryName, User user) {
+    private Category resolveCategory(UUID categoryId, String categoryName, User user) {
         if (categoryId != null) {
             Category c = Category.findById(categoryId);
             if (c != null) return c;
@@ -58,11 +59,11 @@ public class ProductService {
             newCategory.persist();
             return newCategory;
         }
-        throw new ResourceNotFoundException("A categoria do produto é obrigatória.");
+        throw new IllegalArgumentException("A categoria do produto é obrigatória.");
     }
 
     // Helper method to resolve or auto-create Family
-    private Family resolveFamily(Long familyId, String familyName, User user) {
+    private Family resolveFamily(UUID familyId, String familyName, User user) {
         if (familyId != null) {
             Family f = Family.findById(familyId);
             if (f != null) return f;
@@ -79,19 +80,16 @@ public class ProductService {
             newFamily.persist();
             return newFamily;
         }
-        throw new ResourceNotFoundException("A família do produto é obrigatória.");
+        throw new IllegalArgumentException("A família do produto é obrigatória.");
     }
 
     // create a product
     @Transactional
-    public ProductResponseDTO create(ProductRequestDTO dto) {
-        return create(dto, null);
-    }
-
-    @Transactional
-    public ProductResponseDTO create(ProductRequestDTO dto, Long userId) {
+    public ProductResponseDTO create(ProductRequestDTO dto, User user) {
+        if (user == null) {
+            throw new IllegalArgumentException("Sessão inválida ou expirada. Faça login novamente.");
+        }
         String trimmedName = dto.name().trim();
-        User user = userId != null ? User.findById(userId) : null;
 
         Brand brand = resolveBrand(dto.brandId(), dto.brandName(), user);
         Category category = resolveCategory(dto.categoryId(), dto.categoryName(), user);
@@ -113,9 +111,9 @@ public class ProductService {
         return ProductResponseDTO.fromEntity(product);
     }
 
-    // list all products
-    public List<ProductResponseDTO> listAll(Long userId) {
-        User user = userId != null ? User.findById(userId) : null;
+    // list all products for user
+    public List<ProductResponseDTO> listAll(User user) {
+        if (user == null) return List.of();
         List<Product> products = Product.listAllWithRelations(user);
         return products.stream()
                 .map(ProductResponseDTO::fromEntity)
@@ -124,9 +122,9 @@ public class ProductService {
 
     // search products by any criterion
     public List<ProductResponseDTO> searchProducts(
-            String query, String familyName, String brandName, String categoryName, LocalDate maxExpDate, Long userId
+            String query, String familyName, String brandName, String categoryName, LocalDate maxExpDate, User user
     ) {
-        User user = userId != null ? User.findById(userId) : null;
+        if (user == null) return List.of();
         List<Product> products = Product.findWithFilters(query, familyName, brandName, categoryName, maxExpDate, user);
         return products.stream()
                 .map(ProductResponseDTO::fromEntity)
@@ -134,8 +132,8 @@ public class ProductService {
     }
 
     // list all expired products
-    public List<ProductResponseDTO> findExpired(Long userId) {
-        User user = userId != null ? User.findById(userId) : null;
+    public List<ProductResponseDTO> findExpired(User user) {
+        if (user == null) return List.of();
         return Product.findExpired(user)
                 .stream()
                 .map(ProductResponseDTO::fromEntity)
@@ -143,8 +141,8 @@ public class ProductService {
     }
 
     // list all near expiration products
-    public List<ProductResponseDTO> findNearExpiration(Long userId) {
-        User user = userId != null ? User.findById(userId) : null;
+    public List<ProductResponseDTO> findNearExpiration(User user) {
+        if (user == null) return List.of();
         return Product.findNearExpiration(user)
                 .stream()
                 .map(ProductResponseDTO::fromEntity)
@@ -153,7 +151,7 @@ public class ProductService {
 
     // update a product
     @Transactional
-    public ProductResponseDTO update(Long id, ProductRequestDTO dto) {
+    public ProductResponseDTO update(UUID id, ProductRequestDTO dto) {
         Product product = Product.findById(id);
         if (product == null) {
             throw new ResourceNotFoundException("Produto com ID " + id + " não encontrado.");
@@ -180,7 +178,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(UUID id) {
         Product product = Product.findById(id);
 
         if (product == null) {

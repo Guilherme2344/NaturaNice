@@ -2,6 +2,7 @@ package com.guiapplications.resources;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import com.guiapplications.entities.dto.CreateUserRequestDTO;
 import com.guiapplications.entities.dto.UserResponseDTO;
@@ -45,7 +46,7 @@ public class UserResource {
 
     @DELETE
     @Path("/{id}")
-    public Response deleteUser(@PathParam("id") Long id) {
+    public Response deleteUser(@PathParam("id") UUID id) {
         userService.deleteUser(id);
         return Response.noContent().build();
     }

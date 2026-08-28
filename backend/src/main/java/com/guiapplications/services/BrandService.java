@@ -1,8 +1,12 @@
 package com.guiapplications.services;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import com.guiapplications.entities.Brand;
+import com.guiapplications.entities.Product;
 import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.BrandRequestDTO;
 import com.guiapplications.entities.dto.BrandResponseDTO;
@@ -19,15 +23,11 @@ import jakarta.validation.ConstraintViolationException;
 public class BrandService {
 	
 	@Transactional
-	public BrandResponseDTO create(BrandRequestDTO dto) {
-		return create(dto, null);
-	}
-
-	// create a brand
-	@Transactional
-	public BrandResponseDTO create(BrandRequestDTO dto, Long userId) {
+	public BrandResponseDTO create(BrandRequestDTO dto, User user) {
+		if (user == null) {
+			throw new IllegalArgumentException("Sessão inválida ou expirada. Faça login novamente.");
+		}
 		String trimmedName = dto.name().trim();
-		User user = userId != null ? User.findById(userId) : null;
 
         // check if already exists the typed name for this user
         List<Brand> existing = Brand.findByNameAndUser(trimmedName, user);
@@ -37,32 +37,66 @@ public class BrandService {
 		
 		Brand brand = new Brand();
 		brand.name = trimmedName;
-		brand.hexColor = dto.hexColor().toUpperCase();
+		brand.hexColor = dto.hexColor() != null ? dto.hexColor().toUpperCase() : "#1C7ED6";
 		brand.user = user;
 		brand.persist();
-		return BrandResponseDTO.fromEntity(brand);
+		return BrandResponseDTO.fromEntity(brand, true);
 	}
 	
-	// list all brands
-	public List<BrandResponseDTO> listAll(Long userId){
-		User user = userId != null ? User.findById(userId) : null;
+	// list all brands for user (optimized with single bulk count query)
+	public List<BrandResponseDTO> listAll(User user) {
+		if (user == null) return List.of();
 		List<Brand> brands = Brand.listByUser(user);
+		if (brands.isEmpty()) return List.of();
+
+		List<Object[]> counts = Product.getEntityManager()
+				.createQuery("SELECT p.brand.id, COUNT(p) FROM Product p WHERE p.user = :user GROUP BY p.brand.id", Object[].class)
+				.setParameter("user", user)
+				.getResultList();
+
+		Map<UUID, Long> productCountsMap = new HashMap<>();
+		for (Object[] row : counts) {
+			if (row[0] != null) {
+				productCountsMap.put((UUID) row[0], (Long) row[1]);
+			}
+		}
+
 		return brands.stream()
-				.map(BrandResponseDTO::fromEntity)
+				.map(b -> {
+					long count = productCountsMap.getOrDefault(b.id, 0L);
+					return BrandResponseDTO.fromEntity(b, count == 0);
+				})
 				.toList();
 	}
 
-	public List<BrandResponseDTO> search(String name, Long userId){
-		User user = userId != null ? User.findById(userId) : null;
+	public List<BrandResponseDTO> search(String name, User user) {
+		if (user == null) return List.of();
 		List<Brand> brands = Brand.findByNameAndUser(name, user);
+		if (brands.isEmpty()) return List.of();
+
+		List<Object[]> counts = Product.getEntityManager()
+				.createQuery("SELECT p.brand.id, COUNT(p) FROM Product p WHERE p.user = :user GROUP BY p.brand.id", Object[].class)
+				.setParameter("user", user)
+				.getResultList();
+
+		Map<UUID, Long> productCountsMap = new HashMap<>();
+		for (Object[] row : counts) {
+			if (row[0] != null) {
+				productCountsMap.put((UUID) row[0], (Long) row[1]);
+			}
+		}
+
 		return brands.stream()
-				.map(BrandResponseDTO::fromEntity)
+				.map(b -> {
+					long count = productCountsMap.getOrDefault(b.id, 0L);
+					return BrandResponseDTO.fromEntity(b, count == 0);
+				})
 				.toList();
 	}
 	
 	// update a brand
 	@Transactional
-    public BrandResponseDTO update(Long id, BrandRequestDTO dto) {
+    public BrandResponseDTO update(UUID id, BrandRequestDTO dto) {
         Brand brand = Brand.findById(id);
         if (brand == null) {
             throw new ResourceNotFoundException("Marca com ID " + id + " não encontrada.");
@@ -70,23 +104,27 @@ public class BrandService {
 
         String trimmedName = dto.name().trim();
 
-        // check if there are duplicated names
-        long duplicateCount = Brand.count(
-            "unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND id != ?2", 
-            trimmedName, id
-        );
-        if (duplicateCount > 0) {
-            throw new ResourceAlreadyExistsException("Já existe outra marca cadastrada com o nome: " + trimmedName);
+        if (brand.user != null) {
+            long duplicateCount = Brand.count(
+                "unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND id != ?2 AND user = ?3", 
+                trimmedName, id, brand.user
+            );
+            if (duplicateCount > 0) {
+                throw new ResourceAlreadyExistsException("Já existe outra marca cadastrada com o nome: " + trimmedName);
+            }
         }
 
         brand.name = trimmedName;
-        brand.hexColor = dto.hexColor().toUpperCase();
-        return BrandResponseDTO.fromEntity(brand);
+        if (dto.hexColor() != null) {
+            brand.hexColor = dto.hexColor().toUpperCase();
+        }
+        long count = Product.count("brand", brand);
+        return BrandResponseDTO.fromEntity(brand, count == 0);
     }
 	
 	// delete brand by id
 	@Transactional
-	public void delete(Long id) {
+	public void delete(UUID id) {
 		Brand brand = Brand.findById(id);
 		if (brand == null) {
 			throw new ResourceNotFoundException("Marca com ID " + id + " não foi encontrada");

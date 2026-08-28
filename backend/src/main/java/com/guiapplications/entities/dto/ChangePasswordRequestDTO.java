@@ -1,6 +1,8 @@
 package com.guiapplications.entities.dto;
 
+import java.util.UUID;
+
 public record ChangePasswordRequestDTO(
-    Long userId,
+    UUID userId,
     String newPassword
 ) {}

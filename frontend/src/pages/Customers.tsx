@@ -5,6 +5,7 @@ import EntityTable from '../components/EntityTable';
 import type { Entity } from '../components/EntityTable';
 import { EntityModal } from '../components/EntityModal';
 import { DeleteModal } from '../components/DeleteModal';
+import { CustomerSummaryModal } from '../components/CustomerSummaryModal';
 import {
     useCustomersQuery,
     useCreateCustomerMutation,
@@ -24,6 +25,10 @@ export default function Customers() {
     const [modalOpened, setModalOpened] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState<Entity | null>(null);
 
+    // Summary modal states
+    const [summaryModalOpened, setSummaryModalOpened] = useState(false);
+    const [customerForSummary, setCustomerForSummary] = useState<Entity | null>(null);
+
     // Delete states
     const [deleteOpened, setDeleteOpened] = useState(false);
     const [customerToDelete, setCustomerToDelete] = useState<Entity | null>(null);
@@ -42,7 +47,12 @@ export default function Customers() {
         setModalOpened(true);
     };
 
-    const handleOpenDelete = (id: number) => {
+    const handleOpenSummary = (item: Entity) => {
+        setCustomerForSummary(item);
+        setSummaryModalOpened(true);
+    };
+
+    const handleOpenDelete = (id: string) => {
         const item = customers.find((c) => c.id === id);
         if (item) {
             setCustomerToDelete(item);
@@ -116,6 +126,7 @@ export default function Customers() {
                 showColor={false}
                 onAdd={handleOpenAdd}
                 onEdit={handleOpenEdit}
+                onSummary={handleOpenSummary}
                 onDelete={handleOpenDelete}
             />
 
@@ -126,6 +137,12 @@ export default function Customers() {
                 showColor={false}
                 initialData={selectedCustomer}
                 onSubmit={handleSubmit}
+            />
+
+            <CustomerSummaryModal
+                opened={summaryModalOpened}
+                onClose={() => setSummaryModalOpened(false)}
+                customer={customerForSummary}
             />
 
             <DeleteModal

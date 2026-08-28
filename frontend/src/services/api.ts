@@ -10,9 +10,15 @@ export const api = axios.create({
     timeout: 10000,
 });
 
-// Request Interceptor: sends X-User-Id of logged user
+// Request Interceptor: sends Authorization Bearer Token & X-User-Id of logged user
 api.interceptors.request.use((config) => {
     const storedUser = localStorage.getItem('app_user');
+    const token = localStorage.getItem('app_token');
+
+    if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+
     if (storedUser) {
         try {
             const user = JSON.parse(storedUser);
@@ -29,6 +35,14 @@ api.interceptors.response.use(
     (response) => response,
     (error) => {
         const status = error.response ? error.response.status : null;
+
+        // Redirect to login if 401 Unauthorized (session expired)
+        if (status === 401) {
+            localStorage.clear();
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
+        }
 
         // Redirect to 503 Error page if server is unavailable
         if (status === 503) {

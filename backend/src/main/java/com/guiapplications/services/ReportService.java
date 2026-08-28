@@ -19,17 +19,15 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public class ReportService {
 
-    public MonthlySalesReportDTO getMonthlyReport(int year, int month, String customerName) {
-        return getMonthlyReport(year, month, customerName, null);
-    }
-
     // monthly report
-    public MonthlySalesReportDTO getMonthlyReport(int year, int month, String customerName, Long userId) {
+    public MonthlySalesReportDTO getMonthlyReport(int year, int month, String customerName, User user) {
+        if (user == null) {
+            return new MonthlySalesReportDTO(year, month, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0, List.of());
+        }
         YearMonth yearMonth = YearMonth.of(year, month);
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(LocalTime.MAX);
 
-        User user = userId != null ? User.findById(userId) : null;
         List<DailySalesSummaryDTO> dailySummaries = Sale.getDailySummaries(start, end, customerName, user);
 
         BigDecimal totalRevenue = BigDecimal.ZERO;
@@ -47,17 +45,15 @@ public class ReportService {
         return new MonthlySalesReportDTO(year, month, totalRevenue, totalCost, totalProfit, totalItemsSold, dailySummaries);
     }
 
-    public AnnualSalesReportDTO getAnnualReport(int year, String customerName) {
-        return getAnnualReport(year, customerName, null);
-    }
-
     // annual report
-    public AnnualSalesReportDTO getAnnualReport(int year, String customerName, Long userId) {
+    public AnnualSalesReportDTO getAnnualReport(int year, String customerName, User user) {
+        if (user == null) {
+            return new AnnualSalesReportDTO(year, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0, List.of());
+        }
         Year y = Year.of(year);
         LocalDateTime start = y.atDay(1).atStartOfDay();
         LocalDateTime end = y.atMonth(12).atEndOfMonth().atTime(LocalTime.MAX);
 
-        User user = userId != null ? User.findById(userId) : null;
         List<MonthlySalesSummaryDTO> monthlySummaries = Sale.getMonthlySummaries(start, end, customerName, user);
 
         BigDecimal totalRevenue = BigDecimal.ZERO;

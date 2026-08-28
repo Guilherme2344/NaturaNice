@@ -2,6 +2,7 @@ package com.guiapplications.services;
 
 import java.security.SecureRandom;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.guiapplications.entities.User;
@@ -26,7 +27,7 @@ public class UserService {
     Event<UserCreatedEvent> userCreatedEvent;
 
     public List<UserResponseDTO> getAllUsers() {
-        return User.<User>listAllSorted().stream()
+        return User.listAllSorted().stream()
                 .map(u -> new UserResponseDTO(u.id, u.name, u.email, u.role.name(), u.firstAccess))
                 .collect(Collectors.toList());
     }
@@ -57,7 +58,6 @@ public class UserService {
 
         user.persist();
 
-        // Dispara o evento assíncrono via Quarkus Observer (CDI Event Bus) sem bloquear a resposta HTTP
         userCreatedEvent.fireAsync(new UserCreatedEvent(user.name, user.email, randomPassword));
 
         return new UserResponseDTO(
@@ -70,7 +70,7 @@ public class UserService {
     }
 
     @Transactional
-    public void deleteUser(Long id) {
+    public void deleteUser(UUID id) {
         User user = User.findById(id);
         if (user == null) {
             throw new ResourceNotFoundException("Usuário não encontrado com id: " + id);

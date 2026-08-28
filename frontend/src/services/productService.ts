@@ -7,11 +7,11 @@ export interface CreateProductDTO {
     expirationDate: string;
     purchasePrice: number;
     sellingPrice: number;
-    brandId?: number;
+    brandId?: string;
     brandName?: string;
-    categoryId?: number;
+    categoryId?: string;
     categoryName?: string;
-    familyId?: number;
+    familyId?: string;
     familyName?: string;
 }
 
@@ -37,27 +37,29 @@ export const productService = {
     },
 
     update: async (
-        id: number,
+        id: string,
         product: CreateProductDTO
     ): Promise<Product> => {
         const response = await api.put<Product>(`/products/${id}`, product);
         return response.data;
     },
 
-    delete: async (id: number): Promise<void> => {
+    delete: async (id: string): Promise<void> => {
         await api.delete(`/products/${id}`);
     },
 
     sell: async (
-        productId: number,
+        productId: string,
         quantity: number,
         sellingPrice: number,
+        amountPaid?: number,
         customerName?: string
     ): Promise<void> => {
         await api.post('/sales', {
             productId,
             quantity,
             sellingPrice,
+            amountPaid,
             customerName,
         });
     },

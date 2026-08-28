@@ -5,7 +5,6 @@ import ProductsTable, { type Product } from '../components/ProductsTable';
 import { ProductModal } from '../components/ProductModal';
 import { SaleModal } from '../components/SaleModal';
 import { DeleteModal } from '../components/DeleteModal';
-import type { CreateProductDTO } from '../services/productService';
 import {
     useProductsQuery,
     useCreateProductMutation,
@@ -18,34 +17,33 @@ import {
     useCategoriesQuery,
     useFamiliesQuery,
 } from '../hooks/useEntitiesQuery';
+import type { CreateProductDTO } from '../services/productService';
 
 export default function Products() {
-    const { data: products = [], isLoading: loadingProducts } =
-        useProductsQuery();
+    const { data: products = [], isLoading: loadingProducts } = useProductsQuery();
     const { data: brands = [] } = useBrandsQuery();
     const { data: categories = [] } = useCategoriesQuery();
     const { data: families = [] } = useFamiliesQuery();
 
-    // mutation used due to database modification
     const createProductMutation = useCreateProductMutation();
     const updateProductMutation = useUpdateProductMutation();
     const deleteProductMutation = useDeleteProductMutation();
     const createSaleMutation = useCreateSaleMutation();
 
+    // Modal states
     const [modalOpened, setModalOpened] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState<Product | null>(
-        null
-    );
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+    // Sale modal states
     const [saleModalOpened, setSaleModalOpened] = useState(false);
     const [productToSell, setProductToSell] = useState<Product | null>(null);
 
+    // Delete modal states
     const [deleteModalOpened, setDeleteModalOpened] = useState(false);
-    const [productToDelete, setProductToDelete] = useState<Product | null>(
-        null
-    );
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const [deleteError, setDeleteError] = useState('');
 
-    // friendly success message
+    // Feedback message
     const [successMessage, setSuccessMessage] = useState('');
 
     const handleOpenAdd = () => {
@@ -63,10 +61,11 @@ export default function Products() {
         setSaleModalOpened(true);
     };
 
-    const handleOpenDelete = (id: number) => {
+    const handleOpenDelete = (id: string) => {
         const prod = products.find((p) => p.id === id);
         if (prod) {
             setProductToDelete(prod);
+            setDeleteError('');
             setDeleteModalOpened(true);
         }
     };
@@ -88,6 +87,7 @@ export default function Products() {
     const handleConfirmSale = async (
         quantity: number,
         sellingPrice: number,
+        amountPaid?: number,
         customerName?: string
     ) => {
         if (!productToSell) return;
@@ -96,6 +96,7 @@ export default function Products() {
             productId: productToSell.id,
             quantity,
             sellingPrice,
+            amountPaid,
             customerName,
         });
 
@@ -112,14 +113,24 @@ export default function Products() {
         if (!productToDelete) return;
         try {
             setSuccessMessage('');
+            setDeleteError('');
             await deleteProductMutation.mutateAsync(productToDelete.id);
             setDeleteModalOpened(false);
             setSuccessMessage(
                 `Produto "${productToDelete.name}" excluído com sucesso!`
             );
             setProductToDelete(null);
-        } catch (err) {
-            console.error('Erro ao excluir produto:', err);
+        } catch (err: any) {
+            if (err?.response?.status === 409) {
+                const serverMsg = err?.response?.data?.details || err?.response?.data?.message;
+                setDeleteError(
+                    serverMsg || 'Não é possível excluir este produto pois existem vendas associadas a ele.'
+                );
+            } else {
+                setDeleteError(
+                    err?.response?.data?.message || 'Erro ao excluir o produto.'
+                );
+            }
         }
     };
 
@@ -138,7 +149,6 @@ export default function Products() {
             )}
 
             <ProductsTable
-                title="Produtos"
                 products={products}
                 loading={loadingProducts}
                 onAdd={handleOpenAdd}
@@ -175,6 +185,7 @@ export default function Products() {
                         : 'este produto'
                 }
                 loading={deleteProductMutation.isPending}
+                error={deleteError}
             />
         </Stack>
     );

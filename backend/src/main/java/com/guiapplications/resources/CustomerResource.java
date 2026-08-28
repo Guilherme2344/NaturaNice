@@ -1,10 +1,15 @@
 package com.guiapplications.resources;
 
 import java.util.List;
+import java.util.UUID;
 
+import com.guiapplications.entities.User;
+import com.guiapplications.entities.dto.CustomerPaymentRequestDTO;
 import com.guiapplications.entities.dto.CustomerRequestDTO;
 import com.guiapplications.entities.dto.CustomerResponseDTO;
+import com.guiapplications.entities.dto.CustomerSummaryDTO;
 import com.guiapplications.services.CustomerService;
+import com.guiapplications.utils.UserResolver;
 
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -31,8 +36,13 @@ public class CustomerResource {
 
     // create a customer
     @POST
-    public Response create(@Valid CustomerRequestDTO dto, @HeaderParam("X-User-Id") Long userId) {
-        CustomerResponseDTO createdCustomer = customerService.create(dto, userId);
+    public Response create(
+            @Valid CustomerRequestDTO dto,
+            @HeaderParam("Authorization") String authHeader,
+            @HeaderParam("X-User-Id") String userIdHeader
+    ) {
+        User user = UserResolver.resolveUser(authHeader, userIdHeader);
+        CustomerResponseDTO createdCustomer = customerService.create(dto, user);
         return Response.status(Response.Status.CREATED)
                        .entity(createdCustomer)
                        .build();
@@ -40,22 +50,58 @@ public class CustomerResource {
 
     // get all customers
     @GET
-    public Response getAll(@HeaderParam("X-User-Id") Long userId) {
-        return Response.ok(customerService.listAll(userId)).build();
+    public Response getAll(
+            @HeaderParam("Authorization") String authHeader,
+            @HeaderParam("X-User-Id") String userIdHeader
+    ) {
+        User user = UserResolver.resolveUser(authHeader, userIdHeader);
+        return Response.ok(customerService.listAll(user)).build();
     }
 
     // search customer by name
     @GET
     @Path("/search")
-    public Response search(@QueryParam("name") String name, @HeaderParam("X-User-Id") Long userId) {
-        List<CustomerResponseDTO> customers = customerService.search(name, userId);
+    public Response search(
+            @QueryParam("name") String name,
+            @HeaderParam("Authorization") String authHeader,
+            @HeaderParam("X-User-Id") String userIdHeader
+    ) {
+        User user = UserResolver.resolveUser(authHeader, userIdHeader);
+        List<CustomerResponseDTO> customers = customerService.search(name, user);
         return Response.ok(customers).build();
+    }
+
+    // get customer purchase summary and debt status
+    @GET
+    @Path("/{id}/summary")
+    public Response getSummary(
+            @PathParam("id") UUID id,
+            @HeaderParam("Authorization") String authHeader,
+            @HeaderParam("X-User-Id") String userIdHeader
+    ) {
+        User user = UserResolver.resolveUser(authHeader, userIdHeader);
+        CustomerSummaryDTO summary = customerService.getCustomerSummary(id, user);
+        return Response.ok(summary).build();
+    }
+
+    // record additional customer payment towards outstanding debts
+    @POST
+    @Path("/{id}/payments")
+    public Response addPayment(
+            @PathParam("id") UUID id,
+            @Valid CustomerPaymentRequestDTO dto,
+            @HeaderParam("Authorization") String authHeader,
+            @HeaderParam("X-User-Id") String userIdHeader
+    ) {
+        User user = UserResolver.resolveUser(authHeader, userIdHeader);
+        CustomerSummaryDTO updatedSummary = customerService.addCustomerPayment(id, dto.amount(), user);
+        return Response.ok(updatedSummary).build();
     }
 
     // update a customer
     @PUT
     @Path("/{id}")
-    public Response update(@PathParam("id") Long id, @Valid CustomerRequestDTO dto) {
+    public Response update(@PathParam("id") UUID id, @Valid CustomerRequestDTO dto) {
         CustomerResponseDTO updatedCustomer = customerService.update(id, dto);
         return Response.ok(updatedCustomer).build();
     }
@@ -63,7 +109,7 @@ public class CustomerResource {
     // delete customer by id
     @DELETE
     @Path("/{id}")
-    public Response delete(@PathParam("id") Long id) {
+    public Response delete(@PathParam("id") UUID id) {
         customerService.delete(id);
         return Response.noContent().build();
     }

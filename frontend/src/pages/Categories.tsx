@@ -43,7 +43,7 @@ export default function Categories() {
         setModalOpened(true);
     };
 
-    const handleOpenDelete = (id: number) => {
+    const handleOpenDelete = (id: string) => {
         const item = categories.find((c) => c.id === id);
         if (item) {
             setCategoryToDelete(item);

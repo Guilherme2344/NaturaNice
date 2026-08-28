@@ -18,7 +18,7 @@ export default function ExpiredProducts() {
 
     const deleteProductMutation = useDeleteProductMutation();
 
-    const handleOpenDelete = (id: number) => {
+    const handleOpenDelete = (id: string) => {
         const prod = products.find((p) => p.id === id);
         if (prod) {
             setProductToDelete(prod);

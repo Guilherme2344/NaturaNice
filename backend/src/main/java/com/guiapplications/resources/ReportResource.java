@@ -2,9 +2,11 @@ package com.guiapplications.resources;
 
 import java.time.LocalDate;
 
+import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.AnnualSalesReportDTO;
 import com.guiapplications.entities.dto.MonthlySalesReportDTO;
 import com.guiapplications.services.ReportService;
+import com.guiapplications.utils.UserResolver;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
@@ -28,12 +30,14 @@ public class ReportResource {
             @QueryParam("year") Integer year,
             @QueryParam("month") Integer month,
             @QueryParam("customerName") String customerName,
-            @HeaderParam("X-User-Id") Long userId) {
+            @HeaderParam("Authorization") String authHeader,
+            @HeaderParam("X-User-Id") String userIdHeader) {
 
+        User user = UserResolver.resolveUser(authHeader, userIdHeader);
         int selectedYear = (year != null) ? year : LocalDate.now().getYear();
         int selectedMonth = (month != null) ? month : LocalDate.now().getMonthValue();
 
-        return reportService.getMonthlyReport(selectedYear, selectedMonth, customerName, userId);
+        return reportService.getMonthlyReport(selectedYear, selectedMonth, customerName, user);
     }
 
     // annual report
@@ -42,9 +46,11 @@ public class ReportResource {
     public AnnualSalesReportDTO getAnnualReport(
             @QueryParam("year") Integer year,
             @QueryParam("customerName") String customerName,
-            @HeaderParam("X-User-Id") Long userId) {
+            @HeaderParam("Authorization") String authHeader,
+            @HeaderParam("X-User-Id") String userIdHeader) {
+        User user = UserResolver.resolveUser(authHeader, userIdHeader);
         int selectedYear = (year != null) ? year : LocalDate.now().getYear();
 
-        return reportService.getAnnualReport(selectedYear, customerName, userId);
+        return reportService.getAnnualReport(selectedYear, customerName, user);
     }
 }

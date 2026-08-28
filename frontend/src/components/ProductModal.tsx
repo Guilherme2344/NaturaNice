@@ -177,7 +177,8 @@ export function ProductModal({
         try {
             setLoading(true);
 
-            // Find matching category/family ID if selected, or send string name for auto-creation
+            // Find matching brand/category/family ID if selected, or send string name for auto-creation
+            const matchedBrand = brands.find((b) => String(b.id) === String(brandId));
             const matchedCategory = categories.find(
                 (c) => c.name.toLowerCase() === categoryName.trim().toLowerCase()
             );
@@ -191,7 +192,8 @@ export function ProductModal({
                 expirationDate,
                 purchasePrice: Number(purchasePrice) || 0,
                 sellingPrice: Number(sellingPrice) || 0,
-                brandId: Number(brandId),
+                brandId: brandId || undefined,
+                brandName: matchedBrand ? matchedBrand.name : undefined,
                 categoryId: matchedCategory ? matchedCategory.id : undefined,
                 categoryName: categoryName.trim(),
                 familyId: matchedFamily ? matchedFamily.id : undefined,

@@ -39,7 +39,7 @@ export default function Families() {
         setModalOpened(true);
     };
 
-    const handleOpenDelete = (id: number) => {
+    const handleOpenDelete = (id: string) => {
         const item = families.find((f) => f.id === id);
         if (item) {
             setFamilyToDelete(item);

@@ -14,12 +14,13 @@ import {
     Center,
     Loader,
 } from '@mantine/core';
-import { Edit, Trash2, Plus, Search } from 'lucide-react';
+import { Edit, Trash2, Plus, Search, Eye } from 'lucide-react';
 
 export type Entity = {
-    id: number;
+    id: string;
     name: string;
     hexColor?: string; // used for Brands, Categories, Families, Customers
+    canDelete?: boolean;
 };
 
 interface EntityTableProps {
@@ -30,7 +31,8 @@ interface EntityTableProps {
     showColor?: boolean;
     addButtonLabel?: string;
     onEdit?: (item: Entity) => void;
-    onDelete?: (id: number) => void;
+    onDelete?: (id: string) => void;
+    onSummary?: (item: Entity) => void;
     onAdd?: () => void;
 }
 
@@ -43,6 +45,7 @@ export default function EntityTable({
     addButtonLabel,
     onEdit,
     onDelete,
+    onSummary,
     onAdd,
 }: EntityTableProps) {
     const [search, setSearch] = useState('');
@@ -152,6 +155,17 @@ export default function EntityTable({
 
                                     <Table.Td align="right">
                                         <Group gap="xs" justify="flex-end">
+                                            {onSummary && (
+                                                <ActionIcon
+                                                    variant="light"
+                                                    color="teal"
+                                                    title="Ver Resumo e Compras"
+                                                    onClick={() => onSummary(item)}
+                                                >
+                                                    <Eye size={16} />
+                                                </ActionIcon>
+                                            )}
+
                                             <ActionIcon
                                                 variant="light"
                                                 color="blue"
@@ -164,7 +178,12 @@ export default function EntityTable({
                                             <ActionIcon
                                                 variant="light"
                                                 color="red"
-                                                title="Excluir"
+                                                title={
+                                                    item.canDelete === false
+                                                        ? 'Não é possível excluir: existem produtos ou vendas associados'
+                                                        : 'Excluir'
+                                                }
+                                                disabled={item.canDelete === false}
                                                 onClick={() =>
                                                     onDelete?.(item.id)
                                                 }

@@ -1,7 +1,7 @@
 import { api } from './api';
 
 export interface User {
-    id: number;
+    id: string;
     name: string;
     email: string;
     role: 'ADMIN' | 'USER';
@@ -19,7 +19,7 @@ export const authService = {
         return response.data;
     },
 
-    changeFirstPassword: async (userId: number, newPassword: string): Promise<User> => {
+    changeFirstPassword: async (userId: string, newPassword: string): Promise<User> => {
         const response = await api.post<User>('/auth/change-first-password', { userId, newPassword });
         return response.data;
     },

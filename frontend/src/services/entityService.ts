@@ -45,19 +45,19 @@ export const entityService = {
     },
 
     // PUT
-    updateBrand: async (id: number, data: UpdateEntityDTO): Promise<Entity> => {
+    updateBrand: async (id: string, data: UpdateEntityDTO): Promise<Entity> => {
         const response = await api.put<Entity>(`/brands/${id}`, data);
         return response.data;
     },
     updateCategory: async (
-        id: number,
+        id: string,
         data: UpdateEntityDTO
     ): Promise<Entity> => {
         const response = await api.put<Entity>(`/categories/${id}`, data);
         return response.data;
     },
     updateFamily: async (
-        id: number,
+        id: string,
         data: UpdateEntityDTO
     ): Promise<Entity> => {
         const response = await api.put<Entity>(`/families/${id}`, data);
@@ -65,13 +65,13 @@ export const entityService = {
     },
 
     // DELETE
-    deleteBrand: async (id: number): Promise<void> => {
+    deleteBrand: async (id: string): Promise<void> => {
         await api.delete(`/brands/${id}`);
     },
-    deleteCategory: async (id: number): Promise<void> => {
+    deleteCategory: async (id: string): Promise<void> => {
         await api.delete(`/categories/${id}`);
     },
-    deleteFamily: async (id: number): Promise<void> => {
+    deleteFamily: async (id: string): Promise<void> => {
         await api.delete(`/families/${id}`);
     },
 };

@@ -1,16 +1,18 @@
 package com.guiapplications.entities;
 
-import java.text.Normalizer;
 import java.util.List;
-import java.util.Map;
+import java.util.UUID;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 @Entity
@@ -18,51 +20,31 @@ import jakarta.persistence.Table;
     @Index(name = "idx_brand_name", columnList = "name"),
     @Index(name = "idx_brand_user_id", columnList = "user_id")
 })
-public class Brand extends PanacheEntity {
+public class Brand extends PanacheEntityBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    public UUID id;
 
     @Column(name = "name", nullable = false, length = 100)
     public String name;
 
     @Column(name = "hexColor", nullable = false, length = 7)
-    public String hexColor;
+    public String hexColor = "#1C7ED6";
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = true)
     public User user;
 
-    // search brands by name and user
     public static List<Brand> findByNameAndUser(String name, User user) {
-        if (user == null) {
-            return findByName(name);
-        }
-        if (name == null || name.isBlank()) {
-            return list("user = ?1", user);
-        }
-
-        String hql = "FROM Brand b WHERE b.user = :user AND CAST(unaccent(LOWER(b.name)) AS String) LIKE :name";
-        return list(hql, Map.of("user", user, "name", "%" + normalizeText(name) + "%"));
-    }
-
-    public static List<Brand> findByName(String name) {
-        if (name == null || name.isBlank()) {
-            return listAll();
-        }
-
-        String hql = "FROM Brand b WHERE CAST(unaccent(LOWER(b.name)) AS String) LIKE :name";
-        return list(hql, Map.of("name", "%" + normalizeText(name) + "%"));
+        if (name == null || user == null) return List.of();
+        String trimmed = name.trim();
+        return list("unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND user = ?2", trimmed, user);
     }
 
     public static List<Brand> listByUser(User user) {
-        if (user == null) {
-            return listAll();
-        }
-        return list("user = ?1", user);
-    }
-
-    // remove accents from words
-    private static String normalizeText(String input) {
-        if (input == null || input.isBlank()) return "";
-        String normalized = Normalizer.normalize(input.trim().toLowerCase(), Normalizer.Form.NFD);
-        return normalized.replaceAll("\\p{M}", "");
+        if (user == null) return List.of();
+        return list("user = ?1 ORDER BY name ASC", user);
     }
 }

@@ -15,16 +15,26 @@ public class GlobalExceptionHandler implements ExceptionMapper<Throwable> {
     @Override
     public Response toResponse(Throwable exception) {
         
-    	// resource already exists
-    	if (exception instanceof ResourceAlreadyExistsException) {
-    	    ErrorResponseDTO error = new ErrorResponseDTO(
-    	        Response.Status.CONFLICT.getStatusCode(),
-    	        "Conflito no banco",
-    	        exception.getMessage()
-    	    );
-    	    return Response.status(Response.Status.CONFLICT).entity(error).build();
-    	}
-    	
+        // bad request (400)
+        if (exception instanceof IllegalArgumentException) {
+            ErrorResponseDTO error = new ErrorResponseDTO(
+                Response.Status.BAD_REQUEST.getStatusCode(),
+                "Requisição Inválida",
+                exception.getMessage()
+            );
+            return Response.status(Response.Status.BAD_REQUEST).entity(error).build();
+        }
+
+        // resource already exists (409)
+        if (exception instanceof ResourceAlreadyExistsException) {
+            ErrorResponseDTO error = new ErrorResponseDTO(
+                Response.Status.CONFLICT.getStatusCode(),
+                "Conflito no banco",
+                exception.getMessage()
+            );
+            return Response.status(Response.Status.CONFLICT).entity(error).build();
+        }
+        
         // resource not found (404)
         if (exception instanceof ResourceNotFoundException) {
             ErrorResponseDTO error = new ErrorResponseDTO(

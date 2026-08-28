@@ -15,6 +15,7 @@ import com.guiapplications.entities.dto.SaleRequestDTO;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -52,9 +53,9 @@ public class SaleResourceTest {
     public void testCreateSaleDecrementsStock() {
         Product product = Product.findAll().firstResult();
         int initialStock = product.quantity;
-        long productId = product.id;
+        UUID productId = product.id;
 
-        SaleRequestDTO request = new SaleRequestDTO(productId, 1, new BigDecimal("25.00"), "Maria Silva");
+        SaleRequestDTO request = new SaleRequestDTO(productId, 1, new BigDecimal("25.00"), new BigDecimal("25.00"), "Maria Silva");
 
         given()
           .contentType(ContentType.JSON)
@@ -64,9 +65,10 @@ public class SaleResourceTest {
           .then()
              .statusCode(201)
              .body("saleId", notNullValue())
-             .body("productId", equalTo((int) productId))
+             .body("productId", equalTo(productId.toString()))
              .body("quantity", equalTo(1))
-             .body("customerName", equalTo("Maria Silva"));
+             .body("customerName", equalTo("Maria Silva"))
+             .body("status", equalTo("PAID"));
 
         Product.getEntityManager().clear();
         Product updatedProduct = Product.findById(productId);
@@ -77,9 +79,9 @@ public class SaleResourceTest {
     public void testCreateSaleReachingZeroStockAutoDeletesProduct() {
         Product product = Product.findAll().firstResult();
         int fullStock = product.quantity;
-        long productId = product.id;
+        UUID productId = product.id;
 
-        SaleRequestDTO request = new SaleRequestDTO(productId, fullStock, new BigDecimal("30.00"), "João Souza");
+        SaleRequestDTO request = new SaleRequestDTO(productId, fullStock, new BigDecimal("30.00"), new BigDecimal("30.00"), "João Souza");
 
         given()
           .contentType(ContentType.JSON)
@@ -89,7 +91,7 @@ public class SaleResourceTest {
           .then()
              .statusCode(201)
              .body("saleId", notNullValue())
-             .body("productId", equalTo((int) productId))
+             .body("productId", equalTo(productId.toString()))
              .body("quantity", equalTo(fullStock));
 
         Product.getEntityManager().clear();

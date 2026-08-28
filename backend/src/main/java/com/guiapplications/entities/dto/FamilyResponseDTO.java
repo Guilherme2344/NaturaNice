@@ -1,16 +1,22 @@
 package com.guiapplications.entities.dto;
 
+import java.util.UUID;
 import com.guiapplications.entities.Family;
 
 public record FamilyResponseDTO(
-		Long id,
-	    String name
-	) {
-	    // converts entity to DTO
-	    public static FamilyResponseDTO fromEntity(Family family) {
-	        return new FamilyResponseDTO(
-	        	family.id,
-	            family.name
-	        );
-	    }
-	}
+    UUID id,
+    String name,
+    boolean canDelete
+) {
+    public static FamilyResponseDTO fromEntity(Family family, boolean canDelete) {
+        return new FamilyResponseDTO(
+            family.id,
+            family.name,
+            canDelete
+        );
+    }
+
+    public static FamilyResponseDTO fromEntity(Family family) {
+        return fromEntity(family, true);
+    }
+}

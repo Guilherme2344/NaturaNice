@@ -1,9 +1,12 @@
 package com.guiapplications.entities;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -11,13 +14,19 @@ import jakarta.persistence.Transient;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "sale_items")
-public class SaleItem extends PanacheEntity {
+public class SaleItem extends PanacheEntityBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    public UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sale_id", nullable = false)
@@ -28,6 +37,9 @@ public class SaleItem extends PanacheEntity {
     @JoinColumn(name = "product_id", nullable = true)
     @OnDelete(action = OnDeleteAction.SET_NULL)
     public Product product;
+
+    @Column(name = "product_name", nullable = true, length = 100)
+    public String productName;
 
     @Column(nullable = false)
     public Integer quantity;

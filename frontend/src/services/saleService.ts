@@ -1,22 +1,27 @@
 import { api } from './api';
 
 export interface CreateSaleDTO {
-    productId: number;
+    productId: string;
     quantity: number;
     sellingPrice?: number;
+    amountPaid?: number;
     customerName?: string;
 }
 
 export interface SaleResponse {
-    saleId: number;
+    saleId: string;
     saleDate: string;
-    productId: number;
+    productId: string;
     productName: string;
     quantity: number;
     purchasePrice: number;
     sellingPrice: number;
     totalAmount: number;
+    amountPaid: number;
+    remainingAmount: number;
     totalProfit: number;
+    status: 'PAID' | 'PARTIALLY_PAID';
+    statusDescription: string;
     customerName?: string;
 }
 

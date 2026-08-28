@@ -11,11 +11,13 @@ import com.guiapplications.entities.dto.UserResponseDTO;
 import com.guiapplications.entities.dto.VerifyCodeRequestDTO;
 import com.guiapplications.services.AuthService;
 
+import io.vertx.core.http.HttpServerRequest;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
@@ -29,9 +31,9 @@ public class AuthResource {
 
     @POST
     @Path("/login")
-    public Response login(LoginRequestDTO dto) {
+    public Response login(LoginRequestDTO dto, @Context HttpServerRequest request) {
         try {
-            LoginResponseDTO response = authService.login(dto);
+            LoginResponseDTO response = authService.login(dto, request);
             return Response.ok(response).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -72,7 +74,7 @@ public class AuthResource {
         boolean valid = authService.verifyCode(dto);
         if (!valid) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Map.of("message", "Código inválido ou expirado."))
+                    .entity(Map.of("message", "Código de verificação inválido ou expirado (validade de 15 minutos)."))
                     .build();
         }
         return Response.ok(Map.of("valid", true)).build();

@@ -6,23 +6,32 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "Product", indexes = {
+@Table(name = "products", indexes = {
     @Index(name = "idx_product_name", columnList = "name"),
     @Index(name = "idx_product_expiration_date", columnList = "expirationDate"),
     @Index(name = "idx_product_user_id", columnList = "user_id")
 })
-public class Product extends PanacheEntity {
+public class Product extends PanacheEntityBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    public UUID id;
 
     @Column(name = "name", nullable = false, length = 100)
     public String name;
@@ -33,18 +42,11 @@ public class Product extends PanacheEntity {
     @Column(name = "expirationDate", nullable = false)
     public LocalDate expirationDate;
 
-    @Column(name = "purchasePrice", nullable = true)
+    @Column(name = "purchasePrice", nullable = false, precision = 10, scale = 2)
     public BigDecimal purchasePrice;
 
-    @Column(name = "sellingPrice", nullable = false)
+    @Column(name = "sellingPrice", nullable = false, precision = 10, scale = 2)
     public BigDecimal sellingPrice;
-
-    @Column(name = "profit", nullable = true)
-    public BigDecimal profit;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "family_id", nullable = false)
-    public Family family;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id", nullable = false)
@@ -55,106 +57,102 @@ public class Product extends PanacheEntity {
     public Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "family_id", nullable = false)
+    public Family family;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = true)
     public User user;
 
-    // search products by name
-    public static List<Product> findByName(String name) {
-        return list("LOWER(name) LIKE LOWER(?1)", "%" + name + "%");
+    public static List<Product> listAllWithRelations(User user) {
+        if (user == null) {
+            return List.of();
+        }
+        return list(
+            "SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN FETCH p.brand " +
+            "LEFT JOIN FETCH p.category " +
+            "LEFT JOIN FETCH p.family " +
+            "WHERE p.user = ?1 " +
+            "ORDER BY p.id DESC",
+            user
+        );
     }
 
-    // search products to expire in a period of days
-    public static List<Product> findExpiringInDays(int days) {
-        LocalDate limitDate = LocalDate.now().plusDays(days);
-        return list("expirationDate <= ?1 AND expirationDate >= ?2", limitDate, LocalDate.now());
+    public static List<Product> findExpired(User user) {
+        if (user == null) {
+            return List.of();
+        }
+        LocalDate today = LocalDate.now();
+        return list(
+            "SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN FETCH p.brand " +
+            "LEFT JOIN FETCH p.category " +
+            "LEFT JOIN FETCH p.family " +
+            "WHERE p.expirationDate < ?1 AND p.user = ?2 " +
+            "ORDER BY p.expirationDate ASC",
+            today, user
+        );
     }
 
-    // dynamic search
+    public static List<Product> findNearExpiration(User user) {
+        if (user == null) {
+            return List.of();
+        }
+        LocalDate today = LocalDate.now();
+        LocalDate hundredEightyDaysFromNow = today.plusDays(180);
+        return list(
+            "SELECT DISTINCT p FROM Product p " +
+            "LEFT JOIN FETCH p.brand " +
+            "LEFT JOIN FETCH p.category " +
+            "LEFT JOIN FETCH p.family " +
+            "WHERE p.expirationDate >= ?1 AND p.expirationDate <= ?2 AND p.user = ?3 " +
+            "ORDER BY p.expirationDate ASC",
+            today, hundredEightyDaysFromNow, user
+        );
+    }
+
     public static List<Product> findWithFilters(
-            String query, String familyName, String brandName, String categoryName, LocalDate maxExpDate, User user
+            String queryText, String familyName, String brandName, String categoryName, LocalDate maxExpDate, User user
     ) {
-        StringBuilder hql = new StringBuilder(
-                "SELECT DISTINCT p FROM Product p " +
-                "LEFT JOIN FETCH p.brand b " +
-                "LEFT JOIN FETCH p.category c " +
-                "LEFT JOIN FETCH p.family f " +
-                "WHERE 1=1"
-            );
+        if (user == null) {
+            return List.of();
+        }
+        StringBuilder query = new StringBuilder("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.user = :user ");
         Map<String, Object> params = new HashMap<>();
+        params.put("user", user);
 
-        if (user != null) {
-            hql.append(" AND p.user = :user");
-            params.put("user", user);
+        if (queryText != null && !queryText.isBlank()) {
+            query.append("AND (CAST(unaccent(LOWER(p.name)) AS String) LIKE :queryText OR CAST(unaccent(LOWER(p.brand.name)) AS String) LIKE :queryText) ");
+            params.put("queryText", "%" + removeAccents(queryText.trim().toLowerCase()) + "%");
         }
 
-        // wide search
-        if (query != null && !query.isBlank()) {
-            hql.append(" AND (CAST(unaccent(LOWER(p.name)) AS String) LIKE :query")
-                .append(" OR CAST(unaccent(LOWER(b.name)) AS String) LIKE :query")
-                .append(" OR CAST(unaccent(LOWER(c.name)) AS String) LIKE :query")
-                .append(" OR CAST(unaccent(LOWER(f.name)) AS String) LIKE :query)");
-            params.put("query", "%" + normalizeText(query) + "%");
-        }
-
-        // search by family
         if (familyName != null && !familyName.isBlank()) {
-            hql.append(" AND CAST(unaccent(LOWER(f.name)) AS String) LIKE :familyName");
-            params.put("familyName", "%" + normalizeText(familyName) + "%");
+            query.append("AND CAST(unaccent(LOWER(p.family.name)) AS String) = :familyName ");
+            params.put("familyName", removeAccents(familyName.trim().toLowerCase()));
         }
 
-        // search by brand
         if (brandName != null && !brandName.isBlank()) {
-            hql.append(" AND CAST(unaccent(LOWER(b.name)) AS String) LIKE :brandName");
-            params.put("brandName", "%" + normalizeText(brandName) + "%");
+            query.append("AND CAST(unaccent(LOWER(p.brand.name)) AS String) = :brandName ");
+            params.put("brandName", removeAccents(brandName.trim().toLowerCase()));
         }
 
-        // search by category
         if (categoryName != null && !categoryName.isBlank()) {
-            hql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :categoryName");
-            params.put("categoryName", "%" + normalizeText(categoryName) + "%");
+            query.append("AND CAST(unaccent(LOWER(p.category.name)) AS String) = :categoryName ");
+            params.put("categoryName", removeAccents(categoryName.trim().toLowerCase()));
         }
 
-        // search by date limit
         if (maxExpDate != null) {
-            hql.append(" AND p.expirationDate <= :maxExpDate");
+            query.append("AND p.expirationDate <= :maxExpDate ");
             params.put("maxExpDate", maxExpDate);
         }
 
-        return list(hql.toString(), params);
+        query.append("ORDER BY p.id DESC");
+
+        return list(query.toString(), params);
     }
 
-    // list all products with relations fetched in a single query (prevents N+1)
-    public static List<Product> listAllWithRelations(User user) {
-        if (user == null) {
-            return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family");
-        }
-        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.user = ?1", user);
-    }
-
-    // products expired: expirationDate <= current data
-    public static List<Product> findExpired(User user) {
-        if (user == null) {
-            return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate <= CURRENT_DATE ORDER BY p.expirationDate ASC");
-        }
-        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate <= CURRENT_DATE AND p.user = ?1 ORDER BY p.expirationDate ASC", user);
-    }
-
-    // products near expiration: within tomorrow and the next 540 days range
-    public static List<Product> findNearExpiration(User user) {
-        LocalDate today = LocalDate.now();
-        LocalDate limitDate = today.plusDays(540);
-        if (user == null) {
-            return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate > CURRENT_DATE AND p.expirationDate <= ?1 ORDER BY p.expirationDate ASC", limitDate);
-        }
-        return list("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.expirationDate > CURRENT_DATE AND p.expirationDate <= ?1 AND p.user = ?2 ORDER BY p.expirationDate ASC", limitDate, user);
-    }
-
-    // remove accents from words
-    private static String normalizeText(String input) {
-        if (input == null || input.isBlank()) {
-            return "";
-        }
-        String normalized = Normalizer.normalize(input.trim().toLowerCase(), Normalizer.Form.NFD);
-        return normalized.replaceAll("\\p{M}", "");
+    private static String removeAccents(String text) {
+        return text == null ? null : Normalizer.normalize(text, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
     }
 }

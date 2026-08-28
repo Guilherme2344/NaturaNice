@@ -1,16 +1,22 @@
 package com.guiapplications.entities.dto;
 
+import java.util.UUID;
 import com.guiapplications.entities.Customer;
 
 public record CustomerResponseDTO(
-    Long id,
-    String name
+    UUID id,
+    String name,
+    boolean canDelete
 ) {
-    // converts entity to DTO
-    public static CustomerResponseDTO fromEntity(Customer customer) {
+    public static CustomerResponseDTO fromEntity(Customer customer, boolean canDelete) {
         return new CustomerResponseDTO(
             customer.id,
-            customer.name
+            customer.name,
+            canDelete
         );
+    }
+
+    public static CustomerResponseDTO fromEntity(Customer customer) {
+        return fromEntity(customer, true);
     }
 }

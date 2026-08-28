@@ -1,14 +1,18 @@
 package com.guiapplications.entities;
 
 import java.util.List;
+import java.util.UUID;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 @Entity
@@ -16,7 +20,12 @@ import jakarta.persistence.Table;
     @Index(name = "idx_customer_name", columnList = "name"),
     @Index(name = "idx_customer_user_id", columnList = "user_id")
 })
-public class Customer extends PanacheEntity {
+public class Customer extends PanacheEntityBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", updatable = false, nullable = false)
+    public UUID id;
 
     @Column(name = "name", nullable = false, length = 100)
     public String name;
@@ -25,27 +34,14 @@ public class Customer extends PanacheEntity {
     @JoinColumn(name = "user_id", nullable = true)
     public User user;
 
-    public static Customer findByName(String name) {
-        if (name == null || name.isBlank()) return null;
-        return find("unaccent(LOWER(name)) = unaccent(LOWER(?1))", name.trim()).firstResult();
-    }
-
     public static Customer findByNameAndUser(String name, User user) {
-        if (name == null || name.isBlank()) return null;
-        if (user == null) {
-            return findByName(name);
-        }
-        return find("unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND user = ?2", name.trim(), user).firstResult();
-    }
-
-    public static List<Customer> listAllSorted() {
-        return list("ORDER BY name ASC");
+        if (name == null || user == null) return null;
+        String trimmed = name.trim();
+        return find("unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND user = ?2", trimmed, user).firstResult();
     }
 
     public static List<Customer> listByUser(User user) {
-        if (user == null) {
-            return listAllSorted();
-        }
+        if (user == null) return List.of();
         return list("user = ?1 ORDER BY name ASC", user);
     }
 }

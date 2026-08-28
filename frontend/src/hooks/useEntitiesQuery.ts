@@ -50,7 +50,7 @@ export function useCreateBrandMutation() {
 export function useUpdateBrandMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, data }: { id: number; data: { name: string; hexColor?: string } }) =>
+        mutationFn: ({ id, data }: { id: string; data: { name: string; hexColor?: string } }) =>
             entityService.updateBrand(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['brands'] });
@@ -63,7 +63,7 @@ export function useUpdateBrandMutation() {
 export function useDeleteBrandMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => entityService.deleteBrand(id),
+        mutationFn: (id: string) => entityService.deleteBrand(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['brands'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -87,7 +87,7 @@ export function useCreateCategoryMutation() {
 export function useUpdateCategoryMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, data }: { id: number; data: { name: string } }) =>
+        mutationFn: ({ id, data }: { id: string; data: { name: string } }) =>
             entityService.updateCategory(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
@@ -100,7 +100,7 @@ export function useUpdateCategoryMutation() {
 export function useDeleteCategoryMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => entityService.deleteCategory(id),
+        mutationFn: (id: string) => entityService.deleteCategory(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['categories'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -124,7 +124,7 @@ export function useCreateFamilyMutation() {
 export function useUpdateFamilyMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, data }: { id: number; data: { name: string } }) =>
+        mutationFn: ({ id, data }: { id: string; data: { name: string } }) =>
             entityService.updateFamily(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['families'] });
@@ -137,7 +137,7 @@ export function useUpdateFamilyMutation() {
 export function useDeleteFamilyMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => entityService.deleteFamily(id),
+        mutationFn: (id: string) => entityService.deleteFamily(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['families'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -161,7 +161,7 @@ export function useCreateCustomerMutation() {
 export function useUpdateCustomerMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, data }: { id: number; data: { name: string } }) =>
+        mutationFn: ({ id, data }: { id: string; data: { name: string } }) =>
             customerService.update(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -174,7 +174,7 @@ export function useUpdateCustomerMutation() {
 export function useDeleteCustomerMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: number) => customerService.delete(id),
+        mutationFn: (id: string) => customerService.delete(id),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['customers'] });
             queryClient.invalidateQueries({ queryKey: ['reports'] });
