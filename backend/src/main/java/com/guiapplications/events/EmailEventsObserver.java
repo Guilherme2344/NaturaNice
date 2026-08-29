@@ -5,10 +5,13 @@ import io.quarkus.mailer.Mailer;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.ObservesAsync;
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
 
 // Asynchronous observer component for background email processing
 @ApplicationScoped
 public class EmailEventsObserver {
+
+    private static final Logger LOG = Logger.getLogger(EmailEventsObserver.class);
 
     @Inject
     Mailer mailer;
@@ -27,9 +30,11 @@ public class EmailEventsObserver {
 
         try {
             mailer.send(Mail.withHtml(event.email(), "Sua Senha Provisória de Primeiro Acesso - Natura Nice", htmlBody));
-            System.out.println("[SMTP MAILER ASYNC OBSERVER] Senha provisória enviada com sucesso para: " + event.email());
+            LOG.info("[SMTP MAILER] Senha provisória enviada com sucesso para: " + event.email());
         } catch (Exception e) {
-            System.err.println("[SMTP MAILER WARNING] Erro no envio assíncrono de e-mail de primeiro acesso: " + e.getMessage());
+            LOG.warn("[SMTP MAILER NOTICE] Falha ao enviar e-mail de primeiro acesso (" + e.getMessage() +
+                     "). Para enviar e-mails reais via Gmail, configure no arquivo backend/.env: SMTP_USERNAME, " +
+                     "SMTP_PASSWORD (Senha de App de 16 dígitos do Google) e defina SMTP_MOCK=false.");
         }
     }
 
@@ -47,9 +52,11 @@ public class EmailEventsObserver {
 
         try {
             mailer.send(Mail.withHtml(event.email(), "Código de Recuperação de Senha - Natura Nice", htmlBody));
-            System.out.println("[SMTP MAILER ASYNC OBSERVER] E-mail de recuperação enviado para: " + event.email());
+            LOG.info("[SMTP MAILER] E-mail de recuperação enviado para: " + event.email());
         } catch (Exception e) {
-            System.err.println("[SMTP MAILER WARNING] Erro no envio assíncrono de e-mail de recuperação: " + e.getMessage());
+            LOG.warn("[SMTP MAILER NOTICE] Falha ao enviar e-mail de recuperação (" + e.getMessage() +
+                     "). Para enviar e-mails reais via Gmail, configure no arquivo backend/.env: SMTP_USERNAME, " +
+                     "SMTP_PASSWORD (Senha de App de 16 dígitos do Google) e defina SMTP_MOCK=false.");
         }
     }
 }

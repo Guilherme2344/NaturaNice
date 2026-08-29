@@ -228,7 +228,7 @@ export function ReportView({
                     </div>
 
                     <Group gap="sm" wrap="wrap">
-                        {onCustomerChange && (
+                        {type === 'monthly' && onCustomerChange && (
                             <Select
                                 label="Cliente"
                                 placeholder="Todos os Clientes"
@@ -267,7 +267,7 @@ export function ReportView({
             <Grid>
                 <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
                     <Paper shadow="xs" p="md" radius="md" withBorder bg="var(--mantine-color-body)">
-                        <Group justify="space-between" align="flex-start">
+                        <Group justify="space-between" align="center">
                             <div>
                                 <Text size="xs" c="dimmed" fw={700} tt="uppercase">
                                     Faturamento Total
@@ -276,8 +276,8 @@ export function ReportView({
                                     {formatCurrency(totalRevenue)}
                                 </Text>
                             </div>
-                            <Paper p="xs" radius="md" bg="blue.0">
-                                <DollarSign size={22} color="#1c7ed6" />
+                            <Paper p="sm" radius="md" bg="blue.0" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <DollarSign size={24} color="#1c7ed6" />
                             </Paper>
                         </Group>
                     </Paper>
@@ -285,7 +285,7 @@ export function ReportView({
 
                 <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
                     <Paper shadow="xs" p="md" radius="md" withBorder bg="var(--mantine-color-body)">
-                        <Group justify="space-between" align="flex-start">
+                        <Group justify="space-between" align="center">
                             <div>
                                 <Text size="xs" c="dimmed" fw={700} tt="uppercase">
                                     Custo Total
@@ -294,8 +294,8 @@ export function ReportView({
                                     {formatCurrency(totalCost)}
                                 </Text>
                             </div>
-                            <Paper p="xs" radius="md" bg="orange.0">
-                                <ShoppingBag size={22} color="#fd7e14" />
+                            <Paper p="sm" radius="md" bg="orange.0" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <ShoppingBag size={24} color="#fd7e14" />
                             </Paper>
                         </Group>
                     </Paper>
@@ -303,7 +303,7 @@ export function ReportView({
 
                 <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
                     <Paper shadow="xs" p="md" radius="md" withBorder bg="var(--mantine-color-body)">
-                        <Group justify="space-between" align="flex-start">
+                        <Group justify="space-between" align="center">
                             <div>
                                 <Group gap={6} align="center">
                                     <Text size="xs" c="dimmed" fw={700} tt="uppercase">
@@ -322,8 +322,8 @@ export function ReportView({
                                     {totalProfit === 0 ? '-' : formatCurrency(totalProfit)}
                                 </Text>
                             </div>
-                            <Paper p="xs" radius="md" bg={totalProfitMeta.bgColor}>
-                                <TotalProfitIcon size={22} color={totalProfitMeta.iconColor} />
+                            <Paper p="sm" radius="md" bg={totalProfitMeta.bgColor} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <TotalProfitIcon size={24} color={totalProfitMeta.iconColor} />
                             </Paper>
                         </Group>
                     </Paper>
@@ -331,7 +331,7 @@ export function ReportView({
 
                 <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
                     <Paper shadow="xs" p="md" radius="md" withBorder bg="var(--mantine-color-body)">
-                        <Group justify="space-between" align="flex-start">
+                        <Group justify="space-between" align="center">
                             <div>
                                 <Text size="xs" c="dimmed" fw={700} tt="uppercase">
                                     Unidades Vendidas
@@ -340,8 +340,8 @@ export function ReportView({
                                     {totalItemsSold} un.
                                 </Text>
                             </div>
-                            <Paper p="xs" radius="md" bg="violet.0">
-                                <Package size={22} color="#7950f2" />
+                            <Paper p="sm" radius="md" bg="violet.0" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Package size={24} color="#7950f2" />
                             </Paper>
                         </Group>
                     </Paper>
@@ -367,7 +367,7 @@ export function ReportView({
                             <Table.Thead>
                                 <Table.Tr>
                                     <Table.Th>{type === 'monthly' ? 'Data e Hora' : 'Mês'}</Table.Th>
-                                    <Table.Th>Cliente</Table.Th>
+                                    {type === 'monthly' && <Table.Th>Cliente</Table.Th>}
                                     <Table.Th>Faturamento</Table.Th>
                                     <Table.Th>Custo</Table.Th>
                                     <Table.Th>Lucro</Table.Th>
@@ -384,7 +384,7 @@ export function ReportView({
                                     return (
                                         <Table.Tr key={index}>
                                             <Table.Td fw={600}>{row.label}</Table.Td>
-                                            <Table.Td fw={500} c="gray.7">{row.customerName}</Table.Td>
+                                            {type === 'monthly' && <Table.Td fw={500} c="gray.7">{row.customerName}</Table.Td>}
                                             <Table.Td fw={500} c="blue">
                                                 {formatCurrency(row.revenue)}
                                             </Table.Td>

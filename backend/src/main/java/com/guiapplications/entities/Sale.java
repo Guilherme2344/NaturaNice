@@ -110,7 +110,6 @@ public class Sale extends PanacheEntityBase {
         StringBuilder jpql = new StringBuilder(
             "SELECT new com.guiapplications.entities.dto.MonthlySalesSummaryDTO(" +
             "  MONTH(s.saleDate), " +
-            "  COALESCE(c.name, 'Cliente não informado'), " +
             "  SUM(i.sellingPrice * i.quantity), " +
             "  SUM(i.purchasePrice * i.quantity), " +
             "  SUM((i.sellingPrice - i.purchasePrice) * i.quantity), " +
@@ -124,8 +123,8 @@ public class Sale extends PanacheEntityBase {
             jpql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :customerName ");
         }
 
-        jpql.append("GROUP BY MONTH(s.saleDate), COALESCE(c.name, 'Cliente não informado') ");
-        jpql.append("ORDER BY MONTH(s.saleDate) ASC, COALESCE(c.name, 'Cliente não informado') ASC");
+        jpql.append("GROUP BY MONTH(s.saleDate) ");
+        jpql.append("ORDER BY MONTH(s.saleDate) ASC");
 
         TypedQuery<MonthlySalesSummaryDTO> query = getEntityManager()
                 .createQuery(jpql.toString(), MonthlySalesSummaryDTO.class)

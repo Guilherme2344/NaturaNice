@@ -102,9 +102,11 @@ export function CustomerSummaryModal({
         let text = `Olá, *${summary.customerName}*! 👋\n\n`;
         text += `Segue o resumo da sua conta na Natura Nice:\n\n`;
 
-        if (summary.items && summary.items.length > 0) {
-            text += `🛍️ *Produtos Comprados & Histórico de Parcelas:*\n`;
-            summary.items.forEach((item) => {
+        const pendingItems = summary.items ? summary.items.filter((item) => item.remainingAmount > 0) : [];
+
+        if (pendingItems.length > 0) {
+            text += `🛍️ *Produtos em Aberto (A Pagar):*\n`;
+            pendingItems.forEach((item) => {
                 const dateStr = item.saleDate
                     ? new Date(item.saleDate).toLocaleDateString('pt-BR')
                     : '';
@@ -124,10 +126,6 @@ export function CustomerSummaryModal({
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                         });
-                        const pPaidAcc = p.cumulativePaid.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                        });
                         const pRem = p.remainingToPay.toLocaleString('pt-BR', {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
@@ -144,11 +142,7 @@ export function CustomerSummaryModal({
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                     });
-                    if (item.remainingAmount > 0) {
-                        text += `   - Já Pago: R$ ${itemPaid} | *A Pagar: R$ ${itemRemaining}*\n`;
-                    } else {
-                        text += `   - Já Pago: R$ ${itemPaid} (Totalmente Pago 🎉)\n`;
-                    }
+                    text += `   - Já Pago: R$ ${itemPaid} | *A Pagar: R$ ${itemRemaining}*\n`;
                 }
             });
             text += `\n`;
