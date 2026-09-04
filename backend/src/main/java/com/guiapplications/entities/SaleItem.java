@@ -38,7 +38,7 @@ public class SaleItem extends PanacheEntityBase {
     @OnDelete(action = OnDeleteAction.SET_NULL)
     public Product product;
 
-    @Column(name = "product_name", nullable = true, length = 100)
+    @Column(name = "product_name", nullable = true, length = 255)
     public String productName;
 
     @Column(nullable = false)

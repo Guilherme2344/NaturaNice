@@ -87,14 +87,14 @@ O **Natura Nice** é um sistema completo para gestão de estoque, controle de va
 
 ### 📐 Arquitetura & Diagramas
 
-> 📌 **Espaço Reservado para Diagramas**
-> *(Insira aqui futuramente seus diagramas de arquitetura, diagramas UML de classes e diagrama entidade-relacionamento - ER)*
+#### Diagrama de Classe
+<img width="2097" height="1112" alt="diagrama_classe_produtos_mae" src="https://github.com/user-attachments/assets/1637a318-471e-4b4b-b44d-80b9ee7c4a99" />
 
-```markdown
-<!-- Espaço para inserção dos diagramas -->
-<!-- Exemplo: ![Diagrama de Arquitetura](./docs/arquitetura.png) -->
-<!-- Exemplo: ![Diagrama ER](./docs/erd.png) -->
-```
+#### Diagrama de Caso de Uso
+<img width="1902" height="1216" alt="diagrama_caso_uso_produtos_mae" src="https://github.com/user-attachments/assets/b9cd0817-4413-4794-95ee-0e555901c9b3" />
+
+#### Diagrama Relacional
+<img width="1516" height="843" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/a61f1588-1af7-4d57-8b2a-81d55b54bebc" />
 
 ---
 
@@ -102,7 +102,7 @@ O **Natura Nice** é um sistema completo para gestão de estoque, controle de va
 
 #### **Pré-requisitos**
 - Java 25+ instalado
-- Node.js 18+ e npm instalados
+- Node.js 19+ e npm instalados
 - Banco de dados PostgreSQL rodando localmente
 
 #### **1. Configuração do Backend**
@@ -195,11 +195,14 @@ npm run dev
 > 📌 **Reserved Diagram Space**
 > *(Insert your system architecture, UML class diagrams, and Entity-Relationship ER diagrams here)*
 
-```markdown
-<!-- Placeholder for diagrams -->
-<!-- Example: ![Architecture Diagram](./docs/architecture.png) -->
-<!-- Example: ![ER Diagram](./docs/erd.png) -->
-```
+#### Class Diagram
+<img width="2097" height="1112" alt="diagrama_classe_produtos_mae" src="https://github.com/user-attachments/assets/1637a318-471e-4b4b-b44d-80b9ee7c4a99" />
+
+#### Use Case Diagram
+<img width="1902" height="1216" alt="diagrama_caso_uso_produtos_mae" src="https://github.com/user-attachments/assets/b9cd0817-4413-4794-95ee-0e555901c9b3" />
+
+#### ER Diagram
+<img width="1516" height="843" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/a61f1588-1af7-4d57-8b2a-81d55b54bebc" />
 
 ---
 
@@ -207,7 +210,7 @@ npm run dev
 
 #### **Prerequisites**
 - Java 25+ installed
-- Node.js 18+ and npm installed
+- Node.js 19+ and npm installed
 - PostgreSQL database running locally
 
 #### **1. Backend Setup**

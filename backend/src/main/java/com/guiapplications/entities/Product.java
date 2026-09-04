@@ -33,7 +33,7 @@ public class Product extends PanacheEntityBase {
     @Column(name = "id", updatable = false, nullable = false)
     public UUID id;
 
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "name", nullable = false, length = 255)
     public String name;
 
     @Column(name = "quantity", nullable = false)
