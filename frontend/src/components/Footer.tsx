@@ -21,12 +21,24 @@ function GithubIcon({ size = 14 }: { size?: number }) {
 
 export default function Footer() {
     return (
-        <Group justify="space-between" align="center" h="100%" px="md">
-            <Text size="xs" c="dimmed">
+        <Group
+            justify="center"
+            align="center"
+            h="100%"
+            px="md"
+            py="xs"
+            wrap="wrap"
+            gap="sm"
+            style={{ width: '100%', textAlign: 'center' }}
+        >
+            <Text size="xs" c="dimmed" ta="center">
                 &copy; {new Date().getFullYear()} Natura Nice - Todos os direitos reservados.
             </Text>
-            <Group gap="xs" align="center">
-                <Text size="xs" c="dimmed">
+            <Text size="xs" c="dimmed" ta="center" style={{ userSelect: 'none' }}>
+                •
+            </Text>
+            <Group gap={4} align="center" justify="center">
+                <Text size="xs" c="dimmed" ta="center">
                     Desenvolvido por
                 </Text>
                 <Anchor

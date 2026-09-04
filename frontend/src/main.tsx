@@ -7,6 +7,20 @@ import '@mantine/core/styles.css';
 import { BrowserRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+// Global safety patch for browser DOMException on releasePointerCapture
+if (typeof Element !== 'undefined' && Element.prototype.releasePointerCapture) {
+    const originalReleasePointerCapture = Element.prototype.releasePointerCapture;
+    Element.prototype.releasePointerCapture = function (pointerId: number) {
+        try {
+            if (this.hasPointerCapture && this.hasPointerCapture(pointerId)) {
+                originalReleasePointerCapture.call(this, pointerId);
+            }
+        } catch {
+            // Silently catch browser DOMException when pointer capture is released after element unmount
+        }
+    };
+}
+
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {

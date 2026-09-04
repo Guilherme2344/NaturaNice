@@ -203,7 +203,7 @@ export function SaleModal({
                     />
 
                     <Grid>
-                        <Grid.Col span={6}>
+                        <Grid.Col span={{ base: 12, sm: 6 }}>
                             <NumberInput
                                 label="Vendido"
                                 placeholder="Informe a quantidade"
@@ -221,7 +221,7 @@ export function SaleModal({
                                 allowDecimal={false}
                             />
                         </Grid.Col>
-                        <Grid.Col span={6}>
+                        <Grid.Col span={{ base: 12, sm: 6 }}>
                             <NumberInput
                                 label="Preço de Venda Unitário"
                                 placeholder="0,00"
@@ -295,7 +295,7 @@ export function SaleModal({
                     />
 
                     <Grid>
-                        <Grid.Col span={6}>
+                        <Grid.Col span={{ base: 12, sm: 6 }}>
                             <Paper p="xs" withBorder radius="md">
                                 <Text size="xs" c="dimmed" fw={600}>
                                     Preço de Custo Unit.
@@ -309,7 +309,7 @@ export function SaleModal({
                                 </Text>
                             </Paper>
                         </Grid.Col>
-                        <Grid.Col span={6}>
+                        <Grid.Col span={{ base: 12, sm: 6 }}>
                             <Paper p="xs" withBorder radius="md">
                                 <Text size="xs" c="dimmed" fw={600}>
                                     Preço de Venda Unit.
@@ -326,7 +326,7 @@ export function SaleModal({
                                 </Text>
                             </Paper>
                         </Grid.Col>
-                        <Grid.Col span={6}>
+                        <Grid.Col span={{ base: 12, sm: 6 }}>
                             <Paper
                                 p="sm"
                                 radius="md"
@@ -352,7 +352,7 @@ export function SaleModal({
                                 </Text>
                             </Paper>
                         </Grid.Col>
-                        <Grid.Col span={6}>
+                        <Grid.Col span={{ base: 12, sm: 6 }}>
                             <Paper
                                 p="sm"
                                 radius="md"

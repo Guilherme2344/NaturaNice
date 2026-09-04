@@ -5,14 +5,14 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Java_25-ED8B00?style=for-the-badge&logo=java&logoColor=white" alt="Java 25" />
+  <img src="https://img.shields.io/badge/Java_25-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 25" />
   <img src="https://img.shields.io/badge/Quarkus-4695EB?style=for-the-badge&logo=quarkus&logoColor=white" alt="Quarkus" />
   <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
   <img src="https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React 19" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
   <img src="https://img.shields.io/badge/Mantine_UI-339AF0?style=for-the-badge&logo=mantine&logoColor=white" alt="Mantine UI" />
-  <img src="https://img.shields.io/badge/Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white" alt="Railway" />
+  <img src="https://img.shields.io/badge/Heroku-430098?style=for-the-badge&logo=heroku&logoColor=white" alt="Heroku" />
   <img src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel" />
 </p>
 
@@ -26,40 +26,49 @@
 ## 🇧🇷 Português
 
 ### 📖 Sobre o Projeto
-O **Natura Nice** é um sistema completo para gestão de estoque, controle de validade de produtos, registro de vendas e geração de relatórios financeiros diários, mensais e anuais. A aplicação foi projetada para oferecer alta performance, navegação fluida, segurança de dados e relatórios detalhados de faturamento, custos e margem de lucro.
+O **Natura Nice** é um sistema completo para gestão de estoque, controle de validade de produtos, registro de vendas, parcelamento/abatimento de pagamentos e geração de relatórios financeiros diários, mensais e anuais. A aplicação foi projetada para oferecer alta performance, navegação fluida, segurança de dados por usuário (*multi-tenant*) e relatórios detalhados de faturamento, custos e margem de lucro.
 
 ---
 
 ### ✨ Recursos Principais
 - **Gestão de Produtos**: Cadastro completo com controle de quantidade, preço de compra, preço de venda, marca, categoria e família de produtos.
-- **Alertas de Validade**: Telas dedicadas para monitoramento de produtos à vencer e produtos vencidos.
-- **Registro de Vendas**: Modal rápido para efetivação de vendas de produtos com suporte a vínculo de cliente.
+- **Preservação de Snapshot de Venda (`product_name`)**: Cópia automática do nome do produto no ato da venda para impedir a exibição de "Produto indisponível" mesmo após zerar estoque e excluir o item do catálogo.
+- **Alertas de Validade (Regra dos 180 Dias)**:
+  - Destaque em amarelo para produtos a vencer entre **0 e 180 dias**.
+  - Destaque em vermelho para produtos **vencidos**.
+  - Formatação amigável em anos, meses e dias para prazos superiores a 180 dias.
+- **Gestão de Vendas & Abatimento de Parcelas**:
+  - Efetivação de vendas com pagamentos totais ou parciais.
+  - Entidade e histórico de parcelamento (`SalePayment`) registrando data do pagamento, valor abatido, valor acumulado e saldo a pagar.
+  - Modal dedicado de abatimento (`ProductPaymentModal`) e botão de visualização de histórico para produtos quitados.
+  - **Gerador de Mensagens de Cobrança para WhatsApp**: Cópia com 1 clique de resumos formatados no WhatsApp (geral do cliente ou por produto específico, filtrando apenas itens em aberto).
 - **Relatórios Financeiros**:
-  - **Relatório Mensal**: Detalhamento diário do faturamento, custo total, lucro e margem (%).
-  - **Relatório Anual**: Detalhamento mensal comparativo de vendas.
-  - **Filtros por Cliente**: Análise de desempenho por cliente individual.
-- **Painel Administrativo**: Gestão de usuários (administradores e comuns) com envio automático de e-mail de primeiro acesso (senha provisória).
-- **Segurança & Autenticação**:
-  - Controle de sessão com tempo limite e expiração automática.
-  - Recuperação de senha por e-mail com token temporário.
-  - Restrição de segurança CORS dinâmico por ambiente.
-  - Cabeçalhos de segurança HTTP (anti-clickjacking, anti-sniffing).
-  - Páginas de erro customizadas (404, 403, 500, 503).
+  - **Relatório Mensal**: Detalhamento diário do faturamento, custo total, lucro e margem (%), com suporte a filtro por cliente.
+  - **Relatório Anual**: Faturamento e lucro mensal consolidado de todos os clientes no ano selecionado.
+- **Painel Administrativo & Multi-Tenant**:
+  - Isolamento estrito de dados por usuário logado.
+  - Envio de e-mails em segundo plano (senha provisória e código de recuperação de 6 dígitos) via protocolo SMTP real ou mock.
+- **Segurança & Resiliência**:
+  - Proteção contra ataques *Brute Force* com Rate Limiting e expiração de tentativas em memória.
+  - Detecção inteligente de IPs via Proxy/VPN.
+  - Restrição de segurança CORS dinâmico e cabeçalhos HTTP (anti-clickjacking, anti-sniffing).
+  - Tratamento global de erros DOM / pointer capture e páginas de erro customizadas (404, 403, 500, 503).
 - **Licença Proprietária**: Direitos autorais reservados (*All Rights Reserved*).
 
 ---
 
 ### 🛠️ Tecnologias & Bibliotecas Utilizadas
 
-#### **Backend (API REST)**
+#### **Backend & Infraestrutura (API REST)**
 | Tecnologia | Logo / Badge | Descrição |
 | :--- | :---: | :--- |
-| **Java 25** | <img src="https://img.shields.io/badge/Java_25-ED8B00?style=flat-square&logo=java&logoColor=white" /> | Linguagem de programação moderna. |
+| **Java 25** | <img src="https://img.shields.io/badge/Java_25-ED8B00?style=flat-square&logo=openjdk&logoColor=white" /> | Linguagem de programação moderna. |
 | **Quarkus 3.x** | <img src="https://img.shields.io/badge/Quarkus-4695EB?style=flat-square&logo=quarkus&logoColor=white" /> | Framework Java de alta performance com baixo consumo de memória. |
 | **PostgreSQL** | <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" /> | Banco de dados relacional com extensões `unaccent` e índices `@Index`. |
-| **Hibernate ORM** | <img src="https://img.shields.io/badge/Hibernate-59666C?style=flat-square&logo=hibernate&logoColor=white" /> | Camada de persistência JPA simplificada com Panache. |
+| **Hibernate ORM** | <img src="https://img.shields.io/badge/Hibernate-59666C?style=flat-square&logo=hibernate&logoColor=white" /> | Camada de persistência JPA simplificada com Panache e entidades `SalePayment`. |
+| **Heroku** | <img src="https://img.shields.io/badge/Heroku-430098?style=flat-square&logo=heroku&logoColor=white" /> | Plataforma de hospedagem e deployment em nuvem do backend. |
 | **Swagger / OpenAPI** | <img src="https://img.shields.io/badge/Swagger-85EA2D?style=flat-square&logo=swagger&logoColor=black" /> | Documentação interativa das rotas de API. |
-| **Quarkus Mailer** | <img src="https://img.shields.io/badge/Quarkus_Mailer-4695EB?style=flat-square&logo=quarkus&logoColor=white" /> | Envio assíncrono de e-mails em segundo plano (CDI Events). |
+| **Quarkus Mailer** | <img src="https://img.shields.io/badge/Quarkus_Mailer-4695EB?style=flat-square&logo=quarkus&logoColor=white" /> | Envio assíncrono de e-mails via SMTP ou Mock (CDI Events). |
 
 #### **Frontend (Single Page Application)**
 | Tecnologia / Biblioteca | Logo / Badge | Descrição |
@@ -124,39 +133,49 @@ npm run dev
 ## 🇺🇸 English
 
 ### 📖 About the Project
-**Natura Nice** is a full-featured inventory management, product expiration tracking, sales registration, and financial reporting web application. Designed for high performance, smooth navigation, data security, and detailed analytics covering revenue, costs, and profit margins.
+**Natura Nice** is a full-featured inventory management, product expiration tracking, installment payment deduction, sales registration, and financial reporting web application. Designed for high performance, smooth navigation, strict user data isolation (*multi-tenant*), and detailed analytics covering revenue, costs, and profit margins.
 
 ---
 
 ### ✨ Key Features
 - **Product Management**: Full CRUD operations covering quantity, purchase price, selling price, brand, category, and family.
-- **Expiration Alerts**: Dedicated screens monitoring near-expiration and expired items.
-- **Sales Processing**: Fast checkout modal for registering product sales linked to customers.
+- **Sale Snapshot Preservation (`product_name`)**: Automatic snapshot of product names during sales to prevent "Product Unavailable" messages when stock reaches zero.
+- **Expiration Rules (180-Day Rule)**:
+  - Yellow badge for products expiring within **0 to 180 days**.
+  - Red badge for **expired** products.
+  - Friendly year, month, and day formatting for items expiring in >180 days.
+- **Sales & Installment Payment Management**:
+  - Full or partial payment sales registration.
+  - `SalePayment` entity and history tracking payment date, amount paid, cumulative paid, and remaining balance ("To Pay").
+  - Dedicated deduction modal (`ProductPaymentModal`) and history viewing button for fully paid items.
+  - **WhatsApp Billing Message Generator**: One-click copy for WhatsApp formatted summaries (customer account overview or per-product breakdown, filtering pending items).
 - **Financial Reports**:
-  - **Monthly Report**: Daily breakdown of revenue, total cost, profit, and margin (%).
-  - **Annual Report**: Comparative monthly sales analytics.
-  - **Customer Filters**: Performance analysis filtered by individual client.
-- **Admin Panel**: User management (admin and standard roles) with automated onboarding email dispatch (temporary passwords).
-- **Security & Authentication**:
-  - Session timeout and automatic expiration control.
-  - Password recovery via email with temporary verification tokens.
-  - Dynamic environment CORS security restriction.
-  - HTTP security headers (anti-clickjacking, anti-sniffing).
-  - Custom error pages (404, 403, 500, 503).
+  - **Monthly Report**: Daily breakdown of revenue, total cost, profit, and margin (%), with customer filter.
+  - **Annual Report**: Consolidated monthly sales and profit breakdown across all customers.
+- **Admin Panel & Multi-Tenant**:
+  - Strict data isolation per logged-in user.
+  - Background email dispatch (temporary password and 6-digit recovery code) via real SMTP or mock.
+- **Security & Resilience**:
+  - Brute Force protection via in-memory Rate Limiting and attempt expiration.
+  - Smart Proxy/VPN IP detection.
+  - Dynamic environment CORS restrictions and HTTP security headers.
+  - Global DOM / pointer capture exception handling and custom error pages (404, 403, 500, 503).
 - **Proprietary License**: All Rights Reserved.
 
 ---
 
 ### 🛠️ Technologies & Libraries Used
 
-#### **Backend (REST API)**
+#### **Backend & Infrastructure (REST API)**
 | Technology | Badge | Description |
 | :--- | :---: | :--- |
-| **Java 25** | <img src="https://img.shields.io/badge/Java_25-ED8B00?style=flat-square&logo=java&logoColor=white" /> | Modern programming language. |
+| **Java 25** | <img src="https://img.shields.io/badge/Java_25-ED8B00?style=flat-square&logo=openjdk&logoColor=white" /> | Modern programming language. |
 | **Quarkus 3.x** | <img src="https://img.shields.io/badge/Quarkus-4695EB?style=flat-square&logo=quarkus&logoColor=white" /> | Cloud-native Java framework with low memory footprint. |
 | **PostgreSQL** | <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" /> | Relational database with `unaccent` and B-Tree `@Index` support. |
-| **Hibernate ORM** | <img src="https://img.shields.io/badge/Hibernate-59666C?style=flat-square&logo=hibernate&logoColor=white" /> | JPA persistence layer with Panache patterns. |
+| **Hibernate ORM** | <img src="https://img.shields.io/badge/Hibernate-59666C?style=flat-square&logo=hibernate&logoColor=white" /> | JPA persistence layer with Panache patterns and `SalePayment` entities. |
+| **Heroku** | <img src="https://img.shields.io/badge/Heroku-430098?style=flat-square&logo=heroku&logoColor=white" /> | Backend cloud hosting and deployment platform. |
 | **Swagger / OpenAPI** | <img src="https://img.shields.io/badge/Swagger-85EA2D?style=flat-square&logo=swagger&logoColor=black" /> | Interactive REST API documentation interface. |
+| **Quarkus Mailer** | <img src="https://img.shields.io/badge/Quarkus_Mailer-4695EB?style=flat-square&logo=quarkus&logoColor=white" /> | Asynchronous email dispatch via SMTP or Mock mode (CDI Events). |
 
 #### **Frontend (Single Page Application)**
 | Technology / Library | Badge | Description |

@@ -162,19 +162,19 @@ export default function ProductsTable({
             />
 
             {/* Table */}
-            <Table.ScrollContainer minWidth={900}>
+            <Table.ScrollContainer minWidth={1050}>
                 <Table striped highlightOnHover verticalSpacing="sm">
                     <Table.Thead>
                         <Table.Tr>
-                            <Table.Th>Marca</Table.Th>
-                            <Table.Th>Produto</Table.Th>
-                            <Table.Th>Categoria / Família</Table.Th>
-                            <Table.Th>Qtd</Table.Th>
-                            <Table.Th>Data de Vencimento</Table.Th>
-                            <Table.Th>Valor Compra</Table.Th>
-                            <Table.Th>Valor Venda</Table.Th>
-                            <Table.Th>Resultado</Table.Th>
-                            <Table.Th style={{ textAlign: 'right' }}>
+                            <Table.Th style={{ whiteSpace: 'nowrap', minWidth: 120 }}>Marca</Table.Th>
+                            <Table.Th style={{ minWidth: 150 }}>Produto</Table.Th>
+                            <Table.Th style={{ minWidth: 150 }}>Categoria / Família</Table.Th>
+                            <Table.Th style={{ whiteSpace: 'nowrap', minWidth: 70 }}>Qtd</Table.Th>
+                            <Table.Th style={{ whiteSpace: 'nowrap', minWidth: 160 }}>Data de Vencimento</Table.Th>
+                            <Table.Th style={{ whiteSpace: 'nowrap' }}>Valor Compra</Table.Th>
+                            <Table.Th style={{ whiteSpace: 'nowrap' }}>Valor Venda</Table.Th>
+                            <Table.Th style={{ whiteSpace: 'nowrap' }}>Resultado</Table.Th>
+                            <Table.Th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                                 Ações
                             </Table.Th>
                         </Table.Tr>
@@ -200,8 +200,8 @@ export default function ProductsTable({
                         ) : paginatedProducts.length > 0 ? (
                             paginatedProducts.map((product) => (
                                 <Table.Tr key={product.id}>
-                                    <Table.Td>
-                                        <Group gap="xs">
+                                    <Table.Td style={{ whiteSpace: 'nowrap' }}>
+                                        <Group gap="xs" wrap="nowrap">
                                             <ColorSwatch
                                                 color={
                                                     product.brand?.hexColor ||
@@ -209,7 +209,7 @@ export default function ProductsTable({
                                                 }
                                                 size={14}
                                             />
-                                            <Text size="sm">
+                                            <Text size="sm" style={{ whiteSpace: 'nowrap' }}>
                                                 {product.brand?.name || '-'}
                                             </Text>
                                         </Group>
@@ -226,14 +226,14 @@ export default function ProductsTable({
                                         </Text>
                                     </Table.Td>
 
-                                    <Table.Td fw={500}>
+                                    <Table.Td fw={500} style={{ whiteSpace: 'nowrap' }}>
                                         {product.quantity} un
                                     </Table.Td>
 
                                     {/* Data de Vencimento formatada */}
-                                    <Table.Td>
-                                        <Stack gap={4} align="flex-start">
-                                            <Text size="sm">
+                                    <Table.Td style={{ whiteSpace: 'nowrap', minWidth: 160 }}>
+                                        <Stack gap={4} align="flex-start" style={{ whiteSpace: 'nowrap' }}>
+                                            <Text size="sm" style={{ whiteSpace: 'nowrap' }}>
                                                 {formatDate(
                                                     product.expirationDate
                                                 )}
@@ -242,20 +242,20 @@ export default function ProductsTable({
                                                 const status = formatExpirationStatus(product.expirationDate);
                                                 if (status.type === 'EXPIRED') {
                                                     return (
-                                                        <Text size="xs" fw={700} bg="red.6" c="white" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block' }}>
+                                                        <Text size="xs" fw={700} bg="red.6" c="white" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block', whiteSpace: 'nowrap' }}>
                                                             {status.text}
                                                         </Text>
                                                     );
                                                 }
                                                 if (status.type === 'NEAR_EXPIRATION') {
                                                     return (
-                                                        <Text size="xs" fw={700} bg="yellow.4" c="dark" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block' }}>
+                                                        <Text size="xs" fw={700} bg="yellow.4" c="dark" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block', whiteSpace: 'nowrap' }}>
                                                             {status.text}
                                                         </Text>
                                                     );
                                                 }
                                                 return (
-                                                    <Text size="xs" fw={700}>
+                                                    <Text size="xs" fw={700} style={{ whiteSpace: 'nowrap' }}>
                                                         {status.text}
                                                     </Text>
                                                 );
@@ -264,19 +264,19 @@ export default function ProductsTable({
                                     </Table.Td>
 
                                     {/* Preço de Compra com vírgula */}
-                                    <Table.Td fw={400}>
+                                    <Table.Td fw={400} style={{ whiteSpace: 'nowrap' }}>
                                         R${' '}
                                         {formatCurrency(product.purchasePrice)}
                                     </Table.Td>
 
                                     {/* Preço de Venda com vírgula */}
-                                    <Table.Td fw={400}>
+                                    <Table.Td fw={400} style={{ whiteSpace: 'nowrap' }}>
                                         R${' '}
                                         {formatCurrency(product.sellingPrice)}
                                     </Table.Td>
 
                                     {/* Resultado com vírgula */}
-                                    <Table.Td fw={600}>
+                                    <Table.Td fw={600} style={{ whiteSpace: 'nowrap' }}>
                                         R$ {formatCurrency(product.profit)}
                                     </Table.Td>
 
