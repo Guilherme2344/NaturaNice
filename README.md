@@ -88,13 +88,13 @@ O **Natura Nice** é um sistema completo para gestão de estoque, controle de va
 ### 📐 Arquitetura & Diagramas
 
 #### Diagrama de Classe
-<img width="2097" height="1112" alt="diagrama_classe_produtos_mae" src="https://github.com/user-attachments/assets/1637a318-471e-4b4b-b44d-80b9ee7c4a99" />
+<img width="2097" height="1112" alt="diagrama_classe_produtos_mae" src="https://github.com/user-attachments/assets/67279ff8-e987-48c8-ab54-23a678b03966" />
 
 #### Diagrama de Caso de Uso
 <img width="1902" height="1216" alt="diagrama_caso_uso_produtos_mae" src="https://github.com/user-attachments/assets/b9cd0817-4413-4794-95ee-0e555901c9b3" />
 
 #### Diagrama Relacional
-<img width="1516" height="843" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/a61f1588-1af7-4d57-8b2a-81d55b54bebc" />
+<img width="1516" height="849" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/7a7d8e18-0666-406e-9755-e5f978f065c2" />
 
 ---
 
@@ -202,7 +202,7 @@ npm run dev
 <img width="1902" height="1216" alt="diagrama_caso_uso_produtos_mae" src="https://github.com/user-attachments/assets/b9cd0817-4413-4794-95ee-0e555901c9b3" />
 
 #### ER Diagram
-<img width="1516" height="843" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/a61f1588-1af7-4d57-8b2a-81d55b54bebc" />
+<img width="1516" height="849" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/7a7d8e18-0666-406e-9755-e5f978f065c2" />
 
 ---
 
