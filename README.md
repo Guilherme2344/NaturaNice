@@ -94,7 +94,7 @@ O **Natura Nice** é um sistema completo para gestão de estoque, controle de va
 <img width="1902" height="1216" alt="diagrama_caso_uso_produtos_mae" src="https://github.com/user-attachments/assets/b9cd0817-4413-4794-95ee-0e555901c9b3" />
 
 #### Diagrama Relacional
-<img width="1516" height="849" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/7a7d8e18-0666-406e-9755-e5f978f065c2" />
+<img width="1516" height="849" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/3f606304-7ce2-4e1b-808b-f1b2b70d4adc" />
 
 ---
 
