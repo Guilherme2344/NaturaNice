@@ -33,3 +33,10 @@ Thumbs.db
 # OS Temporary Files
 tmp/
 temp/
+
+# Database Backups & Local Data Dumps
+*.sql
+*.dump
+*.bak
+backup_banco.sql
+relatorio_produtos.txt

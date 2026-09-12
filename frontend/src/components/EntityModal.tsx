@@ -3,20 +3,24 @@ import {
     Modal,
     TextInput,
     ColorInput,
+    Select,
     Button,
     Group,
     Stack,
 } from '@mantine/core';
 import type { Entity } from '../components/EntityTable';
 import { entitySchema, validateWithYup } from '../schemas/validationSchemas';
+import { accentInsensitiveFilter } from '../utils/stringUtils';
 
 interface EntityModalProps {
     opened: boolean;
     onClose: () => void;
     title: string;
-    showColor?: boolean; // this modal is used for Brands (includes color data), Categories and Families pages
+    showColor?: boolean; // this modal is used for Brands (includes color data)
+    showBrand?: boolean; // this modal is used for Families (optional brand assignment)
+    brands?: Entity[];
     initialData?: Entity | null; // this modal is used for POST and PUT methods
-    onSubmit: (values: { name: string; hexColor?: string }) => Promise<void>;
+    onSubmit: (values: { name: string; hexColor?: string; brandId?: string }) => Promise<void>;
 }
 
 export function EntityModal({
@@ -24,11 +28,14 @@ export function EntityModal({
     onClose,
     title,
     showColor = false,
+    showBrand = false,
+    brands = [],
     initialData,
     onSubmit,
 }: EntityModalProps) {
     const [name, setName] = useState('');
     const [hexColor, setHexColor] = useState('#206095');
+    const [brandId, setBrandId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -38,9 +45,11 @@ export function EntityModal({
             if (initialData) {
                 setName(initialData.name);
                 setHexColor(initialData.hexColor || '#206095');
+                setBrandId(initialData.brand?.id || initialData.brandId || null);
             } else {
                 setName('');
-                setHexColor('206095');
+                setHexColor('#206095');
+                setBrandId(null);
             }
         }
     }, [opened, initialData]);
@@ -73,6 +82,7 @@ export function EntityModal({
             await onSubmit({
                 name: name.trim(),
                 ...(showColor && { hexColor }),
+                ...(showBrand && { brandId: brandId || undefined }),
             });
             onClose();
         } catch (error: any) {
@@ -99,6 +109,8 @@ export function EntityModal({
                         label="Nome"
                         placeholder="Digite o nome..."
                         required
+                        maxLength={100}
+                        description={`${name.length}/100`}
                         value={name}
                         error={errors.name}
                         onChange={(e) => {
@@ -106,6 +118,28 @@ export function EntityModal({
                             clearError('name');
                         }}
                     />
+
+                    {showBrand && (
+                        <Select
+                            label="Marca"
+                            placeholder="Selecione a marca associada"
+                            data={brands.map((b) => ({
+                                value: String(b.id),
+                                label: b.name,
+                            }))}
+                            value={brandId}
+                            onChange={(val) => setBrandId(val)}
+                            clearable
+                            searchable
+                            filter={accentInsensitiveFilter}
+                            styles={{
+                                dropdown: {
+                                    maxHeight: 140,
+                                    overflowY: 'auto',
+                                },
+                            }}
+                        />
+                    )}
 
                     {showColor && (
                         <ColorInput

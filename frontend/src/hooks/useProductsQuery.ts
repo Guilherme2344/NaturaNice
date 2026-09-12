@@ -31,7 +31,7 @@ export function useNearExpirationProductsQuery() {
     });
 }
 
-// Create new product and invalidate products & reports cache
+// Create new product and invalidate products, reports, brands, categories & families cache
 export function useCreateProductMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -39,11 +39,14 @@ export function useCreateProductMutation() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['reports'] });
+            queryClient.invalidateQueries({ queryKey: ['brands'] });
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            queryClient.invalidateQueries({ queryKey: ['families'] });
         },
     });
 }
 
-// Update existing product and invalidate products & reports cache
+// Update existing product and invalidate products, reports, brands, categories & families cache
 export function useUpdateProductMutation() {
     const queryClient = useQueryClient();
     return useMutation({
@@ -52,6 +55,9 @@ export function useUpdateProductMutation() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['reports'] });
+            queryClient.invalidateQueries({ queryKey: ['brands'] });
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            queryClient.invalidateQueries({ queryKey: ['families'] });
         },
     });
 }
@@ -64,6 +70,9 @@ export function useDeleteProductMutation() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['products'] });
             queryClient.invalidateQueries({ queryKey: ['reports'] });
+            queryClient.invalidateQueries({ queryKey: ['brands'] });
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            queryClient.invalidateQueries({ queryKey: ['families'] });
         },
     });
 }

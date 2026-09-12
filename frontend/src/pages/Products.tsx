@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, Stack } from '@mantine/core';
 import { CheckCircle2 } from 'lucide-react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
@@ -46,6 +46,15 @@ export default function Products() {
     // Feedback message
     const [successMessage, setSuccessMessage] = useState('');
 
+    useEffect(() => {
+        if (successMessage) {
+            const timer = setTimeout(() => {
+                setSuccessMessage('');
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [successMessage]);
+
     const handleOpenAdd = () => {
         setSelectedProduct(null);
         setModalOpened(true);
@@ -88,7 +97,9 @@ export default function Products() {
         quantity: number,
         sellingPrice: number,
         amountPaid?: number,
-        customerName?: string
+        customerName?: string,
+        observation?: string,
+        isPersonalUse?: boolean
     ) => {
         if (!productToSell) return;
         setSuccessMessage('');
@@ -98,6 +109,8 @@ export default function Products() {
             sellingPrice,
             amountPaid,
             customerName,
+            observation,
+            isPersonalUse,
         });
 
         const now = new Date();
@@ -105,7 +118,9 @@ export default function Products() {
         const formattedDate = now.toLocaleDateString('pt-BR');
 
         setSuccessMessage(
-            `Venda do produto "${productToSell.name}" (${quantity} un.) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
+            isPersonalUse
+                ? `Uso pessoal do produto "${productToSell.name}" (${quantity} un.) registrado com sucesso às ${formattedTime} do dia ${formattedDate}!`
+                : `Venda do produto "${productToSell.name}" (${quantity} un.) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
         );
     };
 

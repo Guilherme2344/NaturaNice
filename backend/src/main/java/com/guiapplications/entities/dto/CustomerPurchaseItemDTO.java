@@ -16,5 +16,7 @@ public record CustomerPurchaseItemDTO(
     BigDecimal remainingAmount,
     String status,
     String statusDescription,
-    List<SalePaymentDTO> payments
+    List<SalePaymentDTO> payments,
+    String observation,
+    Boolean isPersonalUse
 ) {}

@@ -49,11 +49,12 @@ public class FamilyResource {
     // get all families
     @GET
     public Response getAll(
+            @QueryParam("brandId") UUID brandId,
             @HeaderParam("Authorization") String authHeader,
             @HeaderParam("X-User-Id") String userIdHeader
     ) {
         User user = UserResolver.resolveUser(authHeader, userIdHeader);
-        return Response.ok(familyService.listAll(user)).build();
+        return Response.ok(familyService.listAll(brandId, user)).build();
     }
 
     // search Family by name
@@ -61,11 +62,12 @@ public class FamilyResource {
     @Path("/search")
     public Response search(
             @QueryParam("name") String name,
+            @QueryParam("brandId") UUID brandId,
             @HeaderParam("Authorization") String authHeader,
             @HeaderParam("X-User-Id") String userIdHeader
     ) {
         User user = UserResolver.resolveUser(authHeader, userIdHeader);
-        List<FamilyResponseDTO> families = familyService.search(name, user);
+        List<FamilyResponseDTO> families = familyService.search(name, brandId, user);
         return Response.ok(families).build();
     }
 

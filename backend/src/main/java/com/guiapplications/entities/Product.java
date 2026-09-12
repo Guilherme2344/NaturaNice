@@ -39,7 +39,10 @@ public class Product extends PanacheEntityBase {
     @Column(name = "quantity", nullable = false)
     public Integer quantity;
 
-    @Column(name = "expirationDate", nullable = false)
+    @Column(name = "purchaseDate", nullable = false)
+    public LocalDate purchaseDate = LocalDate.now();
+
+    @Column(name = "expirationDate", nullable = true)
     public LocalDate expirationDate;
 
     @Column(name = "purchasePrice", nullable = false, precision = 10, scale = 2)
@@ -61,8 +64,15 @@ public class Product extends PanacheEntityBase {
     public Family family;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = true)
+    @JoinColumn(name = "user_id", nullable = false)
     public User user;
+
+    public static Product findByNameAndUser(String name, User user) {
+        if (name == null || user == null) {
+            return null;
+        }
+        return find("unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND user = ?2", name.trim(), user).firstResult();
+    }
 
     public static List<Product> listAllWithRelations(User user) {
         if (user == null) {
@@ -72,7 +82,8 @@ public class Product extends PanacheEntityBase {
             "SELECT DISTINCT p FROM Product p " +
             "LEFT JOIN FETCH p.brand " +
             "LEFT JOIN FETCH p.category " +
-            "LEFT JOIN FETCH p.family " +
+            "LEFT JOIN FETCH p.family f " +
+            "LEFT JOIN FETCH f.brand " +
             "WHERE p.user = ?1 " +
             "ORDER BY p.id DESC",
             user
@@ -88,8 +99,9 @@ public class Product extends PanacheEntityBase {
             "SELECT DISTINCT p FROM Product p " +
             "LEFT JOIN FETCH p.brand " +
             "LEFT JOIN FETCH p.category " +
-            "LEFT JOIN FETCH p.family " +
-            "WHERE p.expirationDate < ?1 AND p.user = ?2 " +
+            "LEFT JOIN FETCH p.family f " +
+            "LEFT JOIN FETCH f.brand " +
+            "WHERE (p.expirationDate IS NULL OR p.expirationDate < ?1) AND p.user = ?2 " +
             "ORDER BY p.expirationDate ASC",
             today, user
         );
@@ -105,8 +117,9 @@ public class Product extends PanacheEntityBase {
             "SELECT DISTINCT p FROM Product p " +
             "LEFT JOIN FETCH p.brand " +
             "LEFT JOIN FETCH p.category " +
-            "LEFT JOIN FETCH p.family " +
-            "WHERE p.expirationDate >= ?1 AND p.expirationDate <= ?2 AND p.user = ?3 " +
+            "LEFT JOIN FETCH p.family f " +
+            "LEFT JOIN FETCH f.brand " +
+            "WHERE p.expirationDate IS NOT NULL AND p.expirationDate >= ?1 AND p.expirationDate <= ?2 AND p.user = ?3 " +
             "ORDER BY p.expirationDate ASC",
             today, hundredEightyDaysFromNow, user
         );
@@ -118,7 +131,7 @@ public class Product extends PanacheEntityBase {
         if (user == null) {
             return List.of();
         }
-        StringBuilder query = new StringBuilder("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family WHERE p.user = :user ");
+        StringBuilder query = new StringBuilder("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family f LEFT JOIN FETCH f.brand WHERE p.user = :user ");
         Map<String, Object> params = new HashMap<>();
         params.put("user", user);
 

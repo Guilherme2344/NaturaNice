@@ -11,6 +11,8 @@ import {
     Loader,
     Center,
     Stack,
+    Tooltip,
+    ActionIcon,
 } from '@mantine/core';
 import {
     DollarSign,
@@ -22,6 +24,7 @@ import {
     Calendar,
     BarChart3,
     User,
+    MessageSquare,
 } from 'lucide-react';
 import type { DailySalesSummary, MonthlySalesSummary } from '../services/reportService';
 import { customerService, type Customer } from '../services/customerService';
@@ -43,11 +46,14 @@ const MONTH_NAMES = [
 
 interface BreakdownRow {
     label: string;
+    productName?: string;
     customerName: string;
     revenue: number;
     cost: number;
     profit: number;
     itemsSold: number;
+    isPersonalUse?: boolean;
+    observation?: string;
 }
 
 interface ReportViewProps {
@@ -190,20 +196,26 @@ export function ReportView({
         if ('date' in item) {
             return {
                 label: formatDate(item.date),
+                productName: item.productName || 'Produto não informado',
                 customerName: item.customerName || 'Cliente não informado',
                 revenue: item.revenue,
                 cost: item.cost,
                 profit: item.profit,
                 itemsSold: item.itemsSold,
+                isPersonalUse: item.isPersonalUse,
+                observation: item.observation,
             };
         } else {
             return {
                 label: MONTH_NAMES[item.month - 1] || `Mês ${item.month}`,
+                productName: item.productName,
                 customerName: item.customerName || 'Cliente não informado',
                 revenue: item.revenue,
                 cost: item.cost,
                 profit: item.profit,
                 itemsSold: item.itemsSold,
+                isPersonalUse: item.isPersonalUse,
+                observation: item.observation,
             };
         }
     });
@@ -367,12 +379,14 @@ export function ReportView({
                             <Table.Thead>
                                 <Table.Tr>
                                     <Table.Th>{type === 'monthly' ? 'Data e Hora' : 'Mês'}</Table.Th>
+                                    {type === 'monthly' && <Table.Th>Produto</Table.Th>}
                                     {type === 'monthly' && <Table.Th>Cliente</Table.Th>}
                                     <Table.Th>Faturamento</Table.Th>
                                     <Table.Th>Custo</Table.Th>
                                     <Table.Th>Lucro</Table.Th>
                                     <Table.Th>Qtd. Vendida</Table.Th>
                                     <Table.Th>Margem (%)</Table.Th>
+                                    <Table.Th style={{ width: 44, textAlign: 'center' }}></Table.Th>
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
@@ -384,7 +398,22 @@ export function ReportView({
                                     return (
                                         <Table.Tr key={index}>
                                             <Table.Td fw={600}>{row.label}</Table.Td>
-                                            {type === 'monthly' && <Table.Td fw={500} c="gray.7">{row.customerName}</Table.Td>}
+                                            {type === 'monthly' && (
+                                                <Table.Td fw={600} c="dark.4">
+                                                    {row.productName || 'Produto não informado'}
+                                                </Table.Td>
+                                            )}
+                                            {type === 'monthly' && (
+                                                <Table.Td fw={500} c="gray.7">
+                                                    {row.isPersonalUse ? (
+                                                        <Badge color="teal" variant="light" size="sm">
+                                                            Uso Pessoal
+                                                        </Badge>
+                                                    ) : (
+                                                        row.customerName
+                                                    )}
+                                                </Table.Td>
+                                            )}
                                             <Table.Td fw={500} c="blue">
                                                 {formatCurrency(row.revenue)}
                                             </Table.Td>
@@ -401,6 +430,26 @@ export function ReportView({
                                                 >
                                                     {row.profit === 0 ? '-' : `${rowMargin.toFixed(1)}%`}
                                                 </Badge>
+                                            </Table.Td>
+                                            <Table.Td style={{ textAlign: 'center' }}>
+                                                {row.observation && (
+                                                    <Tooltip
+                                                        label={`Obs: ${row.observation}`}
+                                                        multiline
+                                                        w={260}
+                                                        withArrow
+                                                        position="top"
+                                                    >
+                                                        <ActionIcon
+                                                            variant="subtle"
+                                                            color="yellow.8"
+                                                            size="sm"
+                                                            aria-label="Ver Observação"
+                                                        >
+                                                            <MessageSquare size={16} />
+                                                        </ActionIcon>
+                                                    </Tooltip>
+                                                )}
                                             </Table.Td>
                                         </Table.Tr>
                                     );

@@ -25,9 +25,22 @@ export const productSchema = yup.object().shape({
         .typeError('A quantidade deve ser um número.')
         .min(0, 'A quantidade deve ser maior ou igual a 0.')
         .required('Informe a quantidade.'),
+    purchaseDate: yup
+        .string()
+        .required('Por favor, selecione a data de compra.'),
+    isIndeterminateExpiration: yup.boolean(),
     expirationDate: yup
         .string()
-        .required('Por favor, selecione a data de vencimento.'),
+        .nullable()
+        .test(
+            'expiration-required',
+            'Por favor, selecione a data de vencimento ou marque como indeterminada.',
+            function (val) {
+                const { isIndeterminateExpiration } = this.parent;
+                if (isIndeterminateExpiration) return true;
+                return Boolean(val && val.trim().length > 0);
+            }
+        ),
     purchasePrice: yup
         .number()
         .typeError('O preço de compra deve ser um número.')
@@ -51,7 +64,7 @@ export const entitySchema = yup.object().shape({
 });
 
 // Validation schema for sale registration with dynamic stock limit check
-export const saleSchema = (availableStock: number) =>
+export const saleSchema = (availableStock: number, isPersonalUse: boolean = false) =>
     yup.object().shape({
         quantity: yup
             .number()
@@ -62,14 +75,23 @@ export const saleSchema = (availableStock: number) =>
                 `Quantidade superior ao estoque disponível (${availableStock} un.).`
             )
             .required('Informe a quantidade.'),
-        sellingPrice: yup
-            .number()
-            .typeError('Informe o preço de venda unitário.')
-            .moreThan(
-                0,
-                'O preço de venda unitário deve ser maior que R$ 0,00.'
-            )
-            .required('Informe o preço de venda.'),
+        sellingPrice: isPersonalUse
+            ? yup
+                .number()
+                .typeError('Informe o preço de venda unitário.')
+                .min(0, 'O preço de venda não pode ser negativo.')
+            : yup
+                .number()
+                .typeError('Informe o preço de venda unitário.')
+                .moreThan(
+                    0,
+                    'O preço de venda unitário deve ser maior que R$ 0,00.'
+                )
+                .required('Informe o preço de venda.'),
+        observation: yup
+            .string()
+            .nullable()
+            .max(250, 'A observação deve ter no máximo 250 caracteres.'),
     });
 
 // Validation schema for user creation by admin

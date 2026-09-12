@@ -14,9 +14,9 @@ export interface ExpirationFormat {
 export function formatExpirationStatus(expirationDateStr: string | null | undefined): ExpirationFormat {
     if (!expirationDateStr) {
         return {
-            text: 'Data não informada',
+            text: 'Indeterminada',
             type: 'NORMAL',
-            daysRemaining: 0,
+            daysRemaining: 999999,
         };
     }
 

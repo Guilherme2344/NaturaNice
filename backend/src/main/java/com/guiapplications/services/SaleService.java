@@ -1,6 +1,7 @@
 package com.guiapplications.services;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -33,7 +34,8 @@ public class SaleService {
         if (dto.quantity() == null || dto.quantity() <= 0) {
             throw new IllegalArgumentException("Quantidade deve ser maior que zero.");
         }
-        if (dto.sellingPrice() == null || dto.sellingPrice().compareTo(BigDecimal.ZERO) <= 0) {
+        boolean isPersonalUse = Boolean.TRUE.equals(dto.isPersonalUse());
+        if (!isPersonalUse && (dto.sellingPrice() == null || dto.sellingPrice().compareTo(BigDecimal.ZERO) <= 0)) {
             throw new IllegalArgumentException("Preço de venda deve ser maior que zero.");
         }
 
@@ -51,17 +53,29 @@ public class SaleService {
         }
 
         String productName = product.name;
-        BigDecimal unitPurchasePrice = product.purchasePrice != null ? product.purchasePrice : BigDecimal.ZERO;
-        BigDecimal unitSellingPrice = dto.sellingPrice();
+        BigDecimal unitPurchasePrice;
+        BigDecimal unitSellingPrice;
+        BigDecimal totalAmount;
+        BigDecimal amountPaid;
+        SaleStatus status;
 
-        BigDecimal totalAmount = unitSellingPrice.multiply(BigDecimal.valueOf(dto.quantity()));
-        BigDecimal amountPaid = dto.amountPaid() != null ? dto.amountPaid() : totalAmount;
-
-        SaleStatus status = SaleStatus.PAID;
-        if (amountPaid.compareTo(BigDecimal.ZERO) == 0) {
-            status = SaleStatus.PARTIALLY_PAID;
-        } else if (amountPaid.compareTo(totalAmount) < 0) {
-            status = SaleStatus.PARTIALLY_PAID;
+        if (isPersonalUse) {
+            unitPurchasePrice = BigDecimal.ZERO;
+            unitSellingPrice = BigDecimal.ZERO;
+            totalAmount = BigDecimal.ZERO;
+            amountPaid = BigDecimal.ZERO;
+            status = SaleStatus.PAID;
+        } else {
+            BigDecimal rawBuy = product.purchasePrice != null ? product.purchasePrice : BigDecimal.ZERO;
+            unitSellingPrice = dto.sellingPrice();
+            if (rawBuy.compareTo(BigDecimal.ZERO) == 0 && unitSellingPrice != null && unitSellingPrice.compareTo(BigDecimal.ZERO) > 0) {
+                unitPurchasePrice = unitSellingPrice.multiply(new BigDecimal("0.70")).setScale(2, RoundingMode.HALF_UP);
+            } else {
+                unitPurchasePrice = rawBuy;
+            }
+            totalAmount = unitSellingPrice.multiply(BigDecimal.valueOf(dto.quantity()));
+            amountPaid = dto.amountPaid() != null ? dto.amountPaid() : totalAmount;
+            status = SaleStatus.calculate(amountPaid, totalAmount);
         }
 
         // Customer lookup or creation
@@ -77,6 +91,8 @@ public class SaleService {
             }
         }
 
+        String observation = dto.observation() != null && !dto.observation().isBlank() ? dto.observation().trim() : null;
+
         // 1. Create & Persist Sale and SaleItem
         Sale sale = new Sale();
         sale.saleDate = LocalDateTime.now();
@@ -84,6 +100,8 @@ public class SaleService {
         sale.status = status;
         sale.customer = customer;
         sale.user = user;
+        sale.observation = observation;
+        sale.isPersonalUse = isPersonalUse;
         sale.items = new ArrayList<>();
 
         SaleItem item = new SaleItem();
@@ -97,7 +115,7 @@ public class SaleService {
         sale.items.add(item);
         sale.persist();
 
-        if (amountPaid.compareTo(BigDecimal.ZERO) > 0) {
+        if (!isPersonalUse && amountPaid.compareTo(BigDecimal.ZERO) > 0) {
             SalePayment initialPayment = new SalePayment();
             initialPayment.sale = sale;
             initialPayment.paymentDate = sale.saleDate;
@@ -116,7 +134,9 @@ public class SaleService {
             product.persist();
         }
 
-        BigDecimal totalProfit = unitSellingPrice.subtract(unitPurchasePrice).multiply(BigDecimal.valueOf(dto.quantity()));
+        BigDecimal totalProfit = isPersonalUse 
+            ? BigDecimal.ZERO 
+            : unitSellingPrice.subtract(unitPurchasePrice).multiply(BigDecimal.valueOf(dto.quantity()));
         BigDecimal remainingAmount = totalAmount.subtract(amountPaid);
         if (remainingAmount.compareTo(BigDecimal.ZERO) < 0) {
             remainingAmount = BigDecimal.ZERO;
@@ -136,7 +156,9 @@ public class SaleService {
             totalProfit,
             status.name(),
             status.getDescription(),
-            customer != null ? customer.name : null
+            customer != null ? customer.name : null,
+            sale.observation,
+            sale.isPersonalUse
         );
     }
 
@@ -165,11 +187,7 @@ public class SaleService {
         BigDecimal newPaid = currentPaid.add(amount);
 
         sale.amountPaid = newPaid;
-        if (newPaid.compareTo(saleTotal) >= 0) {
-            sale.status = SaleStatus.PAID;
-        } else {
-            sale.status = SaleStatus.PARTIALLY_PAID;
-        }
+        sale.status = SaleStatus.calculate(newPaid, saleTotal);
         sale.persist();
 
         SalePayment payment = new SalePayment();

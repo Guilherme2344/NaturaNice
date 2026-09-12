@@ -4,11 +4,15 @@ import type { Entity } from '../components/EntityTable';
 export interface CreateEntityDTO {
     name: string;
     hexColor?: string; // Usado apenas para marcas
+    brandId?: string;  // Usado para famílias
+    brandName?: string;
 }
 
 export interface UpdateEntityDTO {
     name: string;
     hexColor?: string;
+    brandId?: string;
+    brandName?: string;
 }
 
 export const entityService = {
@@ -38,9 +42,11 @@ export const entityService = {
         return response.data;
     },
 
-    // GET: search all families
-    getFamilies: async (): Promise<Entity[]> => {
-        const response = await api.get<Entity[]>('/families');
+    // GET: search all families (optional brand filter)
+    getFamilies: async (brandId?: string): Promise<Entity[]> => {
+        const response = await api.get<Entity[]>('/families', {
+            params: brandId ? { brandId } : undefined,
+        });
         return response.data;
     },
 

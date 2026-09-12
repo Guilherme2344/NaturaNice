@@ -11,6 +11,7 @@ public record ProductResponseDTO(
     UUID id,
     String name,
     Integer quantity,
+    LocalDate purchaseDate,
     LocalDate expirationDate,
     BigDecimal purchasePrice,
     BigDecimal sellingPrice,
@@ -28,10 +29,13 @@ public record ProductResponseDTO(
                 ? product.sellingPrice.subtract(product.purchasePrice)
                 : BigDecimal.ZERO;
         
+        LocalDate purchaseDate = product.purchaseDate != null ? product.purchaseDate : LocalDate.now();
+
         return new ProductResponseDTO(
             product.id,
             product.name,
             product.quantity,
+            purchaseDate,
             product.expirationDate,
             product.purchasePrice,
             product.sellingPrice,

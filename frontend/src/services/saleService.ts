@@ -6,6 +6,8 @@ export interface CreateSaleDTO {
     sellingPrice?: number;
     amountPaid?: number;
     customerName?: string;
+    observation?: string;
+    isPersonalUse?: boolean;
 }
 
 export interface SaleResponse {
@@ -20,9 +22,11 @@ export interface SaleResponse {
     amountPaid: number;
     remainingAmount: number;
     totalProfit: number;
-    status: 'PAID' | 'PARTIALLY_PAID';
+    status: 'PAID' | 'PARTIALLY_PAID' | 'UNPAID';
     statusDescription: string;
     customerName?: string;
+    observation?: string;
+    isPersonalUse?: boolean;
 }
 
 export const saleService = {

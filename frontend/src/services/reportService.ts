@@ -2,20 +2,26 @@ import { api } from './api';
 
 export interface DailySalesSummary {
     date: string;
+    productName?: string;
     customerName?: string;
     revenue: number;
     cost: number;
     profit: number;
     itemsSold: number;
+    isPersonalUse?: boolean;
+    observation?: string;
 }
 
 export interface MonthlySalesSummary {
     month: number;
+    productName?: string;
     customerName?: string;
     revenue: number;
     cost: number;
     profit: number;
     itemsSold: number;
+    isPersonalUse?: boolean;
+    observation?: string;
 }
 
 export interface MonthlySalesReport {

@@ -7,6 +7,7 @@ import java.util.UUID;
 public record ProductRequestDTO(
     String name,
     Integer quantity,
+    LocalDate purchaseDate,
     LocalDate expirationDate,
     BigDecimal purchasePrice,
     BigDecimal sellingPrice,

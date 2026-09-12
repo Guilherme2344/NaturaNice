@@ -52,6 +52,12 @@ public class DatabaseSeeder {
         try {
             em.createNativeQuery("ALTER TABLE sale_items ALTER COLUMN product_id DROP NOT NULL;").executeUpdate();
         } catch (Exception ignored) {}
+        try {
+            em.createNativeQuery("ALTER TABLE products ALTER COLUMN expirationdate DROP NOT NULL;").executeUpdate();
+        } catch (Exception ignored) {}
+        try {
+            em.createNativeQuery("ALTER TABLE products ALTER COLUMN \"expirationDate\" DROP NOT NULL;").executeUpdate();
+        } catch (Exception ignored) {}
     }
 	
     @Transactional
@@ -71,15 +77,16 @@ public class DatabaseSeeder {
         // Seed sample products & sales only if enabled (development mode)
         if (enableSampleData && Product.count() == 0) {
             
-            // families
-            Family maquiagem = createFamily("Maquiagem", admin);
-            Family skincare = createFamily("Skincare", admin);
-            Family cuidados = createFamily("Cuidados Corporais", admin);
-
             // brands
             Brand eudora = createBrand("Eudora", "#53308D", admin);
             Brand natura = createBrand("Natura", "#F38120", admin);
             Brand mary = createBrand("Mary Kay", "#ED3E94", admin);
+
+            // families
+            Family maquiagemEudora = createFamily("Maquiagem", eudora, admin);
+            Family maquiagemMary = createFamily("Maquiagem", mary, admin);
+            Family skincare = createFamily("Skincare", natura, admin);
+            Family cuidados = createFamily("Cuidados Corporais", natura, admin);
 
             // categories
             Category batom = createCategory("Batom", admin);
@@ -93,7 +100,7 @@ public class DatabaseSeeder {
                 LocalDate.of(2027, 8, 15),
                 "15.00",
                 "29.90",
-                maquiagem,
+                maquiagemEudora,
                 eudora,
                 batom,
                 admin
@@ -105,7 +112,7 @@ public class DatabaseSeeder {
                 LocalDate.of(2026, 11, 30),
                 "35.00",
                 "62.00",
-                maquiagem,
+                maquiagemMary,
                 mary,
                 base,
                 admin
@@ -144,9 +151,10 @@ public class DatabaseSeeder {
         }
     }
 
-    private Family createFamily(String name, User user) {
+    private Family createFamily(String name, Brand brand, User user) {
         Family f = new Family();
         f.name = name;
+        f.brand = brand;
         f.user = user;
         f.persist();
         return f;
@@ -175,6 +183,7 @@ public class DatabaseSeeder {
         Product p = new Product();
         p.name = name;
         p.quantity = quantity;
+        p.purchaseDate = LocalDate.now();
         p.expirationDate = expDate;
         p.purchasePrice = new BigDecimal(cost);
         p.sellingPrice = new BigDecimal(price);

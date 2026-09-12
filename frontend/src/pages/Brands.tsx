@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, Stack } from '@mantine/core';
 import { CheckCircle2 } from 'lucide-react';
 import EntityTable from '../components/EntityTable';
@@ -31,6 +31,15 @@ export default function Brands() {
 
     // friendly success message
     const [successMessage, setSuccessMessage] = useState('');
+
+    useEffect(() => {
+        if (successMessage) {
+            const timer = setTimeout(() => {
+                setSuccessMessage('');
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [successMessage]);
 
     const handleOpenAdd = () => {
         setSelectedBrand(null);

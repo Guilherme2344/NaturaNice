@@ -12,6 +12,7 @@ import {
     ActionIcon,
     Text,
     ColorInput,
+    Checkbox,
 } from '@mantine/core';
 import { Plus, Layers, FolderTree } from 'lucide-react';
 import type { CreateProductDTO } from '../services/productService';
@@ -19,6 +20,7 @@ import type { Product } from '../components/ProductsTable';
 import type { Entity } from '../components/EntityTable';
 import { productSchema, validateWithYup } from '../schemas/validationSchemas';
 import { useCreateBrandMutation } from '../hooks/useEntitiesQuery';
+import { accentInsensitiveFilter } from '../utils/stringUtils';
 
 interface ProductModalProps {
     opened: boolean;
@@ -29,6 +31,8 @@ interface ProductModalProps {
     initialData?: Product | null;
     onSubmit: (data: CreateProductDTO) => Promise<void>;
 }
+
+const getTodayString = () => new Date().toISOString().split('T')[0];
 
 export function ProductModal({
     opened,
@@ -41,7 +45,9 @@ export function ProductModal({
 }: ProductModalProps) {
     const [name, setName] = useState('');
     const [quantity, setQuantity] = useState<number | string>(1);
+    const [purchaseDate, setPurchaseDate] = useState<string>(getTodayString());
     const [expirationDate, setExpirationDate] = useState('');
+    const [isIndeterminateExpiration, setIsIndeterminateExpiration] = useState(false);
     const [purchasePrice, setPurchasePrice] = useState<number | string>(0);
     const [sellingPrice, setSellingPrice] = useState<number | string>(0);
     const [brandId, setBrandId] = useState<string | null>(null);
@@ -49,17 +55,14 @@ export function ProductModal({
     const [familyName, setFamilyName] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // Mutation for quick Brand creation
     const createBrandMutation = useCreateBrandMutation();
 
-    // Quick Brand creation sub-modal states
     const [quickBrandModalOpened, setQuickBrandModalOpened] = useState(false);
     const [quickBrandName, setQuickBrandName] = useState('');
     const [quickBrandColor, setQuickBrandColor] = useState('#1c7ed6');
     const [quickBrandLoading, setQuickBrandLoading] = useState(false);
     const [quickBrandError, setQuickBrandError] = useState('');
 
-    // error messages for each field
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
@@ -68,6 +71,9 @@ export function ProductModal({
             if (initialData) {
                 setName(initialData.name || '');
                 setQuantity(initialData.quantity || 0);
+                setPurchaseDate(initialData.purchaseDate || getTodayString());
+                const hasExp = Boolean(initialData.expirationDate);
+                setIsIndeterminateExpiration(!hasExp);
                 setExpirationDate(initialData.expirationDate || '');
                 setPurchasePrice(initialData.purchasePrice || 0);
                 setSellingPrice(initialData.sellingPrice || 0);
@@ -79,6 +85,8 @@ export function ProductModal({
             } else {
                 setName('');
                 setQuantity(1);
+                setPurchaseDate(getTodayString());
+                setIsIndeterminateExpiration(false);
                 setExpirationDate('');
                 setPurchasePrice(0);
                 setSellingPrice(0);
@@ -144,27 +152,29 @@ export function ProductModal({
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
+        const effectivePurchaseDate = purchaseDate || getTodayString();
+
         const formData = {
             name: name.trim(),
             brandId,
             categoryName: categoryName.trim(),
             familyName: familyName.trim(),
             quantity: Number(quantity),
-            expirationDate,
+            purchaseDate: effectivePurchaseDate,
+            expirationDate: isIndeterminateExpiration ? null : expirationDate,
+            isIndeterminateExpiration,
             purchasePrice: Number(purchasePrice),
             sellingPrice: Number(sellingPrice),
         };
 
-        // field errors validated with yup
         const { isValid, errors: validationErrors } = await validateWithYup(
             productSchema,
             formData
         );
 
-        // Warning check for selling price < purchase price
         if (isValid && Number(sellingPrice) < Number(purchasePrice)) {
             validationErrors.sellingPrice =
-                'Atenção: O preço de venda é inferior ao preço de compra (venda com prejuízo).';
+                'Preço de venda inferior ao de compra.';
             setErrors(validationErrors);
             return;
         }
@@ -176,20 +186,28 @@ export function ProductModal({
 
         try {
             setLoading(true);
-
-            // Find matching brand/category/family ID if selected, or send string name for auto-creation
-            const matchedBrand = brands.find((b) => String(b.id) === String(brandId));
-            const matchedCategory = categories.find(
-                (c) => c.name.toLowerCase() === categoryName.trim().toLowerCase()
+            const matchedBrand = brands.find(
+                (b) => String(b.id) === String(brandId)
             );
-            const matchedFamily = families.find(
+            const matchedCategory = categories.find(
+                (c) =>
+                    c.name.toLowerCase() === categoryName.trim().toLowerCase()
+            );
+            const availableFamilies = families.filter((f) => {
+                if (!brandId) return true;
+                return !f.brand?.id || String(f.brand.id) === String(brandId);
+            });
+            const matchedFamily = availableFamilies.find(
+                (f) => f.name.toLowerCase() === familyName.trim().toLowerCase()
+            ) || families.find(
                 (f) => f.name.toLowerCase() === familyName.trim().toLowerCase()
             );
 
             const payload: CreateProductDTO = {
                 name: name.trim(),
                 quantity: Number(quantity) || 0,
-                expirationDate,
+                purchaseDate: effectivePurchaseDate,
+                expirationDate: isIndeterminateExpiration ? undefined : (expirationDate || undefined),
                 purchasePrice: Number(purchasePrice) || 0,
                 sellingPrice: Number(sellingPrice) || 0,
                 brandId: brandId || undefined,
@@ -217,30 +235,53 @@ export function ProductModal({
             <Modal
                 opened={opened}
                 onClose={onClose}
-                title={initialData ? 'Editar Produto' : 'Cadastrar Novo Produto'}
+                title={
+                    initialData ? 'Editar Produto' : 'Cadastrar Novo Produto'
+                }
                 size="lg"
                 centered
                 radius="md"
             >
                 <form onSubmit={handleSubmit} noValidate>
                     <Stack gap="md">
-                        <TextInput
-                            label="Nome do Produto"
-                            required
-                            value={name}
-                            error={errors.name}
-                            onChange={(e) => {
-                                setName(e.currentTarget.value);
-                                clearError('name');
-                            }}
-                        />
+                        <Stack gap={4}>
+                            <Group justify="space-between" align="center">
+                                <Text size="sm" fw={500}>
+                                    Nome do Produto{' '}
+                                    <Text component="span" c="red">
+                                        *
+                                    </Text>
+                                </Text>
+                                <Text size="xs" c="dimmed">
+                                    {name.length}/255
+                                </Text>
+                            </Group>
+                            <TextInput
+                                placeholder="Nome do produto"
+                                required
+                                maxLength={255}
+                                value={name}
+                                error={errors.name}
+                                onChange={(e) => {
+                                    setName(e.currentTarget.value);
+                                    clearError('name');
+                                }}
+                            />
+                        </Stack>
 
                         <Grid>
                             <Grid.Col span={4}>
                                 <Stack gap={4}>
-                                    <Group justify="space-between" align="center">
+                                    <Group
+                                        justify="space-between"
+                                        align="center"
+                                        style={{ minHeight: 22 }}
+                                    >
                                         <Text size="sm" fw={500}>
-                                            Marca <Text component="span" c="red">*</Text>
+                                            Marca{' '}
+                                            <Text component="span" c="red">
+                                                *
+                                            </Text>
                                         </Text>
                                         <ActionIcon
                                             size="xs"
@@ -264,46 +305,103 @@ export function ProductModal({
                                             clearError('brandId');
                                         }}
                                         searchable
+                                        filter={accentInsensitiveFilter}
+                                        styles={{
+                                            dropdown: {
+                                                maxHeight: 140,
+                                                overflowY: 'auto',
+                                            },
+                                        }}
                                         placeholder="Selecione a marca"
                                     />
                                 </Stack>
                             </Grid.Col>
 
                             <Grid.Col span={4}>
-                                <Autocomplete
-                                    label="Categoria"
-                                    placeholder="Digite ou escolha uma categoria"
-                                    data={categories.map((c) => c.name)}
-                                    value={categoryName}
-                                    error={errors.categoryName}
-                                    onChange={(val) => {
-                                        setCategoryName(val);
-                                        clearError('categoryName');
-                                    }}
-                                    required
-                                    leftSection={<Layers size={16} />}
-                                />
+                                <Stack gap={4}>
+                                    <Group
+                                        justify="space-between"
+                                        align="center"
+                                        style={{ minHeight: 22 }}
+                                    >
+                                        <Text size="sm" fw={500}>
+                                            Categoria{' '}
+                                            <Text component="span" c="red">
+                                                *
+                                            </Text>
+                                        </Text>
+                                        <Text size="xs" c="dimmed">
+                                            {categoryName.length}/100
+                                        </Text>
+                                    </Group>
+                                    <Autocomplete
+                                        placeholder="Digite ou escolha uma categoria"
+                                        data={categories.map((c) => c.name)}
+                                        maxLength={100}
+                                        value={categoryName}
+                                        error={errors.categoryName}
+                                        onChange={(val) => {
+                                            setCategoryName(val);
+                                            clearError('categoryName');
+                                        }}
+                                        filter={accentInsensitiveFilter}
+                                        styles={{
+                                            dropdown: {
+                                                maxHeight: 140,
+                                                overflowY: 'auto',
+                                            },
+                                        }}
+                                        required
+                                        leftSection={<Layers size={16} />}
+                                    />
+                                </Stack>
                             </Grid.Col>
 
                             <Grid.Col span={4}>
-                                <Autocomplete
-                                    label="Família"
-                                    placeholder="Digite ou escolha uma família"
-                                    data={families.map((f) => f.name)}
-                                    value={familyName}
-                                    error={errors.familyName}
-                                    onChange={(val) => {
-                                        setFamilyName(val);
-                                        clearError('familyName');
-                                    }}
-                                    required
-                                    leftSection={<FolderTree size={16} />}
-                                />
+                                <Stack gap={4}>
+                                    <Group
+                                        justify="space-between"
+                                        align="center"
+                                        style={{ minHeight: 22 }}
+                                    >
+                                        <Text size="sm" fw={500}>
+                                            Família{' '}
+                                            <Text component="span" c="red">
+                                                *
+                                            </Text>
+                                        </Text>
+                                        <Text size="xs" c="dimmed">
+                                            {familyName.length}/100
+                                        </Text>
+                                    </Group>
+                                    <Autocomplete
+                                        placeholder="Digite ou escolha uma família"
+                                        data={families
+                                            .filter((f) => !brandId || !f.brand?.id || String(f.brand.id) === String(brandId))
+                                            .map((f) => f.name)}
+                                        maxLength={100}
+                                        value={familyName}
+                                        error={errors.familyName}
+                                        onChange={(val) => {
+                                            setFamilyName(val);
+                                            clearError('familyName');
+                                        }}
+                                        filter={accentInsensitiveFilter}
+                                        styles={{
+                                            dropdown: {
+                                                maxHeight: 140,
+                                                overflowY: 'auto',
+                                            },
+                                        }}
+                                        required
+                                        leftSection={<FolderTree size={16} />}
+                                    />
+                                </Stack>
                             </Grid.Col>
                         </Grid>
 
                         <Grid>
-                            <Grid.Col span={6}>
+                            <Grid.Col span={4}>
                                 <NumberInput
                                     label="Quantidade"
                                     required
@@ -316,16 +414,47 @@ export function ProductModal({
                                     }}
                                 />
                             </Grid.Col>
-                            <Grid.Col span={6}>
+                            <Grid.Col span={4}>
+                                <TextInput
+                                    type="date"
+                                    label="Data de Compra"
+                                    required
+                                    value={purchaseDate}
+                                    error={errors.purchaseDate}
+                                    onChange={(e) => {
+                                        setPurchaseDate(e.currentTarget.value);
+                                        clearError('purchaseDate');
+                                    }}
+                                />
+                            </Grid.Col>
+                            <Grid.Col span={4}>
                                 <TextInput
                                     type="date"
                                     label="Data de Vencimento"
-                                    required
+                                    required={!isIndeterminateExpiration}
+                                    placeholder={isIndeterminateExpiration ? 'Validade indeterminada' : 'Selecione a data'}
+                                    disabled={isIndeterminateExpiration}
                                     value={expirationDate}
                                     error={errors.expirationDate}
                                     onChange={(e) => {
-                                        setExpirationDate(e.currentTarget.value);
+                                        setExpirationDate(
+                                            e.currentTarget.value
+                                        );
                                         clearError('expirationDate');
+                                    }}
+                                />
+                                <Checkbox
+                                    mt={6}
+                                    size="xs"
+                                    label="Indeterminada"
+                                    checked={isIndeterminateExpiration}
+                                    onChange={(e) => {
+                                        const checked = e.currentTarget.checked;
+                                        setIsIndeterminateExpiration(checked);
+                                        if (checked) {
+                                            setExpirationDate('');
+                                            clearError('expirationDate');
+                                        }
                                     }}
                                 />
                             </Grid.Col>
@@ -378,7 +507,11 @@ export function ProductModal({
                             >
                                 Cancelar
                             </Button>
-                            <Button type="submit" color="blue" loading={loading}>
+                            <Button
+                                type="submit"
+                                color="blue"
+                                loading={loading}
+                            >
                                 {initialData
                                     ? 'Salvar Alterações'
                                     : 'Cadastrar Produto'}
@@ -388,7 +521,6 @@ export function ProductModal({
                 </form>
             </Modal>
 
-            {/* Quick Brand Creation Sub-Modal */}
             <Modal
                 opened={quickBrandModalOpened}
                 onClose={() => setQuickBrandModalOpened(false)}
@@ -398,17 +530,30 @@ export function ProductModal({
                 radius="md"
             >
                 <Stack gap="md">
-                    <TextInput
-                        label="Nome da Marca"
-                        placeholder="Ex: Natura"
-                        required
-                        value={quickBrandName}
-                        error={quickBrandError}
-                        onChange={(e) => {
-                            setQuickBrandName(e.currentTarget.value);
-                            setQuickBrandError('');
-                        }}
-                    />
+                    <Stack gap={4}>
+                        <Group justify="space-between" align="center">
+                            <Text size="sm" fw={500}>
+                                Nome da Marca{' '}
+                                <Text component="span" c="red">
+                                    *
+                                </Text>
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                                {quickBrandName.length}/100
+                            </Text>
+                        </Group>
+                        <TextInput
+                            placeholder="Ex: Natura"
+                            required
+                            maxLength={100}
+                            value={quickBrandName}
+                            error={quickBrandError}
+                            onChange={(e) => {
+                                setQuickBrandName(e.currentTarget.value);
+                                setQuickBrandError('');
+                            }}
+                        />
+                    </Stack>
 
                     <ColorInput
                         label="Cor da Marca (opcional)"

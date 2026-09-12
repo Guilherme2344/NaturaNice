@@ -18,5 +18,7 @@ public record SaleResponseDTO(
     BigDecimal totalProfit,
     String status,
     String statusDescription,
-    String customerName
+    String customerName,
+    String observation,
+    Boolean isPersonalUse
 ) {}

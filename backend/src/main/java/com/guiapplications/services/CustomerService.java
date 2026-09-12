@@ -193,10 +193,13 @@ public class CustomerService {
             }
 
             BigDecimal amountPaid = sale.amountPaid != null ? sale.amountPaid : BigDecimal.ZERO;
-            SaleStatus saleStatus = sale.status != null ? sale.status : SaleStatus.PAID;
+            SaleStatus saleStatus = sale.status;
 
-            if (sale.amountPaid == null && saleStatus == SaleStatus.PAID) {
+            if (sale.amountPaid == null && (saleStatus == null || saleStatus == SaleStatus.PAID)) {
                 amountPaid = saleTotal;
+                saleStatus = SaleStatus.PAID;
+            } else {
+                saleStatus = SaleStatus.calculate(amountPaid, saleTotal);
             }
 
             BigDecimal remainingAmount = saleTotal.subtract(amountPaid);
@@ -255,7 +258,9 @@ public class CustomerService {
                 remainingAmount,
                 statusStr,
                 statusDesc,
-                paymentDTOs
+                paymentDTOs,
+                sale.observation,
+                Boolean.TRUE.equals(sale.isPersonalUse)
             ));
         }
 
@@ -324,11 +329,7 @@ public class CustomerService {
                 BigDecimal newPaid = currentPaid.add(paymentForSale);
 
                 sale.amountPaid = newPaid;
-                if (newPaid.compareTo(saleTotal) >= 0) {
-                    sale.status = SaleStatus.PAID;
-                } else {
-                    sale.status = SaleStatus.PARTIALLY_PAID;
-                }
+                sale.status = SaleStatus.calculate(newPaid, saleTotal);
                 sale.persist();
 
                 // Persist new SalePayment installment record

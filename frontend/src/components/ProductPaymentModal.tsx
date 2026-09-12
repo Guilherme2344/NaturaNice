@@ -12,7 +12,7 @@ import {
     NumberInput,
     Alert,
 } from '@mantine/core';
-import { DollarSign, CheckCircle2, Clock, History, Copy, Check } from 'lucide-react';
+import { DollarSign, CheckCircle2, History, Copy, Check, MessageSquare } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import type { CustomerPurchaseItem } from '../services/customerService';
@@ -99,6 +99,9 @@ export function ProductPaymentModal({
         text += `• Data da Compra: ${saleDateStr}\n`;
         text += `• Valor Total do Produto: R$ ${formattedTotal}\n`;
         text += `• Valor Já Pago: R$ ${formattedPaid}\n`;
+        if (item.observation) {
+            text += `• Observação: ${item.observation}\n`;
+        }
 
         if (item.remainingAmount > 0) {
             text += `• *Valor Restante A Pagar: R$ ${formattedRemaining}*\n\n`;
@@ -113,10 +116,6 @@ export function ProductPaymentModal({
                     ? new Date(p.paymentDate).toLocaleDateString('pt-BR')
                     : '';
                 const pAmount = p.amount.toLocaleString('pt-BR', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                });
-                const pPaidAcc = p.cumulativePaid.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                 });
@@ -157,6 +156,25 @@ export function ProductPaymentModal({
                     <Text fw={700} size="lg">
                         {isFullyPaid ? `Histórico de Pagamento - ${item.productName}` : `Abater Pagamento - ${item.productName}`}
                     </Text>
+                    {item.isPersonalUse ? (
+                        <Badge color="teal" variant="light" size="sm">
+                            Uso Pessoal
+                        </Badge>
+                    ) : (
+                        <Badge
+                            color={
+                                item.status === 'PAID' || item.remainingAmount === 0
+                                    ? 'teal'
+                                    : item.status === 'UNPAID' || item.amountPaid === 0
+                                    ? 'red'
+                                    : 'orange'
+                            }
+                            variant="light"
+                            size="sm"
+                        >
+                            {item.statusDescription}
+                        </Badge>
+                    )}
                 </Group>
             }
             centered
@@ -164,6 +182,22 @@ export function ProductPaymentModal({
             radius="md"
         >
             <Stack gap="md">
+                {item.observation && (
+                    <Paper p="xs" withBorder radius="md" bg="yellow.0">
+                        <Group gap="xs" align="flex-start" wrap="nowrap">
+                            <MessageSquare size={16} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }} />
+                            <div>
+                                <Text size="xs" fw={700} c="yellow.9">
+                                    Observação:
+                                </Text>
+                                <Text size="xs" c="gray.8">
+                                    {item.observation}
+                                </Text>
+                            </div>
+                        </Group>
+                    </Paper>
+                )}
+
                 {/* Summary Cards */}
                 <Grid>
                     <Grid.Col span={{ base: 12, sm: 4 }}>

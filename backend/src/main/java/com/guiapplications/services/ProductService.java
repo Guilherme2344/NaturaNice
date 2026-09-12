@@ -1,5 +1,7 @@
 package com.guiapplications.services;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -18,6 +20,16 @@ import jakarta.transaction.Transactional;
 
 @ApplicationScoped
 public class ProductService {
+
+    private BigDecimal resolvePurchasePrice(BigDecimal purchasePrice, BigDecimal sellingPrice) {
+        if (purchasePrice == null || purchasePrice.compareTo(BigDecimal.ZERO) == 0) {
+            if (sellingPrice != null && sellingPrice.compareTo(BigDecimal.ZERO) > 0) {
+                return sellingPrice.multiply(new BigDecimal("0.70")).setScale(2, RoundingMode.HALF_UP);
+            }
+            return BigDecimal.ZERO;
+        }
+        return purchasePrice;
+    }
 
     // Helper method to resolve or auto-create Brand
     private Brand resolveBrand(UUID brandId, String brandName, User user) {
@@ -63,19 +75,26 @@ public class ProductService {
     }
 
     // Helper method to resolve or auto-create Family
-    private Family resolveFamily(UUID familyId, String familyName, User user) {
+    private Family resolveFamily(UUID familyId, String familyName, Brand brand, User user) {
         if (familyId != null) {
             Family f = Family.findById(familyId);
-            if (f != null) return f;
+            if (f != null) {
+                if (f.brand == null && brand != null) {
+                    f.brand = brand;
+                    f.persist();
+                }
+                return f;
+            }
         }
         if (familyName != null && !familyName.isBlank()) {
             String trimmed = familyName.trim();
-            List<Family> existing = Family.findByNameAndUser(trimmed, user);
+            List<Family> existing = Family.findByNameAndBrandAndUser(trimmed, brand, user);
             if (!existing.isEmpty()) {
                 return existing.get(0);
             }
             Family newFamily = new Family();
             newFamily.name = trimmed;
+            newFamily.brand = brand;
             newFamily.user = user;
             newFamily.persist();
             return newFamily;
@@ -93,13 +112,14 @@ public class ProductService {
 
         Brand brand = resolveBrand(dto.brandId(), dto.brandName(), user);
         Category category = resolveCategory(dto.categoryId(), dto.categoryName(), user);
-        Family family = resolveFamily(dto.familyId(), dto.familyName(), user);
+        Family family = resolveFamily(dto.familyId(), dto.familyName(), brand, user);
 
         Product product = new Product();
         product.name = trimmedName;
         product.quantity = dto.quantity();
+        product.purchaseDate = dto.purchaseDate() != null ? dto.purchaseDate() : LocalDate.now();
         product.expirationDate = dto.expirationDate();
-        product.purchasePrice = dto.purchasePrice();
+        product.purchasePrice = resolvePurchasePrice(dto.purchasePrice(), dto.sellingPrice());
         product.sellingPrice = dto.sellingPrice();
         product.brand = brand;
         product.category = category;
@@ -162,13 +182,14 @@ public class ProductService {
 
         Brand brand = resolveBrand(dto.brandId(), dto.brandName(), user);
         Category category = resolveCategory(dto.categoryId(), dto.categoryName(), user);
-        Family family = resolveFamily(dto.familyId(), dto.familyName(), user);
+        Family family = resolveFamily(dto.familyId(), dto.familyName(), brand, user);
 
         // update data
         product.name = trimmedName;
         product.quantity = dto.quantity();
+        product.purchaseDate = dto.purchaseDate() != null ? dto.purchaseDate() : (product.purchaseDate != null ? product.purchaseDate : LocalDate.now());
         product.expirationDate = dto.expirationDate();
-        product.purchasePrice = dto.purchasePrice();
+        product.purchasePrice = resolvePurchasePrice(dto.purchasePrice(), dto.sellingPrice());
         product.sellingPrice = dto.sellingPrice();
         product.brand = brand;
         product.category = category;

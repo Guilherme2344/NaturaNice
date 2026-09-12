@@ -23,9 +23,11 @@ export interface CustomerPurchaseItem {
     totalAmount: number;
     amountPaid: number;
     remainingAmount: number;
-    status: 'PAID' | 'PARTIALLY_PAID';
+    status: 'PAID' | 'PARTIALLY_PAID' | 'UNPAID';
     statusDescription: string;
     payments?: SalePayment[];
+    observation?: string;
+    isPersonalUse?: boolean;
 }
 
 export interface CustomerSummary {

@@ -46,6 +46,15 @@ export default function AdminUsers() {
     // friendly success alert
     const [successMessage, setSuccessMessage] = useState('');
 
+    useEffect(() => {
+        if (successMessage) {
+            const timer = setTimeout(() => {
+                setSuccessMessage('');
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [successMessage]);
+
     const fetchUsers = async () => {
         try {
             setLoading(true);

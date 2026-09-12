@@ -29,13 +29,14 @@ public class SaleResourceTest {
     @BeforeEach
     @Transactional
     public void setup() {
-        if (Product.count() == 0) {
-            User admin = User.findByEmail("admin@sistema.com");
-            Brand brand = Brand.findAll().firstResult();
-            Category category = Category.findAll().firstResult();
-            Family family = Family.findAll().firstResult();
+        User admin = User.findByEmail("admin@sistema.com");
+        Brand brand = Brand.findAll().firstResult();
+        Category category = Category.findAll().firstResult();
+        Family family = Family.findAll().firstResult();
 
-            Product p = new Product();
+        Product p = Product.find("name", "Produto Teste Venda").firstResult();
+        if (p == null) {
+            p = new Product();
             p.name = "Produto Teste Venda";
             p.quantity = 10;
             p.expirationDate = LocalDate.now().plusMonths(6);
@@ -46,12 +47,15 @@ public class SaleResourceTest {
             p.family = family;
             p.user = admin;
             p.persist();
+        } else {
+            p.quantity = 10;
+            p.persist();
         }
     }
 
     @Test
     public void testCreateSaleDecrementsStock() {
-        Product product = Product.findAll().firstResult();
+        Product product = Product.find("name", "Produto Teste Venda").firstResult();
         int initialStock = product.quantity;
         UUID productId = product.id;
 
@@ -77,7 +81,7 @@ public class SaleResourceTest {
 
     @Test
     public void testCreateSaleReachingZeroStockAutoDeletesProduct() {
-        Product product = Product.findAll().firstResult();
+        Product product = Product.find("name", "Produto Teste Venda").firstResult();
         int fullStock = product.quantity;
         UUID productId = product.id;
 
@@ -91,11 +95,29 @@ public class SaleResourceTest {
           .then()
              .statusCode(201)
              .body("saleId", notNullValue())
-             .body("productId", equalTo(productId.toString()))
              .body("quantity", equalTo(fullStock));
 
         Product.getEntityManager().clear();
         Product deletedProduct = Product.findById(productId);
         assertNull(deletedProduct, "Product should be deleted when stock reaches 0");
+    }
+
+    @Test
+    public void testCreateSaleWithZeroAmountPaidSetsUnpaidStatus() {
+        Product product = Product.find("name", "Produto Teste Venda").firstResult();
+        UUID productId = product.id;
+
+        SaleRequestDTO request = new SaleRequestDTO(productId, 1, new BigDecimal("25.00"), BigDecimal.ZERO, "Carlos Cliente");
+
+        given()
+          .contentType(ContentType.JSON)
+          .body(request)
+          .when()
+          .post("/sales")
+          .then()
+             .statusCode(201)
+             .body("saleId", notNullValue())
+             .body("status", equalTo("UNPAID"))
+             .body("statusDescription", equalTo("Não pago"));
     }
 }

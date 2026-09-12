@@ -1,17 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, Stack } from '@mantine/core';
 import { CheckCircle2 } from 'lucide-react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
+import { ProductModal } from '../components/ProductModal';
 import { SaleModal } from '../components/SaleModal';
 import { DeleteModal } from '../components/DeleteModal';
 import {
     useNearExpirationProductsQuery,
+    useUpdateProductMutation,
     useCreateSaleMutation,
     useDeleteProductMutation,
 } from '../hooks/useProductsQuery';
+import {
+    useBrandsQuery,
+    useCategoriesQuery,
+    useFamiliesQuery,
+} from '../hooks/useEntitiesQuery';
+import type { CreateProductDTO } from '../services/productService';
 
 export default function NearExpirationProducts() {
     const { data: products = [], isLoading: loading } = useNearExpirationProductsQuery();
+    const { data: brands = [] } = useBrandsQuery();
+    const { data: categories = [] } = useCategoriesQuery();
+    const { data: families = [] } = useFamiliesQuery();
+
+    // Edit modal states
+    const [modalOpened, setModalOpened] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
     // Sale modal states
     const [saleModalOpened, setSaleModalOpened] = useState(false);
@@ -25,8 +40,33 @@ export default function NearExpirationProducts() {
     // Feedback message
     const [successMessage, setSuccessMessage] = useState('');
 
+    useEffect(() => {
+        if (successMessage) {
+            const timer = setTimeout(() => {
+                setSuccessMessage('');
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [successMessage]);
+
+    const updateProductMutation = useUpdateProductMutation();
     const createSaleMutation = useCreateSaleMutation();
     const deleteProductMutation = useDeleteProductMutation();
+
+    const handleOpenEdit = (product: Product) => {
+        setSelectedProduct(product);
+        setModalOpened(true);
+    };
+
+    const handleSubmitProduct = async (data: CreateProductDTO) => {
+        if (!selectedProduct) return;
+        setSuccessMessage('');
+        await updateProductMutation.mutateAsync({
+            id: selectedProduct.id,
+            data,
+        });
+        setSuccessMessage(`Produto "${data.name}" atualizado com sucesso!`);
+    };
 
     const handleOpenSale = (product: Product) => {
         setProductToSell(product);
@@ -37,7 +77,9 @@ export default function NearExpirationProducts() {
         quantity: number,
         sellingPrice: number,
         amountPaid?: number,
-        customerName?: string
+        customerName?: string,
+        observation?: string,
+        isPersonalUse?: boolean
     ) => {
         if (!productToSell) return;
         setSuccessMessage('');
@@ -47,6 +89,8 @@ export default function NearExpirationProducts() {
             sellingPrice,
             amountPaid,
             customerName,
+            observation,
+            isPersonalUse,
         });
 
         const now = new Date();
@@ -54,7 +98,9 @@ export default function NearExpirationProducts() {
         const formattedDate = now.toLocaleDateString('pt-BR');
 
         setSuccessMessage(
-            `Venda do produto "${productToSell.name}" (${quantity} un.) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
+            isPersonalUse
+                ? `Uso pessoal do produto "${productToSell.name}" (${quantity} un.) registrado com sucesso às ${formattedTime} do dia ${formattedDate}!`
+                : `Venda do produto "${productToSell.name}" (${quantity} un.) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
         );
     };
 
@@ -109,8 +155,19 @@ export default function NearExpirationProducts() {
                 subtitle="Itens com data de validade próxima que exigem atenção"
                 products={products}
                 loading={loading}
+                onEdit={handleOpenEdit}
                 onSale={handleOpenSale}
                 onDelete={handleOpenDelete}
+            />
+
+            <ProductModal
+                opened={modalOpened}
+                onClose={() => setModalOpened(false)}
+                brands={brands}
+                categories={categories}
+                families={families}
+                initialData={selectedProduct}
+                onSubmit={handleSubmitProduct}
             />
 
             <SaleModal

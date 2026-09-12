@@ -11,9 +11,10 @@ import {
     Grid,
     Divider,
     Autocomplete,
+    Checkbox,
+    Textarea,
 } from '@mantine/core';
 import {
-    ShoppingCart,
     DollarSign,
     TrendingUp,
     Package,
@@ -23,6 +24,7 @@ import {
 import type { Product } from './ProductsTable';
 import { customerService, type Customer } from '../services/customerService';
 import { saleSchema, validateWithYup } from '../schemas/validationSchemas';
+import { accentInsensitiveFilter } from '../utils/stringUtils';
 
 interface SaleModalProps {
     opened: boolean;
@@ -32,7 +34,9 @@ interface SaleModalProps {
         quantity: number,
         sellingPrice: number,
         amountPaid?: number,
-        customerName?: string
+        customerName?: string,
+        observation?: string,
+        isPersonalUse?: boolean
     ) => Promise<void>;
 }
 
@@ -46,6 +50,8 @@ export function SaleModal({
     const [sellingPrice, setSellingPrice] = useState<number>(0);
     const [amountPaid, setAmountPaid] = useState<number | string>(0);
     const [customerName, setCustomerName] = useState<string>('');
+    const [observation, setObservation] = useState<string>('');
+    const [isPersonalUse, setIsPersonalUse] = useState<boolean>(false);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -68,6 +74,8 @@ export function SaleModal({
             setSellingPrice(initialPrice);
             setAmountPaid(initialQty * initialPrice);
             setCustomerName('');
+            setObservation('');
+            setIsPersonalUse(false);
         }
     }, [product]);
 
@@ -75,19 +83,45 @@ export function SaleModal({
     const handleQuantityOrPriceChange = (newQty: number, newPrice: number) => {
         setQuantity(newQty);
         setSellingPrice(newPrice);
-        setAmountPaid(newQty * newPrice);
+        if (!isPersonalUse) {
+            setAmountPaid(newQty * newPrice);
+        }
+    };
+
+    const handleTogglePersonalUse = (checked: boolean) => {
+        setIsPersonalUse(checked);
+        clearError('sellingPrice');
+        if (checked) {
+            setSellingPrice(0);
+            setAmountPaid(0);
+        } else {
+            const defaultPrice = product?.sellingPrice || 0;
+            setSellingPrice(defaultPrice);
+            setAmountPaid((quantity || 1) * defaultPrice);
+        }
     };
 
     if (!product) return null;
 
     const availableStock = product.quantity || 0;
-    const purchasePrice = product.purchasePrice || 0;
-    const currentSellingPrice = sellingPrice || 0;
+    const currentSellingPrice = isPersonalUse ? 0 : sellingPrice || 0;
+    const rawPurchasePrice = product.purchasePrice || 0;
+    const effectivePurchasePrice = isPersonalUse
+        ? 0
+        : rawPurchasePrice > 0
+          ? rawPurchasePrice
+          : Number((currentSellingPrice * 0.7).toFixed(2));
 
-    const totalAmount = (quantity || 0) * currentSellingPrice;
-    const currentAmountPaid = Number(amountPaid) || 0;
-    const remainingBalance = Math.max(0, totalAmount - currentAmountPaid);
-    const totalProfit = (quantity || 0) * (currentSellingPrice - purchasePrice);
+    const totalAmount = isPersonalUse
+        ? 0
+        : (quantity || 0) * currentSellingPrice;
+    const currentAmountPaid = isPersonalUse ? 0 : Number(amountPaid) || 0;
+    const remainingBalance = isPersonalUse
+        ? 0
+        : Math.max(0, totalAmount - currentAmountPaid);
+    const totalProfit = isPersonalUse
+        ? 0
+        : (quantity || 0) * (currentSellingPrice - effectivePurchasePrice);
 
     const clearError = (field: string) => {
         if (errors[field]) {
@@ -103,12 +137,13 @@ export function SaleModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        const schema = saleSchema(availableStock);
+        const schema = saleSchema(availableStock, isPersonalUse);
         const { isValid, errors: validationErrors } = await validateWithYup(
             schema,
             {
                 quantity: Number(quantity),
                 sellingPrice: Number(sellingPrice),
+                observation: observation.trim() || undefined,
             }
         );
 
@@ -123,7 +158,9 @@ export function SaleModal({
                 quantity,
                 currentSellingPrice,
                 currentAmountPaid,
-                customerName
+                customerName.trim() || undefined,
+                observation.trim() || undefined,
+                isPersonalUse
             );
             onClose();
         } catch (error) {
@@ -139,25 +176,20 @@ export function SaleModal({
             onClose={onClose}
             title={
                 <Group gap="xs">
-                    <ShoppingCart size={22} color="#12b886" />
+                    <DollarSign size={22} color="#12b886" />
                     <Text fw={700} size="lg">
                         Efetivar Venda de Produto
                     </Text>
                 </Group>
             }
             centered
-            size="md"
+            size="lg"
             radius="md"
         >
             <form onSubmit={handleSubmit} noValidate>
                 <Stack gap="md">
-                    <Paper
-                        p="sm"
-                        withBorder
-                        radius="md"
-                        bg="var(--mantine-color-gray-0)"
-                    >
-                        <Group justify="space-between" align="flex-start">
+                    <Paper p="sm" withBorder radius="md" bg="gray.0">
+                        <Group justify="space-between" align="center">
                             <div>
                                 <Text fw={700} size="md">
                                     {product.name}
@@ -178,6 +210,15 @@ export function SaleModal({
                                         {product.category?.name ||
                                             'Sem Categoria'}
                                     </Badge>
+                                    {product.family?.name && (
+                                        <Badge
+                                            variant="outline"
+                                            color="gray"
+                                            size="sm"
+                                        >
+                                            {product.family.name}
+                                        </Badge>
+                                    )}
                                 </Group>
                             </div>
                             <Group gap={4} align="center">
@@ -195,23 +236,56 @@ export function SaleModal({
 
                     <Autocomplete
                         label="Nome do Cliente (opcional)"
-                        placeholder="Digite ou escolha um cliente cadastrado"
+                        placeholder="Digite ou escolha um cliente"
                         data={customers.map((c) => c.name)}
+                        maxLength={100}
                         value={customerName}
                         onChange={setCustomerName}
+                        filter={accentInsensitiveFilter}
+                        styles={{
+                            dropdown: {
+                                maxHeight: 140,
+                                overflowY: 'auto',
+                            },
+                        }}
                         leftSection={<User size={16} />}
+                    />
+
+                    <Checkbox
+                        label="Uso Pessoal"
+                        checked={isPersonalUse}
+                        onChange={(e) =>
+                            handleTogglePersonalUse(e.currentTarget.checked)
+                        }
+                        color="teal"
+                    />
+
+                    <Textarea
+                        label="Observação (opcional)"
+                        placeholder="Digite alguma observação sobre a venda/uso (máx. 250 caracteres)..."
+                        maxLength={250}
+                        description={`${observation.length}/250`}
+                        value={observation}
+                        error={errors.observation}
+                        onChange={(e) => {
+                            setObservation(e.currentTarget.value);
+                            clearError('observation');
+                        }}
                     />
 
                     <Grid>
                         <Grid.Col span={{ base: 12, sm: 6 }}>
                             <NumberInput
-                                label="Vendido"
+                                label="Quantidade Vendida"
                                 placeholder="Informe a quantidade"
                                 value={quantity}
                                 error={errors.quantity}
                                 onChange={(val) => {
                                     const newQty = Number(val) || 0;
-                                    handleQuantityOrPriceChange(newQty, sellingPrice);
+                                    handleQuantityOrPriceChange(
+                                        newQty,
+                                        sellingPrice
+                                    );
                                     clearError('quantity');
                                 }}
                                 min={1}
@@ -227,9 +301,13 @@ export function SaleModal({
                                 placeholder="0,00"
                                 value={sellingPrice}
                                 error={errors.sellingPrice}
+                                disabled={isPersonalUse}
                                 onChange={(val) => {
                                     const newPrice = Number(val) || 0;
-                                    handleQuantityOrPriceChange(quantity, newPrice);
+                                    handleQuantityOrPriceChange(
+                                        quantity,
+                                        newPrice
+                                    );
                                     clearError('sellingPrice');
                                 }}
                                 prefix="R$ "
@@ -237,57 +315,70 @@ export function SaleModal({
                                 decimalSeparator=","
                                 thousandSeparator="."
                                 selectAllOnFocus
-                                required
+                                required={!isPersonalUse}
                                 min={0}
                             />
                         </Grid.Col>
                     </Grid>
 
-                    <Paper p="xs" withBorder radius="md" bg="blue.0">
-                        <Stack gap="xs">
-                            <Group justify="space-between">
-                                <Group gap={6}>
-                                    <Wallet size={18} color="#1c7ed6" />
-                                    <Text size="sm" fw={700} c="blue.9">
-                                        Pagamento pelo Cliente
-                                    </Text>
+                    {!isPersonalUse && (
+                        <Paper p="xs" withBorder radius="md" bg="blue.0">
+                            <Stack gap="xs">
+                                <Group justify="space-between">
+                                    <Group gap={6}>
+                                        <Wallet size={18} color="#1c7ed6" />
+                                        <Text size="sm" fw={700} c="blue.9">
+                                            Pagamento pelo Cliente
+                                        </Text>
+                                    </Group>
+                                    <Badge
+                                        color={
+                                            remainingBalance === 0
+                                                ? 'teal'
+                                                : 'orange'
+                                        }
+                                        variant="filled"
+                                        size="sm"
+                                    >
+                                        {remainingBalance === 0
+                                            ? 'Totalmente Pago'
+                                            : 'Parcialmente Pago'}
+                                    </Badge>
                                 </Group>
-                                <Badge
-                                    color={remainingBalance === 0 ? 'teal' : 'orange'}
-                                    variant="filled"
-                                    size="sm"
-                                >
-                                    {remainingBalance === 0
-                                        ? 'Totalmente Pago'
-                                        : 'Parcialmente Pago'}
-                                </Badge>
-                            </Group>
 
-                            <NumberInput
-                                label="Valor Já Pago pelo Cliente (R$)"
-                                placeholder="0,00"
-                                value={amountPaid}
-                                onChange={(val) => setAmountPaid(val !== '' ? Number(val) : 0)}
-                                prefix="R$ "
-                                decimalScale={2}
-                                decimalSeparator=","
-                                thousandSeparator="."
-                                selectAllOnFocus
-                                min={0}
-                                max={totalAmount}
-                            />
+                                <NumberInput
+                                    label="Valor Já Pago pelo Cliente (R$)"
+                                    placeholder="0,00"
+                                    value={amountPaid}
+                                    onChange={(val) =>
+                                        setAmountPaid(
+                                            val !== '' ? Number(val) : 0
+                                        )
+                                    }
+                                    prefix="R$ "
+                                    decimalScale={2}
+                                    decimalSeparator=","
+                                    thousandSeparator="."
+                                    selectAllOnFocus
+                                    min={0}
+                                    max={totalAmount}
+                                />
 
-                            {remainingBalance > 0 && (
-                                <Text size="xs" c="orange.8" fw={600}>
-                                    ⚠️ Restante a Pagar / Devedor: R${' '}
-                                    {remainingBalance.toLocaleString('pt-BR', {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    })}
-                                </Text>
-                            )}
-                        </Stack>
-                    </Paper>
+                                {remainingBalance > 0 && (
+                                    <Text size="xs" c="orange.8" fw={600}>
+                                        ⚠️ Restante a Pagar / Devedor: R${' '}
+                                        {remainingBalance.toLocaleString(
+                                            'pt-BR',
+                                            {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                            }
+                                        )}
+                                    </Text>
+                                )}
+                            </Stack>
+                        </Paper>
+                    )}
 
                     <Divider
                         label="Resumo Financeiro da Transação"
@@ -302,10 +393,13 @@ export function SaleModal({
                                 </Text>
                                 <Text fw={600} size="sm">
                                     R${' '}
-                                    {purchasePrice.toLocaleString('pt-BR', {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    })}
+                                    {effectivePurchasePrice.toLocaleString(
+                                        'pt-BR',
+                                        {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                        }
+                                    )}
                                 </Text>
                             </Paper>
                         </Grid.Col>
@@ -335,10 +429,7 @@ export function SaleModal({
                                 }}
                             >
                                 <Group gap={6}>
-                                    <DollarSign
-                                        size={18}
-                                        color="#12b886"
-                                    />
+                                    <DollarSign size={18} color="#12b886" />
                                     <Text size="xs" fw={700} c="teal">
                                         Total da Venda
                                     </Text>
@@ -405,11 +496,13 @@ export function SaleModal({
                         <Button
                             type="submit"
                             color="teal"
-                            leftSection={<ShoppingCart size={16} />}
+                            leftSection={<DollarSign size={16} />}
                             loading={loading}
                             disabled={availableStock <= 0}
                         >
-                            Efetivar Venda
+                            {isPersonalUse
+                                ? 'Registrar Uso Pessoal'
+                                : 'Efetivar Venda'}
                         </Button>
                     </Group>
                 </Stack>

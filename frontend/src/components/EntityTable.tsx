@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { normalizeText } from '../utils/stringUtils';
 import {
     Table,
     Group,
@@ -13,13 +14,16 @@ import {
     Select,
     Center,
     Loader,
+    CloseButton,
 } from '@mantine/core';
 import { Edit, Trash2, Plus, Search, Eye } from 'lucide-react';
 
 export type Entity = {
     id: string;
     name: string;
-    hexColor?: string; // used for Brands, Categories, Families, Customers
+    hexColor?: string; // used for Brands
+    brand?: { id: string; name: string; hexColor?: string }; // used for Families
+    brandId?: string;
     canDelete?: boolean;
 };
 
@@ -29,6 +33,7 @@ interface EntityTableProps {
     items?: Entity[];
     loading?: boolean;
     showColor?: boolean;
+    showBrand?: boolean;
     addButtonLabel?: string;
     onEdit?: (item: Entity) => void;
     onDelete?: (id: string) => void;
@@ -42,6 +47,7 @@ export default function EntityTable({
     items = [],
     loading = false,
     showColor = false,
+    showBrand = false,
     addButtonLabel,
     onEdit,
     onDelete,
@@ -56,10 +62,12 @@ export default function EntityTable({
 
     // filter items by searching
     const filteredItems = items.filter((item) => {
-        const query = search.toLowerCase();
+        const query = normalizeText(search.trim());
+        if (!query) return true;
         return (
-            item.name.toLowerCase().includes(query) ||
-            item.id.toString().includes(query)
+            normalizeText(item.name || '').includes(query) ||
+            normalizeText(item.brand?.name || '').includes(query) ||
+            normalizeText(item.id?.toString() || '').includes(query)
         );
     });
 
@@ -99,6 +107,19 @@ export default function EntityTable({
             <TextInput
                 placeholder={`Pesquisar ${title.toLowerCase()}...`}
                 leftSection={<Search size={16} />}
+                rightSection={
+                    search ? (
+                        <CloseButton
+                            size="sm"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                                setSearch('');
+                                setPage(1);
+                            }}
+                            aria-label="Limpar pesquisa"
+                        />
+                    ) : null
+                }
                 value={search}
                 onChange={(e) => {
                     setSearch(e.currentTarget.value);
@@ -113,6 +134,7 @@ export default function EntityTable({
                     <Table.Thead>
                         <Table.Tr>
                             <Table.Th>Nome</Table.Th>
+                            {showBrand && <Table.Th>Marca</Table.Th>}
                             <Table.Th style={{ textAlign: 'right' }}>
                                 Ações
                             </Table.Th>
@@ -122,7 +144,7 @@ export default function EntityTable({
                     <Table.Tbody>
                         {loading ? (
                             <Table.Tr>
-                                <Table.Td colSpan={2} align="center" py="xl">
+                                <Table.Td colSpan={showBrand ? 3 : 2} align="center" py="xl">
                                     <Center
                                         style={{
                                             flexDirection: 'column',
@@ -153,6 +175,28 @@ export default function EntityTable({
                                         </Group>
                                     </Table.Td>
 
+                                    {showBrand && (
+                                        <Table.Td>
+                                            {item.brand ? (
+                                                <Group gap="xs">
+                                                    {item.brand.hexColor && (
+                                                        <ColorSwatch
+                                                            color={item.brand.hexColor}
+                                                            size={14}
+                                                        />
+                                                    )}
+                                                    <Text size="sm">
+                                                        {item.brand.name}
+                                                    </Text>
+                                                </Group>
+                                            ) : (
+                                                <Text size="sm" c="dimmed">
+                                                    -
+                                                </Text>
+                                            )}
+                                        </Table.Td>
+                                    )}
+
                                     <Table.Td align="right">
                                         <Group gap="xs" justify="flex-end">
                                             {onSummary && (
@@ -180,7 +224,7 @@ export default function EntityTable({
                                                 color="red"
                                                 title={
                                                     item.canDelete === false
-                                                        ? 'Não é possível excluir: existem produtos ou vendas associados'
+                                                        ? 'Não é possível excluir: existem produtos associados'
                                                         : 'Excluir'
                                                 }
                                                 disabled={item.canDelete === false}
@@ -196,7 +240,7 @@ export default function EntityTable({
                             ))
                         ) : (
                             <Table.Tr>
-                                <Table.Td colSpan={2} align="center" py="xl">
+                                <Table.Td colSpan={showBrand ? 3 : 2} align="center" py="xl">
                                     <Text c="dimmed">
                                         Nenhum registro encontrado.
                                     </Text>

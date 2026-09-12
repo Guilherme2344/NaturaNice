@@ -48,6 +48,12 @@ public class Sale extends PanacheEntityBase {
     @Column(name = "status", nullable = true, length = 20, columnDefinition = "varchar(20) default 'PAID'")
     public SaleStatus status = SaleStatus.PAID;
 
+    @Column(name = "observation", length = 2000)
+    public String observation;
+
+    @Column(name = "is_personal_use", nullable = true, columnDefinition = "boolean default false")
+    public Boolean isPersonalUse = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = true)
     public Customer customer;
@@ -61,6 +67,20 @@ public class Sale extends PanacheEntityBase {
 
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL)
     public List<SalePayment> payments;
+
+    public BigDecimal calculateTotalProfit() {
+        if (Boolean.TRUE.equals(isPersonalUse)) {
+            return BigDecimal.ZERO;
+        }
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        BigDecimal total = BigDecimal.ZERO;
+        for (SaleItem item : items) {
+            total = total.add(item.getTotalProfit());
+        }
+        return total;
+    }
     
     // daily sales summary
     public static List<DailySalesSummaryDTO> getDailySummaries(LocalDateTime start, LocalDateTime end, String customerName, User user) {
@@ -71,13 +91,16 @@ public class Sale extends PanacheEntityBase {
         StringBuilder jpql = new StringBuilder(
             "SELECT new com.guiapplications.entities.dto.DailySalesSummaryDTO(" +
             "  s.saleDate, " +
+            "  COALESCE(i.productName, p.name, 'Produto não informado'), " +
             "  COALESCE(c.name, 'Cliente não informado'), " +
             "  SUM(i.sellingPrice * i.quantity), " +
             "  SUM(i.purchasePrice * i.quantity), " +
             "  SUM((i.sellingPrice - i.purchasePrice) * i.quantity), " +
-            "  SUM(i.quantity) " +
+            "  SUM(i.quantity), " +
+            "  s.isPersonalUse, " +
+            "  s.observation " +
             ") " +
-            "FROM SaleItem i JOIN i.sale s LEFT JOIN s.customer c " +
+            "FROM SaleItem i JOIN i.sale s LEFT JOIN i.product p LEFT JOIN s.customer c " +
             "WHERE s.saleDate >= :start AND s.saleDate <= :end AND s.user = :user "
         );
 
@@ -85,7 +108,7 @@ public class Sale extends PanacheEntityBase {
             jpql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :customerName ");
         }
 
-        jpql.append("GROUP BY s.saleDate, COALESCE(c.name, 'Cliente não informado'), s.id ");
+        jpql.append("GROUP BY s.saleDate, COALESCE(i.productName, p.name, 'Produto não informado'), COALESCE(c.name, 'Cliente não informado'), s.id, s.isPersonalUse, s.observation ");
         jpql.append("ORDER BY s.saleDate DESC");
 
         TypedQuery<DailySalesSummaryDTO> query = getEntityManager()

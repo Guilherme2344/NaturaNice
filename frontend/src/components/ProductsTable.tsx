@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { formatExpirationStatus } from '../utils/expirationUtils';
+import { normalizeText, accentInsensitiveFilter } from '../utils/stringUtils';
 import {
     Table,
     Badge,
@@ -16,8 +17,10 @@ import {
     Center,
     Loader,
     Stack,
+    Grid,
+    CloseButton,
 } from '@mantine/core';
-import { Edit, Trash2, Plus, Search, ShoppingCart } from 'lucide-react';
+import { Edit, Trash2, Plus, Search, DollarSign } from 'lucide-react';
 
 export type ExpirationStatus =
     | 'FAR_FROM_EXPIRING'
@@ -44,15 +47,16 @@ export type Product = {
     id: string;
     name: string;
     quantity: number;
-    expirationDate: string;
+    purchaseDate?: string;
+    expirationDate?: string | null;
     purchasePrice: number;
     sellingPrice: number;
     profit: number;
     brand: Brand;
     category: Category;
     family: Family;
-    expirationStatus: ExpirationStatus;
-    expirationStatusDescription: string;
+    expirationStatus?: ExpirationStatus | null;
+    expirationStatusDescription?: string | null;
     canDelete?: boolean;
 };
 
@@ -78,6 +82,9 @@ export default function ProductsTable({
     onSale,
 }: ProductsTableProps) {
     const [search, setSearch] = useState('');
+    const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
     const [activePage, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<string | null>('5');
 
@@ -91,31 +98,44 @@ export default function ProductsTable({
         });
     };
 
-    const getStatusBadgeColor = (status: ExpirationStatus) => {
-        switch (status) {
-            case 'EXPIRED':
-                return 'red';
-            case 'NEAR_EXPIRATION':
-                return 'yellow';
-            default:
-                return 'green';
-        }
-    };
-
-    const formatDate = (dateString: string) => {
-        if (!dateString) return '-';
+    const formatDate = (dateString?: string | null) => {
+        if (!dateString) return 'Indeterminada';
         const [year, month, day] = dateString.split('-');
         return `${day}/${month}/${year}`;
     };
 
+    // Extract unique options for filters
+    const brandOptions = Array.from(
+        new Set(products.map((p) => p.brand?.name).filter((name): name is string => Boolean(name)))
+    ).sort((a, b) => a.localeCompare(b));
+
+    const categoryOptions = Array.from(
+        new Set(products.map((p) => p.category?.name).filter((name): name is string => Boolean(name)))
+    ).sort((a, b) => a.localeCompare(b));
+
+    const familyOptions = Array.from(
+        new Set(
+            products
+                .filter((p) => !selectedBrand || p.brand?.name === selectedBrand)
+                .map((p) => p.family?.name)
+                .filter((name): name is string => Boolean(name))
+        )
+    ).sort((a, b) => a.localeCompare(b));
+
     const filteredProducts = (products || []).filter((product) => {
-        const query = search.toLowerCase();
-        return (
-            product.name?.toLowerCase().includes(query) ||
-            product.brand?.name?.toLowerCase().includes(query) ||
-            product.category?.name?.toLowerCase().includes(query) ||
-            product.family?.name?.toLowerCase().includes(query)
-        );
+        const query = normalizeText(search.trim());
+        const matchesSearch =
+            !query ||
+            normalizeText(product.name || '').includes(query) ||
+            normalizeText(product.brand?.name || '').includes(query) ||
+            normalizeText(product.category?.name || '').includes(query) ||
+            normalizeText(product.family?.name || '').includes(query);
+
+        const matchesBrand = !selectedBrand || product.brand?.name === selectedBrand;
+        const matchesCategory = !selectedCategory || product.category?.name === selectedCategory;
+        const matchesFamily = !selectedFamily || product.family?.name === selectedFamily;
+
+        return matchesSearch && matchesBrand && matchesCategory && matchesFamily;
     });
 
     // total pages
@@ -129,37 +149,115 @@ export default function ProductsTable({
 
     return (
         <Paper shadow="xs" p="md" radius="md" withBorder>
+            {/* Header */}
             <Group justify="space-between" mb="md">
                 <div>
                     <Title order={3}>{title}</Title>
-                    {subtitle && (
-                        <Text size="sm" c="dimmed">
-                            {subtitle}
-                        </Text>
-                    )}
+                    <Text size="sm" c="dimmed">
+                        {subtitle}
+                    </Text>
                 </div>
-                {onAdd && (
-                    <Button
-                        leftSection={<Plus size={16} />}
-                        color="blue"
-                        onClick={onAdd}
-                    >
-                        Novo Produto
-                    </Button>
-                )}
+                <Group>
+                    {onAdd && (
+                        <Button
+                            leftSection={<Plus size={16} />}
+                            color="blue"
+                            onClick={onAdd}
+                        >
+                            Novo Produto
+                        </Button>
+                    )}
+                </Group>
             </Group>
 
-            {/* Search */}
-            <TextInput
-                placeholder="Pesquisar por produto, marca, categoria ou família..."
-                leftSection={<Search size={16} />}
-                value={search}
-                onChange={(e) => {
-                    setSearch(e.currentTarget.value);
-                    setPage(1);
-                }}
-                mb="md"
-            />
+            {/* Filter Bar */}
+            <Grid mb="md" align="center">
+                <Grid.Col span={{ base: 12, sm: 12, md: 4.5 }}>
+                    <TextInput
+                        placeholder="Pesquisar por nome, marca, categoria ou família..."
+                        leftSection={<Search size={16} />}
+                        rightSection={
+                            search ? (
+                                <CloseButton
+                                    size="sm"
+                                    onMouseDown={(event) => event.preventDefault()}
+                                    onClick={() => {
+                                        setSearch('');
+                                        setPage(1);
+                                    }}
+                                    aria-label="Limpar pesquisa"
+                                />
+                            ) : null
+                        }
+                        value={search}
+                        onChange={(e) => {
+                            setSearch(e.currentTarget.value);
+                            setPage(1);
+                        }}
+                    />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 4, md: 2.5 }}>
+                    <Select
+                        placeholder="Filtrar por Marca"
+                        data={brandOptions}
+                        value={selectedBrand}
+                        onChange={(val) => {
+                            setSelectedBrand(val);
+                            setSelectedFamily(null);
+                            setPage(1);
+                        }}
+                        clearable
+                        searchable
+                        filter={accentInsensitiveFilter}
+                        styles={{
+                            dropdown: {
+                                maxHeight: 140,
+                                overflowY: 'auto',
+                            },
+                        }}
+                    />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 4, md: 2.5 }}>
+                    <Select
+                        placeholder="Filtrar por Categoria"
+                        data={categoryOptions}
+                        value={selectedCategory}
+                        onChange={(val) => {
+                            setSelectedCategory(val);
+                            setPage(1);
+                        }}
+                        clearable
+                        searchable
+                        filter={accentInsensitiveFilter}
+                        styles={{
+                            dropdown: {
+                                maxHeight: 140,
+                                overflowY: 'auto',
+                            },
+                        }}
+                    />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 4, md: 2.5 }}>
+                    <Select
+                        placeholder="Filtrar por Família"
+                        data={familyOptions}
+                        value={selectedFamily}
+                        onChange={(val) => {
+                            setSelectedFamily(val);
+                            setPage(1);
+                        }}
+                        clearable
+                        searchable
+                        filter={accentInsensitiveFilter}
+                        styles={{
+                            dropdown: {
+                                maxHeight: 140,
+                                overflowY: 'auto',
+                            },
+                        }}
+                    />
+                </Grid.Col>
+            </Grid>
 
             {/* Table */}
             <Table.ScrollContainer minWidth={1050}>
@@ -232,35 +330,41 @@ export default function ProductsTable({
 
                                     {/* Data de Vencimento formatada */}
                                     <Table.Td style={{ whiteSpace: 'nowrap', minWidth: 160 }}>
-                                        <Stack gap={4} align="flex-start" style={{ whiteSpace: 'nowrap' }}>
-                                            <Text size="sm" style={{ whiteSpace: 'nowrap' }}>
-                                                {formatDate(
-                                                    product.expirationDate
-                                                )}
-                                            </Text>
-                                            {(() => {
-                                                const status = formatExpirationStatus(product.expirationDate);
-                                                if (status.type === 'EXPIRED') {
+                                        {product.expirationDate ? (
+                                            <Stack gap={4} align="flex-start" style={{ whiteSpace: 'nowrap' }}>
+                                                <Text size="sm" style={{ whiteSpace: 'nowrap' }}>
+                                                    {formatDate(
+                                                        product.expirationDate
+                                                    )}
+                                                </Text>
+                                                {(() => {
+                                                    const status = formatExpirationStatus(product.expirationDate);
+                                                    if (status.type === 'EXPIRED') {
+                                                        return (
+                                                            <Text size="xs" fw={700} bg="red.6" c="white" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block', whiteSpace: 'nowrap' }}>
+                                                                {status.text}
+                                                            </Text>
+                                                        );
+                                                    }
+                                                    if (status.type === 'NEAR_EXPIRATION') {
+                                                        return (
+                                                            <Text size="xs" fw={700} bg="yellow.4" c="dark" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block', whiteSpace: 'nowrap' }}>
+                                                                {status.text}
+                                                            </Text>
+                                                        );
+                                                    }
                                                     return (
-                                                        <Text size="xs" fw={700} bg="red.6" c="white" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block', whiteSpace: 'nowrap' }}>
+                                                        <Text size="xs" fw={700} style={{ whiteSpace: 'nowrap' }}>
                                                             {status.text}
                                                         </Text>
                                                     );
-                                                }
-                                                if (status.type === 'NEAR_EXPIRATION') {
-                                                    return (
-                                                        <Text size="xs" fw={700} bg="yellow.4" c="dark" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block', whiteSpace: 'nowrap' }}>
-                                                            {status.text}
-                                                        </Text>
-                                                    );
-                                                }
-                                                return (
-                                                    <Text size="xs" fw={700} style={{ whiteSpace: 'nowrap' }}>
-                                                        {status.text}
-                                                    </Text>
-                                                );
-                                            })()}
-                                        </Stack>
+                                                })()}
+                                            </Stack>
+                                        ) : (
+                                            <Badge variant="light" color="gray" size="sm">
+                                                Indeterminada
+                                            </Badge>
+                                        )}
                                     </Table.Td>
 
                                     {/* Preço de Compra com vírgula */}
@@ -298,7 +402,7 @@ export default function ProductsTable({
                                                         onSale(product)
                                                     }
                                                 >
-                                                    <ShoppingCart size={16} />
+                                                    <DollarSign size={16} />
                                                 </ActionIcon>
                                             )}
 

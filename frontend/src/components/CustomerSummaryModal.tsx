@@ -12,6 +12,8 @@ import {
     Loader,
     Center,
     Alert,
+    Tooltip,
+    ActionIcon,
 } from '@mantine/core';
 import {
     UserCheck,
@@ -21,6 +23,7 @@ import {
     Copy,
     Check,
     History,
+    MessageSquare,
 } from 'lucide-react';
 import {
     customerService,
@@ -335,9 +338,34 @@ export function CustomerSummaryModal({
                                                         </Text>
                                                     </Table.Td>
                                                     <Table.Td>
-                                                        <Text size="xs" fw={600}>
-                                                            {item.productName}
-                                                        </Text>
+                                                        <Group gap={6} align="center" wrap="nowrap">
+                                                            <Text size="xs" fw={600}>
+                                                                {item.productName}
+                                                            </Text>
+                                                            {item.isPersonalUse && (
+                                                                <Badge color="teal" variant="light" size="xs">
+                                                                    Uso Pessoal
+                                                                </Badge>
+                                                            )}
+                                                            {item.observation && (
+                                                                <Tooltip
+                                                                    label={`Obs: ${item.observation}`}
+                                                                    multiline
+                                                                    w={260}
+                                                                    withArrow
+                                                                    position="top"
+                                                                >
+                                                                    <ActionIcon
+                                                                        variant="subtle"
+                                                                        color="yellow.8"
+                                                                        size="xs"
+                                                                        aria-label="Ver Observação"
+                                                                    >
+                                                                        <MessageSquare size={14} />
+                                                                    </ActionIcon>
+                                                                </Tooltip>
+                                                            )}
+                                                        </Group>
                                                     </Table.Td>
                                                     <Table.Td align="center">
                                                         <Text size="xs">{item.quantity}</Text>
@@ -375,7 +403,13 @@ export function CustomerSummaryModal({
                                                     </Table.Td>
                                                     <Table.Td align="center">
                                                         <Badge
-                                                            color={item.remainingAmount === 0 ? 'teal' : 'orange'}
+                                                            color={
+                                                                item.status === 'PAID' || item.remainingAmount === 0
+                                                                    ? 'teal'
+                                                                    : item.status === 'UNPAID' || item.amountPaid === 0
+                                                                    ? 'red'
+                                                                    : 'orange'
+                                                            }
                                                             size="xs"
                                                         >
                                                             {item.statusDescription}

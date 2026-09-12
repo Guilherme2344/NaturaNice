@@ -37,6 +37,18 @@ public class DatabaseMigrationInitializer {
                 "FROM products p WHERE i.product_id = p.id AND (i.product_name IS NULL OR i.product_name = '')"
             ).executeUpdate();
 
+            // Ensure observation and is_personal_use columns exist in sales
+            em.createNativeQuery("ALTER TABLE sales ADD COLUMN IF NOT EXISTS observation VARCHAR(2000)").executeUpdate();
+            em.createNativeQuery("ALTER TABLE sales ADD COLUMN IF NOT EXISTS is_personal_use BOOLEAN DEFAULT FALSE").executeUpdate();
+
+            // Update sales status check constraint to include UNPAID
+            try {
+                em.createNativeQuery("ALTER TABLE sales DROP CONSTRAINT IF EXISTS sales_status_check").executeUpdate();
+                em.createNativeQuery("ALTER TABLE sales ADD CONSTRAINT sales_status_check CHECK (status IN ('PAID', 'PARTIALLY_PAID', 'UNPAID'))").executeUpdate();
+            } catch (Exception e) {
+                LOG.warn("Could not update sales_status_check constraint: " + e.getMessage());
+            }
+
             // Migrate any orphaned null-user records to default admin user
             em.createNativeQuery("UPDATE products SET user_id = (SELECT id FROM users WHERE email = 'admin@sistema.com' LIMIT 1) WHERE user_id IS NULL").executeUpdate();
             em.createNativeQuery("UPDATE brands SET user_id = (SELECT id FROM users WHERE email = 'admin@sistema.com' LIMIT 1) WHERE user_id IS NULL").executeUpdate();

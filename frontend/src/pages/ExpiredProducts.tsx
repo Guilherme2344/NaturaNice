@@ -1,22 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, Stack } from '@mantine/core';
 import { CheckCircle2 } from 'lucide-react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
+import { ProductModal } from '../components/ProductModal';
 import { DeleteModal } from '../components/DeleteModal';
 import {
     useExpiredProductsQuery,
+    useUpdateProductMutation,
     useDeleteProductMutation,
 } from '../hooks/useProductsQuery';
+import {
+    useBrandsQuery,
+    useCategoriesQuery,
+    useFamiliesQuery,
+} from '../hooks/useEntitiesQuery';
+import type { CreateProductDTO } from '../services/productService';
 
 export default function ExpiredProducts() {
     const { data: products = [], isLoading: loading } = useExpiredProductsQuery();
+    const { data: brands = [] } = useBrandsQuery();
+    const { data: categories = [] } = useCategoriesQuery();
+    const { data: families = [] } = useFamiliesQuery();
+
+    const updateProductMutation = useUpdateProductMutation();
+    const deleteProductMutation = useDeleteProductMutation();
+
+    const [modalOpened, setModalOpened] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
     const [deleteModalOpened, setDeleteModalOpened] = useState(false);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
     const [deleteError, setDeleteError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
-    const deleteProductMutation = useDeleteProductMutation();
+    useEffect(() => {
+        if (successMessage) {
+            const timer = setTimeout(() => {
+                setSuccessMessage('');
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [successMessage]);
+
+    const handleOpenEdit = (product: Product) => {
+        setSelectedProduct(product);
+        setModalOpened(true);
+    };
+
+    const handleSubmitProduct = async (data: CreateProductDTO) => {
+        if (!selectedProduct) return;
+        setSuccessMessage('');
+        await updateProductMutation.mutateAsync({
+            id: selectedProduct.id,
+            data,
+        });
+        setSuccessMessage(`Produto "${data.name}" atualizado com sucesso!`);
+    };
 
     const handleOpenDelete = (id: string) => {
         const prod = products.find((p) => p.id === id);
@@ -66,10 +105,21 @@ export default function ExpiredProducts() {
 
             <ProductsTable
                 title="Produtos Vencidos"
-                subtitle="Itens com data expirada que devem ser separados/descartados"
+                subtitle="Itens com data expirada ou com validade indeterminada"
                 products={products}
                 loading={loading}
+                onEdit={handleOpenEdit}
                 onDelete={handleOpenDelete}
+            />
+
+            <ProductModal
+                opened={modalOpened}
+                onClose={() => setModalOpened(false)}
+                brands={brands}
+                categories={categories}
+                families={families}
+                initialData={selectedProduct}
+                onSubmit={handleSubmitProduct}
             />
 
             <DeleteModal

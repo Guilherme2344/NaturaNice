@@ -8,9 +8,15 @@ public record SaleRequestDTO(
     Integer quantity,
     BigDecimal sellingPrice,
     BigDecimal amountPaid,
-    String customerName
+    String customerName,
+    String observation,
+    Boolean isPersonalUse
 ) {
     public SaleRequestDTO(UUID productId, Integer quantity, BigDecimal sellingPrice, String customerName) {
-        this(productId, quantity, sellingPrice, null, customerName);
+        this(productId, quantity, sellingPrice, null, customerName, null, false);
+    }
+
+    public SaleRequestDTO(UUID productId, Integer quantity, BigDecimal sellingPrice, BigDecimal amountPaid, String customerName) {
+        this(productId, quantity, sellingPrice, amountPaid, customerName, null, false);
     }
 }

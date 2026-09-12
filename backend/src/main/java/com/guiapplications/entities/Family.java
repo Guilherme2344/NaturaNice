@@ -27,17 +27,36 @@ public class Family extends PanacheEntityBase {
     public String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "brand_id", nullable = false)
+    public Brand brand;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = true)
     public User user;
 
     public static List<Family> findByNameAndUser(String name, User user) {
         if (name == null || user == null) return List.of();
         String trimmed = name.trim();
-        return list("unaccent(LOWER(name)) = unaccent(LOWER(?1)) AND user = ?2", trimmed, user);
+        return list("SELECT DISTINCT f FROM Family f LEFT JOIN FETCH f.brand WHERE unaccent(LOWER(f.name)) = unaccent(LOWER(?1)) AND f.user = ?2", trimmed, user);
+    }
+
+    public static List<Family> findByNameAndBrandAndUser(String name, Brand brand, User user) {
+        if (name == null || user == null) return List.of();
+        String trimmed = name.trim();
+        if (brand != null) {
+            return list("SELECT DISTINCT f FROM Family f LEFT JOIN FETCH f.brand WHERE unaccent(LOWER(f.name)) = unaccent(LOWER(?1)) AND f.brand = ?2 AND f.user = ?3", trimmed, brand, user);
+        }
+        return findByNameAndUser(name, user);
     }
 
     public static List<Family> listByUser(User user) {
         if (user == null) return List.of();
-        return list("user = ?1 ORDER BY name ASC", user);
+        return list("SELECT DISTINCT f FROM Family f LEFT JOIN FETCH f.brand WHERE f.user = ?1 ORDER BY f.name ASC", user);
+    }
+
+    public static List<Family> listByBrandAndUser(Brand brand, User user) {
+        if (user == null) return List.of();
+        if (brand == null) return listByUser(user);
+        return list("SELECT DISTINCT f FROM Family f LEFT JOIN FETCH f.brand WHERE f.brand = ?1 AND f.user = ?2 ORDER BY f.name ASC", brand, user);
     }
 }

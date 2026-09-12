@@ -4,7 +4,8 @@ import type { Product } from '../components/ProductsTable';
 export interface CreateProductDTO {
     name: string;
     quantity: number;
-    expirationDate: string;
+    purchaseDate?: string;
+    expirationDate?: string | null;
     purchasePrice: number;
     sellingPrice: number;
     brandId?: string;

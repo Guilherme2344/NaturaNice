@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, Stack } from '@mantine/core';
 import { CheckCircle2 } from 'lucide-react';
 import EntityTable from '../components/EntityTable';
@@ -7,6 +7,7 @@ import { EntityModal } from '../components/EntityModal';
 import { DeleteModal } from '../components/DeleteModal';
 import {
     useFamiliesQuery,
+    useBrandsQuery,
     useCreateFamilyMutation,
     useUpdateFamilyMutation,
     useDeleteFamilyMutation,
@@ -15,6 +16,7 @@ import {
 export default function Families() {
     const { data: families = [], isLoading: loadingFamilies } =
         useFamiliesQuery();
+    const { data: brands = [] } = useBrandsQuery();
 
     const createFamilyMutation = useCreateFamilyMutation();
     const updateFamilyMutation = useUpdateFamilyMutation();
@@ -28,6 +30,15 @@ export default function Families() {
     const [deleteError, setDeleteError] = useState('');
 
     const [successMessage, setSuccessMessage] = useState('');
+
+    useEffect(() => {
+        if (successMessage) {
+            const timer = setTimeout(() => {
+                setSuccessMessage('');
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [successMessage]);
 
     const handleOpenAdd = () => {
         setSelectedFamily(null);
@@ -48,7 +59,7 @@ export default function Families() {
         }
     };
 
-    const handleSubmit = async (values: { name: string }) => {
+    const handleSubmit = async (values: { name: string; brandId?: string }) => {
         setSuccessMessage('');
         if (selectedFamily) {
             await updateFamilyMutation.mutateAsync({
@@ -111,6 +122,7 @@ export default function Families() {
                 addButtonLabel="Nova Família"
                 items={families}
                 loading={loadingFamilies}
+                showBrand
                 onAdd={handleOpenAdd}
                 onEdit={handleOpenEdit}
                 onDelete={handleOpenDelete}
@@ -124,6 +136,8 @@ export default function Families() {
                         ? 'Editar Família'
                         : 'Cadastrar Nova Família'
                 }
+                showBrand
+                brands={brands}
                 initialData={selectedFamily}
                 onSubmit={handleSubmit}
             />

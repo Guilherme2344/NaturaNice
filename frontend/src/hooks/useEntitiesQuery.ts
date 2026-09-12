@@ -18,11 +18,11 @@ export function useCategoriesQuery() {
     });
 }
 
-// Fetch all product families
-export function useFamiliesQuery() {
+// Fetch all product families (optional brand filter)
+export function useFamiliesQuery(brandId?: string) {
     return useQuery({
-        queryKey: ['families'],
-        queryFn: () => entityService.getFamilies(),
+        queryKey: ['families', brandId || 'all'],
+        queryFn: () => entityService.getFamilies(brandId),
     });
 }
 
@@ -112,7 +112,7 @@ export function useDeleteCategoryMutation() {
 export function useCreateFamilyMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (data: { name: string }) => entityService.createFamily(data),
+        mutationFn: (data: { name: string; brandId?: string }) => entityService.createFamily(data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['families'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -124,7 +124,7 @@ export function useCreateFamilyMutation() {
 export function useUpdateFamilyMutation() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ id, data }: { id: string; data: { name: string } }) =>
+        mutationFn: ({ id, data }: { id: string; data: { name: string; brandId?: string } }) =>
             entityService.updateFamily(id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['families'] });
