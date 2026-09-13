@@ -18,8 +18,11 @@ import { Plus, Layers, FolderTree } from 'lucide-react';
 import type { CreateProductDTO } from '../services/productService';
 import type { Product } from '../components/ProductsTable';
 import type { Entity } from '../components/EntityTable';
+import type { ProductBatch } from '../services/productBatchService';
 import { productSchema, validateWithYup } from '../schemas/validationSchemas';
 import { useCreateBrandMutation } from '../hooks/useEntitiesQuery';
+import { useUpdateProductBatchMutation } from '../hooks/useProductBatchesQuery';
+import { getTodayString } from '../utils/expirationUtils';
 import { accentInsensitiveFilter } from '../utils/stringUtils';
 
 interface ProductModalProps {
@@ -29,10 +32,9 @@ interface ProductModalProps {
     categories: Entity[];
     families: Entity[];
     initialData?: Product | null;
+    initialBatch?: ProductBatch | null;
     onSubmit: (data: CreateProductDTO) => Promise<void>;
 }
-
-const getTodayString = () => new Date().toISOString().split('T')[0];
 
 export function ProductModal({
     opened,
@@ -41,6 +43,7 @@ export function ProductModal({
     categories,
     families,
     initialData,
+    initialBatch,
     onSubmit,
 }: ProductModalProps) {
     const [name, setName] = useState('');
@@ -56,6 +59,7 @@ export function ProductModal({
     const [loading, setLoading] = useState(false);
 
     const createBrandMutation = useCreateBrandMutation();
+    const updateBatchMutation = useUpdateProductBatchMutation();
 
     const [quickBrandModalOpened, setQuickBrandModalOpened] = useState(false);
     const [quickBrandName, setQuickBrandName] = useState('');
@@ -70,18 +74,29 @@ export function ProductModal({
             setErrors({});
             if (initialData) {
                 setName(initialData.name || '');
-                setQuantity(initialData.quantity || 0);
-                setPurchaseDate(initialData.purchaseDate || getTodayString());
-                const hasExp = Boolean(initialData.expirationDate);
-                setIsIndeterminateExpiration(!hasExp);
-                setExpirationDate(initialData.expirationDate || '');
-                setPurchasePrice(initialData.purchasePrice || 0);
-                setSellingPrice(initialData.sellingPrice || 0);
                 setBrandId(
                     initialData.brand?.id ? String(initialData.brand.id) : null
                 );
                 setCategoryName(initialData.category?.name || '');
                 setFamilyName(initialData.family?.name || '');
+
+                if (initialBatch) {
+                    setQuantity(initialBatch.quantity || 0);
+                    setPurchaseDate(initialBatch.purchaseDate || getTodayString());
+                    const hasExp = Boolean(initialBatch.expirationDate);
+                    setIsIndeterminateExpiration(!hasExp);
+                    setExpirationDate(initialBatch.expirationDate || '');
+                    setPurchasePrice(initialBatch.purchasePrice || 0);
+                    setSellingPrice(initialBatch.sellingPrice || 0);
+                } else {
+                    setQuantity(initialData.quantity || 0);
+                    setPurchaseDate(initialData.purchaseDate || getTodayString());
+                    const hasExp = Boolean(initialData.expirationDate);
+                    setIsIndeterminateExpiration(!hasExp);
+                    setExpirationDate(initialData.expirationDate || '');
+                    setPurchasePrice(initialData.purchasePrice || 0);
+                    setSellingPrice(initialData.sellingPrice || 0);
+                }
             } else {
                 setName('');
                 setQuantity(1);
@@ -95,7 +110,7 @@ export function ProductModal({
                 setFamilyName('');
             }
         }
-    }, [opened, initialData]);
+    }, [opened, initialData, initialBatch]);
 
     const clearError = (field: string) => {
         if (errors[field]) {
@@ -218,6 +233,21 @@ export function ProductModal({
                 familyName: familyName.trim(),
             };
 
+            // If editing a specific batch of a multi-batch product
+            if (initialData && initialBatch) {
+                await updateBatchMutation.mutateAsync({
+                    id: initialBatch.id,
+                    data: {
+                        productId: initialData.id,
+                        quantity: Number(quantity) || 0,
+                        purchaseDate: effectivePurchaseDate,
+                        expirationDate: isIndeterminateExpiration ? null : expirationDate,
+                        purchasePrice: Number(purchasePrice) || 0,
+                        sellingPrice: Number(sellingPrice) || 0,
+                    },
+                });
+            }
+
             await onSubmit(payload);
             onClose();
         } catch (error: any) {
@@ -230,14 +260,30 @@ export function ProductModal({
         }
     };
 
+    let modalTitle = 'Cadastrar Novo Produto';
+    if (initialData) {
+        const batchCount = (initialData.batches || []).length;
+        if (initialBatch && batchCount > 1) {
+            const sortedBatches = (initialData.batches || []).slice().sort((a, b) => {
+                if (!a.expirationDate && !b.expirationDate) return 0;
+                if (!a.expirationDate) return 1;
+                if (!b.expirationDate) return -1;
+                return a.expirationDate.localeCompare(b.expirationDate);
+            });
+            const batchIdx = sortedBatches.findIndex((b) => b.id === initialBatch.id);
+            const batchNum = batchIdx >= 0 ? batchIdx + 1 : 1;
+            modalTitle = `Editar Produto - Lote ${batchNum}`;
+        } else {
+            modalTitle = 'Editar Produto';
+        }
+    }
+
     return (
         <>
             <Modal
                 opened={opened}
                 onClose={onClose}
-                title={
-                    initialData ? 'Editar Produto' : 'Cadastrar Novo Produto'
-                }
+                title={modalTitle}
                 size="lg"
                 centered
                 radius="md"

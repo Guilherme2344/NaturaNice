@@ -12,8 +12,8 @@ import {
     Loader,
     Center,
     Alert,
-    Tooltip,
     ActionIcon,
+    Popover,
 } from '@mantine/core';
 import {
     UserCheck,
@@ -31,6 +31,7 @@ import {
     type CustomerSummary,
     type CustomerPurchaseItem,
 } from '../services/customerService';
+import { formatDateDisplay } from '../utils/expirationUtils';
 import { ProductPaymentModal } from './ProductPaymentModal';
 
 interface CustomerSummaryModalProps {
@@ -110,9 +111,7 @@ export function CustomerSummaryModal({
         if (pendingItems.length > 0) {
             text += `🛍️ *Produtos em Aberto (A Pagar):*\n`;
             pendingItems.forEach((item) => {
-                const dateStr = item.saleDate
-                    ? new Date(item.saleDate).toLocaleDateString('pt-BR')
-                    : '';
+                const dateStr = formatDateDisplay(item.saleDate);
                 const itemTotal = item.totalAmount.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
@@ -122,9 +121,7 @@ export function CustomerSummaryModal({
 
                 if (item.payments && item.payments.length > 0) {
                     item.payments.forEach((p, idx) => {
-                        const pDateStr = p.paymentDate
-                            ? new Date(p.paymentDate).toLocaleDateString('pt-BR')
-                            : '';
+                        const pDateStr = formatDateDisplay(p.paymentDate);
                         const pAmount = p.amount.toLocaleString('pt-BR', {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
@@ -334,7 +331,7 @@ export function CustomerSummaryModal({
                                                 <Table.Tr key={item.saleId}>
                                                     <Table.Td>
                                                         <Text size="xs">
-                                                            {new Date(item.saleDate).toLocaleDateString('pt-BR')}
+                                                            {formatDateDisplay(item.saleDate)}
                                                         </Text>
                                                     </Table.Td>
                                                     <Table.Td>
@@ -348,22 +345,27 @@ export function CustomerSummaryModal({
                                                                 </Badge>
                                                             )}
                                                             {item.observation && (
-                                                                <Tooltip
-                                                                    label={`Obs: ${item.observation}`}
-                                                                    multiline
-                                                                    w={260}
-                                                                    withArrow
-                                                                    position="top"
-                                                                >
-                                                                    <ActionIcon
-                                                                        variant="subtle"
-                                                                        color="yellow.8"
-                                                                        size="xs"
-                                                                        aria-label="Ver Observação"
-                                                                    >
-                                                                        <MessageSquare size={14} />
-                                                                    </ActionIcon>
-                                                                </Tooltip>
+                                                                <Popover width={260} shadow="md" withArrow position="top">
+                                                                    <Popover.Target>
+                                                                        <ActionIcon
+                                                                            variant="light"
+                                                                            color="blue"
+                                                                            size="xs"
+                                                                            aria-label="Ver Observação"
+                                                                            style={{ cursor: 'pointer' }}
+                                                                        >
+                                                                            <MessageSquare size={12} />
+                                                                        </ActionIcon>
+                                                                    </Popover.Target>
+                                                                    <Popover.Dropdown p="xs">
+                                                                        <Text size="xs" fw={700} c="dimmed" mb={4}>
+                                                                            Observação da Venda:
+                                                                        </Text>
+                                                                        <Text size="xs" style={{ whiteSpace: 'pre-wrap' }}>
+                                                                            {item.observation}
+                                                                        </Text>
+                                                                    </Popover.Dropdown>
+                                                                </Popover>
                                                             )}
                                                         </Group>
                                                     </Table.Td>

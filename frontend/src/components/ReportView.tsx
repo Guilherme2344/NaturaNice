@@ -11,8 +11,8 @@ import {
     Loader,
     Center,
     Stack,
-    Tooltip,
     ActionIcon,
+    Popover,
 } from '@mantine/core';
 import {
     DollarSign,
@@ -433,22 +433,27 @@ export function ReportView({
                                             </Table.Td>
                                             <Table.Td style={{ textAlign: 'center' }}>
                                                 {row.observation && (
-                                                    <Tooltip
-                                                        label={`Obs: ${row.observation}`}
-                                                        multiline
-                                                        w={260}
-                                                        withArrow
-                                                        position="top"
-                                                    >
-                                                        <ActionIcon
-                                                            variant="subtle"
-                                                            color="yellow.8"
-                                                            size="sm"
-                                                            aria-label="Ver Observação"
-                                                        >
-                                                            <MessageSquare size={16} />
-                                                        </ActionIcon>
-                                                    </Tooltip>
+                                                    <Popover width={260} shadow="md" withArrow position="top">
+                                                        <Popover.Target>
+                                                            <ActionIcon
+                                                                variant="light"
+                                                                color="blue"
+                                                                size="xs"
+                                                                aria-label="Ver Observação"
+                                                                style={{ cursor: 'pointer' }}
+                                                            >
+                                                                <MessageSquare size={12} />
+                                                            </ActionIcon>
+                                                        </Popover.Target>
+                                                        <Popover.Dropdown p="xs">
+                                                            <Text size="xs" fw={700} c="dimmed" mb={4}>
+                                                                Observação da Venda:
+                                                            </Text>
+                                                            <Text size="xs" style={{ whiteSpace: 'pre-wrap' }}>
+                                                                {row.observation}
+                                                            </Text>
+                                                        </Popover.Dropdown>
+                                                    </Popover>
                                                 )}
                                             </Table.Td>
                                         </Table.Tr>

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import com.guiapplications.entities.Customer;
@@ -45,7 +46,8 @@ public class SaleService {
             throw new ResourceNotFoundException("Produto com ID " + productId + " não encontrado.");
         }
 
-        int currentStock = product.quantity != null ? product.quantity : 0;
+        List<com.guiapplications.entities.ProductBatch> existingExtraBatches = com.guiapplications.entities.ProductBatch.findByProductAndUser(product, user);
+        int currentStock = (product.quantity != null ? product.quantity : 0) + existingExtraBatches.stream().mapToInt(b -> b.quantity != null ? b.quantity : 0).sum();
         if (dto.quantity() > currentStock) {
             throw new IllegalArgumentException(
                 "Quantidade solicitada (" + dto.quantity() + ") é maior do que o estoque disponível (" + currentStock + ")."
@@ -123,14 +125,88 @@ public class SaleService {
             initialPayment.persist();
         }
 
-        // 2. Update stock or auto-delete product if quantity reaches 0
-        int newStock = currentStock - dto.quantity();
-        if (newStock <= 0) {
-            item.product = null;
-            SaleItem.update("product = null WHERE product.id = ?1", productId);
-            product.delete();
+        // 2. Deduct stock from specific batch or FEFO order
+        if (dto.batchId() != null) {
+            if (dto.batchId().equals(product.id)) {
+                // Deduct from Lote 1 (Product)
+                if (!isPersonalUse && product.purchasePrice != null) {
+                    unitPurchasePrice = product.purchasePrice;
+                }
+                product.quantity = product.quantity - dto.quantity();
+            } else {
+                // Deduct from extra batch in product_batches
+                com.guiapplications.entities.ProductBatch selectedBatch = com.guiapplications.entities.ProductBatch.findById(dto.batchId());
+                if (selectedBatch != null) {
+                    if (!isPersonalUse && selectedBatch.purchasePrice != null) {
+                        unitPurchasePrice = selectedBatch.purchasePrice;
+                    }
+                    selectedBatch.quantity = selectedBatch.quantity - dto.quantity();
+                    if (selectedBatch.quantity <= 0) {
+                        selectedBatch.delete();
+                    } else {
+                        selectedBatch.persist();
+                    }
+                }
+            }
         } else {
-            product.quantity = newStock;
+            // FEFO automatic deduction
+            int toDeduct = dto.quantity();
+            // Build candidate list sorted by expiration date
+            List<BatchCandidate> candidates = new ArrayList<>();
+            candidates.add(new BatchCandidate(product.id, true, product.quantity, product.expirationDate, product.purchaseDate));
+            for (com.guiapplications.entities.ProductBatch pb : existingExtraBatches) {
+                candidates.add(new BatchCandidate(pb.id, false, pb.quantity, pb.expirationDate, pb.purchaseDate));
+            }
+            candidates.sort((c1, c2) -> {
+                if (c1.expDate == null && c2.expDate == null) return 0;
+                if (c1.expDate == null) return 1;
+                if (c2.expDate == null) return -1;
+                int cmp = c1.expDate.compareTo(c2.expDate);
+                if (cmp != 0) return cmp;
+                if (c1.purDate == null || c2.purDate == null) return 0;
+                return c1.purDate.compareTo(c2.purDate);
+            });
+
+            for (BatchCandidate c : candidates) {
+                if (toDeduct <= 0) break;
+                if (c.isLote1) {
+                    int deduct = Math.min(product.quantity, toDeduct);
+                    product.quantity -= deduct;
+                    toDeduct -= deduct;
+                } else {
+                    com.guiapplications.entities.ProductBatch pb = com.guiapplications.entities.ProductBatch.findById(c.id);
+                    if (pb != null) {
+                        int deduct = Math.min(pb.quantity, toDeduct);
+                        pb.quantity -= deduct;
+                        toDeduct -= deduct;
+                        if (pb.quantity <= 0) {
+                            pb.delete();
+                        } else {
+                            pb.persist();
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Stock promotion or deletion
+        if (product.quantity <= 0) {
+            List<com.guiapplications.entities.ProductBatch> remainingExtra = com.guiapplications.entities.ProductBatch.findByProductAndUser(product, user);
+            if (remainingExtra != null && !remainingExtra.isEmpty()) {
+                com.guiapplications.entities.ProductBatch oldestRemaining = remainingExtra.get(0);
+                product.quantity = oldestRemaining.quantity + product.quantity;
+                product.purchaseDate = oldestRemaining.purchaseDate;
+                product.expirationDate = oldestRemaining.expirationDate;
+                product.purchasePrice = oldestRemaining.purchasePrice;
+                product.sellingPrice = oldestRemaining.sellingPrice;
+                oldestRemaining.delete();
+                product.persist();
+            } else {
+                item.product = null;
+                SaleItem.update("product = null WHERE product.id = ?1", productId);
+                product.delete();
+            }
+        } else {
             product.persist();
         }
 
@@ -196,4 +272,12 @@ public class SaleService {
         payment.amount = amount;
         payment.persist();
     }
+
+    private record BatchCandidate(
+        UUID id,
+        boolean isLote1,
+        int quantity,
+        java.time.LocalDate expDate,
+        java.time.LocalDate purDate
+    ) {}
 }

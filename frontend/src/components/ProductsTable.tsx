@@ -19,8 +19,9 @@ import {
     Stack,
     Grid,
     CloseButton,
+    Popover,
 } from '@mantine/core';
-import { Edit, Trash2, Plus, Search, DollarSign } from 'lucide-react';
+import { Edit, Trash2, Plus, Search, DollarSign, Boxes } from 'lucide-react';
 
 export type ExpirationStatus =
     | 'FAR_FROM_EXPIRING'
@@ -43,6 +44,17 @@ export type Family = {
     name: string;
 };
 
+export type ProductBatch = {
+    id: string;
+    productId: string;
+    productName?: string;
+    quantity: number;
+    purchaseDate: string;
+    expirationDate?: string | null;
+    purchasePrice: number;
+    sellingPrice: number;
+};
+
 export type Product = {
     id: string;
     name: string;
@@ -58,6 +70,7 @@ export type Product = {
     expirationStatus?: ExpirationStatus | null;
     expirationStatusDescription?: string | null;
     canDelete?: boolean;
+    batches?: ProductBatch[];
 };
 
 interface ProductsTableProps {
@@ -69,6 +82,7 @@ interface ProductsTableProps {
     onDelete?: (id: string) => void;
     onAdd?: () => void;
     onSale?: (product: Product) => void;
+    onAddLote?: (product: Product) => void;
 }
 
 export default function ProductsTable({
@@ -80,10 +94,13 @@ export default function ProductsTable({
     onDelete,
     onAdd,
     onSale,
+    onAddLote,
 }: ProductsTableProps) {
     const [search, setSearch] = useState('');
     const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(
+        null
+    );
     const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
     const [activePage, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<string | null>('5');
@@ -106,17 +123,27 @@ export default function ProductsTable({
 
     // Extract unique options for filters
     const brandOptions = Array.from(
-        new Set(products.map((p) => p.brand?.name).filter((name): name is string => Boolean(name)))
+        new Set(
+            products
+                .map((p) => p.brand?.name)
+                .filter((name): name is string => Boolean(name))
+        )
     ).sort((a, b) => a.localeCompare(b));
 
     const categoryOptions = Array.from(
-        new Set(products.map((p) => p.category?.name).filter((name): name is string => Boolean(name)))
+        new Set(
+            products
+                .map((p) => p.category?.name)
+                .filter((name): name is string => Boolean(name))
+        )
     ).sort((a, b) => a.localeCompare(b));
 
     const familyOptions = Array.from(
         new Set(
             products
-                .filter((p) => !selectedBrand || p.brand?.name === selectedBrand)
+                .filter(
+                    (p) => !selectedBrand || p.brand?.name === selectedBrand
+                )
                 .map((p) => p.family?.name)
                 .filter((name): name is string => Boolean(name))
         )
@@ -131,11 +158,16 @@ export default function ProductsTable({
             normalizeText(product.category?.name || '').includes(query) ||
             normalizeText(product.family?.name || '').includes(query);
 
-        const matchesBrand = !selectedBrand || product.brand?.name === selectedBrand;
-        const matchesCategory = !selectedCategory || product.category?.name === selectedCategory;
-        const matchesFamily = !selectedFamily || product.family?.name === selectedFamily;
+        const matchesBrand =
+            !selectedBrand || product.brand?.name === selectedBrand;
+        const matchesCategory =
+            !selectedCategory || product.category?.name === selectedCategory;
+        const matchesFamily =
+            !selectedFamily || product.family?.name === selectedFamily;
 
-        return matchesSearch && matchesBrand && matchesCategory && matchesFamily;
+        return (
+            matchesSearch && matchesBrand && matchesCategory && matchesFamily
+        );
     });
 
     // total pages
@@ -180,7 +212,9 @@ export default function ProductsTable({
                             search ? (
                                 <CloseButton
                                     size="sm"
-                                    onMouseDown={(event) => event.preventDefault()}
+                                    onMouseDown={(event) =>
+                                        event.preventDefault()
+                                    }
                                     onClick={() => {
                                         setSearch('');
                                         setPage(1);
@@ -264,15 +298,42 @@ export default function ProductsTable({
                 <Table striped highlightOnHover verticalSpacing="sm">
                     <Table.Thead>
                         <Table.Tr>
-                            <Table.Th style={{ whiteSpace: 'nowrap', minWidth: 120 }}>Marca</Table.Th>
-                            <Table.Th style={{ minWidth: 150 }}>Produto</Table.Th>
-                            <Table.Th style={{ minWidth: 150 }}>Categoria / Família</Table.Th>
-                            <Table.Th style={{ whiteSpace: 'nowrap', minWidth: 70 }}>Qtd</Table.Th>
-                            <Table.Th style={{ whiteSpace: 'nowrap', minWidth: 160 }}>Data de Vencimento</Table.Th>
-                            <Table.Th style={{ whiteSpace: 'nowrap' }}>Valor Compra</Table.Th>
-                            <Table.Th style={{ whiteSpace: 'nowrap' }}>Valor Venda</Table.Th>
-                            <Table.Th style={{ whiteSpace: 'nowrap' }}>Resultado</Table.Th>
-                            <Table.Th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                            <Table.Th
+                                style={{ whiteSpace: 'nowrap', minWidth: 120 }}
+                            >
+                                Marca
+                            </Table.Th>
+                            <Table.Th style={{ minWidth: 150 }}>
+                                Produto
+                            </Table.Th>
+                            <Table.Th style={{ minWidth: 150 }}>
+                                Categoria / Família
+                            </Table.Th>
+                            <Table.Th
+                                style={{ whiteSpace: 'nowrap', minWidth: 70 }}
+                            >
+                                Qtd
+                            </Table.Th>
+                            <Table.Th
+                                style={{ whiteSpace: 'nowrap', minWidth: 160 }}
+                            >
+                                Data de Vencimento
+                            </Table.Th>
+                            <Table.Th style={{ whiteSpace: 'nowrap' }}>
+                                Valor Compra
+                            </Table.Th>
+                            <Table.Th style={{ whiteSpace: 'nowrap' }}>
+                                Valor Venda
+                            </Table.Th>
+                            <Table.Th style={{ whiteSpace: 'nowrap' }}>
+                                Resultado
+                            </Table.Th>
+                            <Table.Th
+                                style={{
+                                    textAlign: 'right',
+                                    whiteSpace: 'nowrap',
+                                }}
+                            >
                                 Ações
                             </Table.Th>
                         </Table.Tr>
@@ -307,7 +368,10 @@ export default function ProductsTable({
                                                 }
                                                 size={14}
                                             />
-                                            <Text size="sm" style={{ whiteSpace: 'nowrap' }}>
+                                            <Text
+                                                size="sm"
+                                                style={{ whiteSpace: 'nowrap' }}
+                                            >
                                                 {product.brand?.name || '-'}
                                             </Text>
                                         </Group>
@@ -324,64 +388,651 @@ export default function ProductsTable({
                                         </Text>
                                     </Table.Td>
 
-                                    <Table.Td fw={500} style={{ whiteSpace: 'nowrap' }}>
+                                    <Table.Td
+                                        fw={500}
+                                        style={{ whiteSpace: 'nowrap' }}
+                                    >
                                         {product.quantity} un
                                     </Table.Td>
 
                                     {/* Data de Vencimento formatada */}
-                                    <Table.Td style={{ whiteSpace: 'nowrap', minWidth: 160 }}>
-                                        {product.expirationDate ? (
-                                            <Stack gap={4} align="flex-start" style={{ whiteSpace: 'nowrap' }}>
-                                                <Text size="sm" style={{ whiteSpace: 'nowrap' }}>
-                                                    {formatDate(
-                                                        product.expirationDate
-                                                    )}
-                                                </Text>
-                                                {(() => {
-                                                    const status = formatExpirationStatus(product.expirationDate);
-                                                    if (status.type === 'EXPIRED') {
+                                    <Table.Td
+                                        style={{
+                                            whiteSpace: 'nowrap',
+                                            minWidth: 160,
+                                        }}
+                                    >
+                                        <Group
+                                            gap={6}
+                                            align="center"
+                                            wrap="nowrap"
+                                        >
+                                            {product.expirationDate ? (
+                                                <Stack
+                                                    gap={4}
+                                                    align="flex-start"
+                                                    style={{
+                                                        whiteSpace: 'nowrap',
+                                                    }}
+                                                >
+                                                    <Text
+                                                        size="sm"
+                                                        style={{
+                                                            whiteSpace:
+                                                                'nowrap',
+                                                        }}
+                                                    >
+                                                        {formatDate(
+                                                            product.expirationDate
+                                                        )}
+                                                    </Text>
+                                                    {(() => {
+                                                        const status =
+                                                            formatExpirationStatus(
+                                                                product.expirationDate
+                                                            );
+                                                        if (
+                                                            status.type ===
+                                                            'EXPIRED'
+                                                        ) {
+                                                            return (
+                                                                <Text
+                                                                    size="xs"
+                                                                    fw={700}
+                                                                    bg="red.6"
+                                                                    c="white"
+                                                                    px="xs"
+                                                                    py={2}
+                                                                    style={{
+                                                                        borderRadius: 4,
+                                                                        display:
+                                                                            'inline-block',
+                                                                        whiteSpace:
+                                                                            'nowrap',
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        status.text
+                                                                    }
+                                                                </Text>
+                                                            );
+                                                        }
+                                                        if (
+                                                            status.type ===
+                                                            'NEAR_EXPIRATION'
+                                                        ) {
+                                                            return (
+                                                                <Text
+                                                                    size="xs"
+                                                                    fw={700}
+                                                                    bg="yellow.4"
+                                                                    c="dark"
+                                                                    px="xs"
+                                                                    py={2}
+                                                                    style={{
+                                                                        borderRadius: 4,
+                                                                        display:
+                                                                            'inline-block',
+                                                                        whiteSpace:
+                                                                            'nowrap',
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        status.text
+                                                                    }
+                                                                </Text>
+                                                            );
+                                                        }
                                                         return (
-                                                            <Text size="xs" fw={700} bg="red.6" c="white" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block', whiteSpace: 'nowrap' }}>
+                                                            <Text
+                                                                size="xs"
+                                                                fw={700}
+                                                                style={{
+                                                                    whiteSpace:
+                                                                        'nowrap',
+                                                                }}
+                                                            >
                                                                 {status.text}
                                                             </Text>
                                                         );
-                                                    }
-                                                    if (status.type === 'NEAR_EXPIRATION') {
-                                                        return (
-                                                            <Text size="xs" fw={700} bg="yellow.4" c="dark" px="xs" py={2} style={{ borderRadius: 4, display: 'inline-block', whiteSpace: 'nowrap' }}>
-                                                                {status.text}
-                                                            </Text>
+                                                    })()}
+                                                </Stack>
+                                            ) : (
+                                                <Badge
+                                                    variant="light"
+                                                    color="gray"
+                                                    size="sm"
+                                                >
+                                                    Indeterminada
+                                                </Badge>
+                                            )}
+
+                                            {(() => {
+                                                const sortedBatches = (
+                                                    product.batches || []
+                                                )
+                                                    .slice()
+                                                    .sort((a, b) => {
+                                                        if (
+                                                            !a.expirationDate &&
+                                                            !b.expirationDate
+                                                        )
+                                                            return 0;
+                                                        if (!a.expirationDate)
+                                                            return 1;
+                                                        if (!b.expirationDate)
+                                                            return -1;
+                                                        return a.expirationDate.localeCompare(
+                                                            b.expirationDate
                                                         );
-                                                    }
-                                                    return (
-                                                        <Text size="xs" fw={700} style={{ whiteSpace: 'nowrap' }}>
-                                                            {status.text}
-                                                        </Text>
-                                                    );
-                                                })()}
-                                            </Stack>
-                                        ) : (
-                                            <Badge variant="light" color="gray" size="sm">
-                                                Indeterminada
-                                            </Badge>
-                                        )}
+                                                    });
+                                                return sortedBatches.length >
+                                                    1 ? (
+                                                    <Popover
+                                                        width={280}
+                                                        shadow="md"
+                                                        withArrow
+                                                        position="top"
+                                                    >
+                                                        <Popover.Target>
+                                                            <ActionIcon
+                                                                size="xs"
+                                                                variant="light"
+                                                                color="blue"
+                                                                style={{
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                            >
+                                                                <Plus
+                                                                    size={12}
+                                                                />
+                                                            </ActionIcon>
+                                                        </Popover.Target>
+                                                        <Popover.Dropdown p="xs">
+                                                            <Text
+                                                                size="xs"
+                                                                fw={700}
+                                                                c="dimmed"
+                                                                mb={6}
+                                                            >
+                                                                Data de
+                                                                Vencimento por
+                                                                Lote (
+                                                                {
+                                                                    sortedBatches.length
+                                                                }{' '}
+                                                                lotes):
+                                                            </Text>
+                                                            <Stack
+                                                                gap={4}
+                                                                style={
+                                                                    sortedBatches.length >= 4
+                                                                        ? {
+                                                                              maxHeight: 75,
+                                                                              overflowY: 'auto',
+                                                                              paddingRight: 4,
+                                                                          }
+                                                                        : undefined
+                                                                }
+                                                            >
+                                                                {sortedBatches.map(
+                                                                    (
+                                                                        batch,
+                                                                        idx
+                                                                    ) => (
+                                                                        <Group
+                                                                            key={
+                                                                                batch.id ||
+                                                                                idx
+                                                                            }
+                                                                            justify="space-between"
+                                                                            wrap="nowrap"
+                                                                        >
+                                                                            <Text
+                                                                                size="xs"
+                                                                                fw={
+                                                                                    500
+                                                                                }
+                                                                            >
+                                                                                Lote{' '}
+                                                                                {idx +
+                                                                                    1}{' '}
+                                                                                (
+                                                                                {
+                                                                                    batch.quantity
+                                                                                }{' '}
+                                                                                un.):
+                                                                            </Text>
+                                                                            <Text
+                                                                                size="xs"
+                                                                                fw={
+                                                                                    700
+                                                                                }
+                                                                            >
+                                                                                {formatDate(
+                                                                                    batch.expirationDate
+                                                                                )}
+                                                                            </Text>
+                                                                        </Group>
+                                                                    )
+                                                                )}
+                                                            </Stack>
+                                                        </Popover.Dropdown>
+                                                    </Popover>
+                                                ) : null;
+                                            })()}
+                                        </Group>
                                     </Table.Td>
 
                                     {/* Preço de Compra com vírgula */}
-                                    <Table.Td fw={400} style={{ whiteSpace: 'nowrap' }}>
-                                        R${' '}
-                                        {formatCurrency(product.purchasePrice)}
+                                    <Table.Td
+                                        fw={400}
+                                        style={{ whiteSpace: 'nowrap' }}
+                                    >
+                                        <Group
+                                            gap={4}
+                                            align="center"
+                                            wrap="nowrap"
+                                        >
+                                            <Text size="sm">
+                                                R${' '}
+                                                {formatCurrency(
+                                                    product.purchasePrice
+                                                )}
+                                            </Text>
+                                            {(() => {
+                                                const sortedBatches = (
+                                                    product.batches || []
+                                                )
+                                                    .slice()
+                                                    .sort((a, b) => {
+                                                        if (
+                                                            !a.expirationDate &&
+                                                            !b.expirationDate
+                                                        )
+                                                            return 0;
+                                                        if (!a.expirationDate)
+                                                            return 1;
+                                                        if (!b.expirationDate)
+                                                            return -1;
+                                                        return a.expirationDate.localeCompare(
+                                                            b.expirationDate
+                                                        );
+                                                    });
+                                                return sortedBatches.length >
+                                                    1 ? (
+                                                    <Popover
+                                                        width={280}
+                                                        shadow="md"
+                                                        withArrow
+                                                        position="top"
+                                                    >
+                                                        <Popover.Target>
+                                                            <ActionIcon
+                                                                size="xs"
+                                                                variant="light"
+                                                                color="blue"
+                                                                style={{
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                            >
+                                                                <Plus
+                                                                    size={12}
+                                                                />
+                                                            </ActionIcon>
+                                                        </Popover.Target>
+                                                        <Popover.Dropdown p="xs">
+                                                            <Text
+                                                                size="xs"
+                                                                fw={700}
+                                                                c="dimmed"
+                                                                mb={6}
+                                                            >
+                                                                Preço de Compra
+                                                                por Lote (
+                                                                {
+                                                                    sortedBatches.length
+                                                                }{' '}
+                                                                lotes):
+                                                            </Text>
+                                                            <Stack
+                                                                gap={4}
+                                                                style={
+                                                                    sortedBatches.length >= 4
+                                                                        ? {
+                                                                              maxHeight: 75,
+                                                                              overflowY: 'auto',
+                                                                              paddingRight: 4,
+                                                                          }
+                                                                        : undefined
+                                                                }
+                                                            >
+                                                                {sortedBatches.map(
+                                                                    (
+                                                                        batch,
+                                                                        idx
+                                                                    ) => (
+                                                                        <Group
+                                                                            key={
+                                                                                batch.id ||
+                                                                                idx
+                                                                            }
+                                                                            justify="space-between"
+                                                                            wrap="nowrap"
+                                                                        >
+                                                                            <Text
+                                                                                size="xs"
+                                                                                fw={
+                                                                                    500
+                                                                                }
+                                                                            >
+                                                                                Lote{' '}
+                                                                                {idx +
+                                                                                    1}{' '}
+                                                                                (
+                                                                                {
+                                                                                    batch.quantity
+                                                                                }{' '}
+                                                                                un.):
+                                                                            </Text>
+                                                                            <Text
+                                                                                size="xs"
+                                                                                fw={
+                                                                                    700
+                                                                                }
+                                                                            >
+                                                                                R${' '}
+                                                                                {formatCurrency(
+                                                                                    batch.purchasePrice
+                                                                                )}
+                                                                            </Text>
+                                                                        </Group>
+                                                                    )
+                                                                )}
+                                                            </Stack>
+                                                        </Popover.Dropdown>
+                                                    </Popover>
+                                                ) : null;
+                                            })()}
+                                        </Group>
                                     </Table.Td>
 
                                     {/* Preço de Venda com vírgula */}
-                                    <Table.Td fw={400} style={{ whiteSpace: 'nowrap' }}>
-                                        R${' '}
-                                        {formatCurrency(product.sellingPrice)}
+                                    <Table.Td
+                                        fw={400}
+                                        style={{ whiteSpace: 'nowrap' }}
+                                    >
+                                        <Group
+                                            gap={4}
+                                            align="center"
+                                            wrap="nowrap"
+                                        >
+                                            <Text size="sm">
+                                                R${' '}
+                                                {formatCurrency(
+                                                    product.sellingPrice
+                                                )}
+                                            </Text>
+                                            {(() => {
+                                                const sortedBatches = (
+                                                    product.batches || []
+                                                )
+                                                    .slice()
+                                                    .sort((a, b) => {
+                                                        if (
+                                                            !a.expirationDate &&
+                                                            !b.expirationDate
+                                                        )
+                                                            return 0;
+                                                        if (!a.expirationDate)
+                                                            return 1;
+                                                        if (!b.expirationDate)
+                                                            return -1;
+                                                        return a.expirationDate.localeCompare(
+                                                            b.expirationDate
+                                                        );
+                                                    });
+                                                return sortedBatches.length >
+                                                    1 ? (
+                                                    <Popover
+                                                        width={280}
+                                                        shadow="md"
+                                                        withArrow
+                                                        position="top"
+                                                    >
+                                                        <Popover.Target>
+                                                            <ActionIcon
+                                                                size="xs"
+                                                                variant="light"
+                                                                color="blue"
+                                                                style={{
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                            >
+                                                                <Plus
+                                                                    size={12}
+                                                                />
+                                                            </ActionIcon>
+                                                        </Popover.Target>
+                                                        <Popover.Dropdown p="xs">
+                                                            <Text
+                                                                size="xs"
+                                                                fw={700}
+                                                                c="dimmed"
+                                                                mb={6}
+                                                            >
+                                                                Preço de Venda
+                                                                por Lote (
+                                                                {
+                                                                    sortedBatches.length
+                                                                }{' '}
+                                                                lotes):
+                                                            </Text>
+                                                            <Stack
+                                                                gap={4}
+                                                                style={
+                                                                    sortedBatches.length >= 4
+                                                                        ? {
+                                                                              maxHeight: 75,
+                                                                              overflowY: 'auto',
+                                                                              paddingRight: 4,
+                                                                          }
+                                                                        : undefined
+                                                                }
+                                                            >
+                                                                {sortedBatches.map(
+                                                                    (
+                                                                        batch,
+                                                                        idx
+                                                                    ) => (
+                                                                        <Group
+                                                                            key={
+                                                                                batch.id ||
+                                                                                idx
+                                                                            }
+                                                                            justify="space-between"
+                                                                            wrap="nowrap"
+                                                                        >
+                                                                            <Text
+                                                                                size="xs"
+                                                                                fw={
+                                                                                    500
+                                                                                }
+                                                                            >
+                                                                                Lote{' '}
+                                                                                {idx +
+                                                                                    1}{' '}
+                                                                                (
+                                                                                {
+                                                                                    batch.quantity
+                                                                                }{' '}
+                                                                                un.):
+                                                                            </Text>
+                                                                            <Text
+                                                                                size="xs"
+                                                                                fw={
+                                                                                    700
+                                                                                }
+                                                                            >
+                                                                                R${' '}
+                                                                                {formatCurrency(
+                                                                                    batch.sellingPrice
+                                                                                )}
+                                                                            </Text>
+                                                                        </Group>
+                                                                    )
+                                                                )}
+                                                            </Stack>
+                                                        </Popover.Dropdown>
+                                                    </Popover>
+                                                ) : null;
+                                            })()}
+                                        </Group>
                                     </Table.Td>
 
                                     {/* Resultado com vírgula */}
-                                    <Table.Td fw={600} style={{ whiteSpace: 'nowrap' }}>
-                                        R$ {formatCurrency(product.profit)}
+                                    <Table.Td
+                                        fw={600}
+                                        style={{ whiteSpace: 'nowrap' }}
+                                    >
+                                        <Group
+                                            gap={4}
+                                            align="center"
+                                            wrap="nowrap"
+                                        >
+                                            <Text size="sm" fw={600}>
+                                                R${' '}
+                                                {formatCurrency(product.profit)}
+                                            </Text>
+                                            {(() => {
+                                                const sortedBatches = (
+                                                    product.batches || []
+                                                )
+                                                    .slice()
+                                                    .sort((a, b) => {
+                                                        if (
+                                                            !a.expirationDate &&
+                                                            !b.expirationDate
+                                                        )
+                                                            return 0;
+                                                        if (!a.expirationDate)
+                                                            return 1;
+                                                        if (!b.expirationDate)
+                                                            return -1;
+                                                        return a.expirationDate.localeCompare(
+                                                            b.expirationDate
+                                                        );
+                                                    });
+                                                return sortedBatches.length >
+                                                    1 ? (
+                                                    <Popover
+                                                        width={280}
+                                                        shadow="md"
+                                                        withArrow
+                                                        position="top"
+                                                    >
+                                                        <Popover.Target>
+                                                            <ActionIcon
+                                                                size="xs"
+                                                                variant="light"
+                                                                color="blue"
+                                                                style={{
+                                                                    cursor: 'pointer',
+                                                                }}
+                                                            >
+                                                                <Plus
+                                                                    size={12}
+                                                                />
+                                                            </ActionIcon>
+                                                        </Popover.Target>
+                                                        <Popover.Dropdown p="xs">
+                                                            <Text
+                                                                size="xs"
+                                                                fw={700}
+                                                                c="dimmed"
+                                                                mb={6}
+                                                            >
+                                                                Resultado
+                                                                (Lucro) por Lote
+                                                                (
+                                                                {
+                                                                    sortedBatches.length
+                                                                }{' '}
+                                                                lotes):
+                                                            </Text>
+                                                            <Stack
+                                                                gap={4}
+                                                                style={
+                                                                    sortedBatches.length >= 4
+                                                                        ? {
+                                                                              maxHeight: 75,
+                                                                              overflowY: 'auto',
+                                                                              paddingRight: 4,
+                                                                          }
+                                                                        : undefined
+                                                                }
+                                                            >
+                                                                {sortedBatches.map(
+                                                                    (
+                                                                        batch,
+                                                                        idx
+                                                                    ) => {
+                                                                        const batchProfit =
+                                                                            (batch.sellingPrice ||
+                                                                                0) -
+                                                                            (batch.purchasePrice ||
+                                                                                0);
+                                                                        return (
+                                                                            <Group
+                                                                                key={
+                                                                                    batch.id ||
+                                                                                    idx
+                                                                                }
+                                                                                justify="space-between"
+                                                                                wrap="nowrap"
+                                                                            >
+                                                                                <Text
+                                                                                    size="xs"
+                                                                                    fw={
+                                                                                        500
+                                                                                    }
+                                                                                >
+                                                                                    Lote{' '}
+                                                                                    {idx +
+                                                                                        1}{' '}
+                                                                                    (
+                                                                                    {
+                                                                                        batch.quantity
+                                                                                    }{' '}
+                                                                                    un.):
+                                                                                </Text>
+                                                                                <Text
+                                                                                    size="xs"
+                                                                                    fw={
+                                                                                        700
+                                                                                    }
+                                                                                    c={
+                                                                                        batchProfit >=
+                                                                                        0
+                                                                                            ? 'teal'
+                                                                                            : 'red'
+                                                                                    }
+                                                                                >
+                                                                                    R${' '}
+                                                                                    {formatCurrency(
+                                                                                        batchProfit
+                                                                                    )}
+                                                                                </Text>
+                                                                            </Group>
+                                                                        );
+                                                                    }
+                                                                )}
+                                                            </Stack>
+                                                        </Popover.Dropdown>
+                                                    </Popover>
+                                                ) : null;
+                                            })()}
+                                        </Group>
                                     </Table.Td>
 
                                     <Table.Td align="right">
@@ -406,6 +1057,19 @@ export default function ProductsTable({
                                                 </ActionIcon>
                                             )}
 
+                                            {onAddLote && (
+                                                <ActionIcon
+                                                    variant="light"
+                                                    color="indigo"
+                                                    title="Cadastrar Lote"
+                                                    onClick={() =>
+                                                        onAddLote(product)
+                                                    }
+                                                >
+                                                    <Boxes size={16} />
+                                                </ActionIcon>
+                                            )}
+
                                             <ActionIcon
                                                 variant="light"
                                                 color="blue"
@@ -425,7 +1089,9 @@ export default function ProductsTable({
                                                         ? 'Não é possível excluir: existem vendas associadas a este produto'
                                                         : 'Excluir produto'
                                                 }
-                                                disabled={product.canDelete === false}
+                                                disabled={
+                                                    product.canDelete === false
+                                                }
                                                 onClick={() =>
                                                     onDelete?.(product.id)
                                                 }

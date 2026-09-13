@@ -67,6 +67,9 @@ public class Product extends PanacheEntityBase {
     @JoinColumn(name = "user_id", nullable = false)
     public User user;
 
+    @jakarta.persistence.OneToMany(mappedBy = "product", cascade = jakarta.persistence.CascadeType.ALL, orphanRemoval = true)
+    public List<ProductBatch> batches;
+
     public static Product findByNameAndUser(String name, User user) {
         if (name == null || user == null) {
             return null;
@@ -84,6 +87,7 @@ public class Product extends PanacheEntityBase {
             "LEFT JOIN FETCH p.category " +
             "LEFT JOIN FETCH p.family f " +
             "LEFT JOIN FETCH f.brand " +
+            "LEFT JOIN FETCH p.batches " +
             "WHERE p.user = ?1 " +
             "ORDER BY p.id DESC",
             user
@@ -101,8 +105,12 @@ public class Product extends PanacheEntityBase {
             "LEFT JOIN FETCH p.category " +
             "LEFT JOIN FETCH p.family f " +
             "LEFT JOIN FETCH f.brand " +
-            "WHERE (p.expirationDate IS NULL OR p.expirationDate < ?1) AND p.user = ?2 " +
-            "ORDER BY p.expirationDate ASC",
+            "LEFT JOIN FETCH p.batches " +
+            "WHERE p.user = ?2 AND (" +
+            "  (p.expirationDate IS NULL OR p.expirationDate <= ?1) OR " +
+            "  EXISTS (SELECT b FROM ProductBatch b WHERE b.product = p AND (b.expirationDate IS NULL OR b.expirationDate <= ?1))" +
+            ") " +
+            "ORDER BY p.id DESC",
             today, user
         );
     }
@@ -119,8 +127,12 @@ public class Product extends PanacheEntityBase {
             "LEFT JOIN FETCH p.category " +
             "LEFT JOIN FETCH p.family f " +
             "LEFT JOIN FETCH f.brand " +
-            "WHERE p.expirationDate IS NOT NULL AND p.expirationDate >= ?1 AND p.expirationDate <= ?2 AND p.user = ?3 " +
-            "ORDER BY p.expirationDate ASC",
+            "LEFT JOIN FETCH p.batches " +
+            "WHERE p.user = ?3 AND (" +
+            "  (p.expirationDate IS NOT NULL AND p.expirationDate > ?1 AND p.expirationDate <= ?2) OR " +
+            "  EXISTS (SELECT b FROM ProductBatch b WHERE b.product = p AND b.expirationDate IS NOT NULL AND b.expirationDate > ?1 AND b.expirationDate <= ?2)" +
+            ") " +
+            "ORDER BY p.id DESC",
             today, hundredEightyDaysFromNow, user
         );
     }
@@ -131,7 +143,7 @@ public class Product extends PanacheEntityBase {
         if (user == null) {
             return List.of();
         }
-        StringBuilder query = new StringBuilder("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family f LEFT JOIN FETCH f.brand WHERE p.user = :user ");
+        StringBuilder query = new StringBuilder("SELECT DISTINCT p FROM Product p LEFT JOIN FETCH p.brand LEFT JOIN FETCH p.category LEFT JOIN FETCH p.family f LEFT JOIN FETCH f.brand LEFT JOIN FETCH p.batches WHERE p.user = :user ");
         Map<String, Object> params = new HashMap<>();
         params.put("user", user);
 
@@ -156,7 +168,7 @@ public class Product extends PanacheEntityBase {
         }
 
         if (maxExpDate != null) {
-            query.append("AND p.expirationDate <= :maxExpDate ");
+            query.append("AND (p.expirationDate <= :maxExpDate OR EXISTS (SELECT b FROM ProductBatch b WHERE b.product = p AND b.expirationDate <= :maxExpDate)) ");
             params.put("maxExpDate", maxExpDate);
         }
 

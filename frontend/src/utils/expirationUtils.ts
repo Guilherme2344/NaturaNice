@@ -5,6 +5,65 @@ export interface ExpirationFormat {
 }
 
 /**
+ * Returns today's date formatted as YYYY-MM-DD in the user's local system timezone (GMT).
+ */
+export function getTodayString(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Parses a YYYY-MM-DD (or ISO string) into a local Date object at 00:00:00 without UTC timezone offset shift.
+ */
+export function parseLocalDate(dateStr: string): Date {
+    const cleanStr = dateStr.split('T')[0];
+    const parts = cleanStr.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+    return new Date(dateStr);
+}
+
+/**
+ * Formats a date string (YYYY-MM-DD) to pt-BR display format (DD/MM/YYYY).
+ */
+export function formatDateDisplay(dateStr?: string | null): string {
+    if (!dateStr) return 'Indeterminada';
+    const cleanStr = dateStr.split('T')[0];
+    const parts = cleanStr.split('-').map(Number);
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+        const day = String(parts[2]).padStart(2, '0');
+        const month = String(parts[1]).padStart(2, '0');
+        const year = parts[0];
+        return `${day}/${month}/${year}`;
+    }
+    return new Date(dateStr).toLocaleDateString('pt-BR');
+}
+
+/**
+ * Formats a date-time string (ISO string) to pt-BR display format (DD/MM/YYYY às HH:mm) safely without UTC shift.
+ */
+export function formatDateTimeDisplay(dateStr?: string | null): string {
+    if (!dateStr) return '';
+    const dateFormatted = formatDateDisplay(dateStr);
+    if (dateStr.includes('T')) {
+        const timePart = dateStr.split('T')[1];
+        if (timePart) {
+            const timeComponents = timePart.split(':');
+            if (timeComponents.length >= 2) {
+                const hours = timeComponents[0].padStart(2, '0');
+                const minutes = timeComponents[1].padStart(2, '0');
+                return `${dateFormatted} às ${hours}:${minutes}`;
+            }
+        }
+    }
+    return dateFormatted;
+}
+
+/**
  * Calculates remaining expiration time and formats the label according to exact rules:
  * - Expired (days < 0): Red background, e.g. "Vencido há X dias"
  * - Near Expiration (0 <= days <= 180): Yellow background, e.g. "Vence hoje" or "Vence em X dias"
@@ -20,7 +79,7 @@ export function formatExpirationStatus(expirationDateStr: string | null | undefi
         };
     }
 
-    const expDate = new Date(expirationDateStr);
+    const expDate = parseLocalDate(expirationDateStr);
     const today = new Date();
 
     // Reset hours to midnight for exact date comparison
@@ -80,3 +139,4 @@ export function formatExpirationStatus(expirationDateStr: string | null | undefi
         daysRemaining,
     };
 }
+

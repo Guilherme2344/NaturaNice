@@ -13,6 +13,7 @@ import {
     Autocomplete,
     Checkbox,
     Textarea,
+    Select,
 } from '@mantine/core';
 import {
     DollarSign,
@@ -20,6 +21,7 @@ import {
     Package,
     User,
     Wallet,
+    Boxes,
 } from 'lucide-react';
 import type { Product } from './ProductsTable';
 import { customerService, type Customer } from '../services/customerService';
@@ -36,9 +38,17 @@ interface SaleModalProps {
         amountPaid?: number,
         customerName?: string,
         observation?: string,
-        isPersonalUse?: boolean
+        isPersonalUse?: boolean,
+        batchId?: string
     ) => Promise<void>;
 }
+
+const formatDate = (dateString?: string | null) => {
+    if (!dateString) return 'Indeterminada';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+};
+
 
 export function SaleModal({
     opened,
@@ -46,6 +56,7 @@ export function SaleModal({
     product,
     onConfirmSale,
 }: SaleModalProps) {
+    const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
     const [quantity, setQuantity] = useState<number>(1);
     const [sellingPrice, setSellingPrice] = useState<number>(0);
     const [amountPaid, setAmountPaid] = useState<number | string>(0);
@@ -66,10 +77,25 @@ export function SaleModal({
         }
     }, [opened]);
 
+    const sortedBatches = (product?.batches || []).slice().sort((a, b) => {
+        if (!a.expirationDate && !b.expirationDate) return 0;
+        if (!a.expirationDate) return 1;
+        if (!b.expirationDate) return -1;
+        return a.expirationDate.localeCompare(b.expirationDate);
+    });
+
     useEffect(() => {
         if (product) {
+            const batches = (product.batches || []).slice().sort((a, b) => {
+                if (!a.expirationDate && !b.expirationDate) return 0;
+                if (!a.expirationDate) return 1;
+                if (!b.expirationDate) return -1;
+                return a.expirationDate.localeCompare(b.expirationDate);
+            });
+            const firstBatch = batches[0];
             const initialQty = 1;
-            const initialPrice = product.sellingPrice || 0;
+            const initialPrice = firstBatch ? firstBatch.sellingPrice : (product.sellingPrice || 0);
+            setSelectedBatchId(firstBatch ? firstBatch.id : null);
             setQuantity(initialQty);
             setSellingPrice(initialPrice);
             setAmountPaid(initialQty * initialPrice);
@@ -79,7 +105,7 @@ export function SaleModal({
         }
     }, [product]);
 
-    // Recalculate amountPaid when quantity or sellingPrice changes, if user hasn't modified it manually
+    // Recalculate amountPaid when quantity or sellingPrice changes
     const handleQuantityOrPriceChange = (newQty: number, newPrice: number) => {
         setQuantity(newQty);
         setSellingPrice(newPrice);
@@ -95,7 +121,8 @@ export function SaleModal({
             setSellingPrice(0);
             setAmountPaid(0);
         } else {
-            const defaultPrice = product?.sellingPrice || 0;
+            const selectedBatch = sortedBatches.find((b) => b.id === selectedBatchId);
+            const defaultPrice = selectedBatch ? selectedBatch.sellingPrice : (product?.sellingPrice || 0);
             setSellingPrice(defaultPrice);
             setAmountPaid((quantity || 1) * defaultPrice);
         }
@@ -103,9 +130,19 @@ export function SaleModal({
 
     if (!product) return null;
 
-    const availableStock = product.quantity || 0;
+    const selectedBatch = sortedBatches.find((b) => b.id === selectedBatchId);
+
+    // Stock for the chosen batch (or total stock if no specific batch)
+    const availableStock = selectedBatch
+        ? selectedBatch.quantity
+        : (product.quantity || 0);
+
     const currentSellingPrice = isPersonalUse ? 0 : sellingPrice || 0;
-    const rawPurchasePrice = product.purchasePrice || 0;
+
+    const rawPurchasePrice = selectedBatch
+        ? selectedBatch.purchasePrice
+        : (product.purchasePrice || 0);
+
     const effectivePurchasePrice = isPersonalUse
         ? 0
         : rawPurchasePrice > 0
@@ -133,7 +170,7 @@ export function SaleModal({
         }
     };
 
-    // form validated using yup
+    // Form submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -160,7 +197,8 @@ export function SaleModal({
                 currentAmountPaid,
                 customerName.trim() || undefined,
                 observation.trim() || undefined,
-                isPersonalUse
+                isPersonalUse,
+                selectedBatchId || undefined
             );
             onClose();
         } catch (error) {
@@ -228,11 +266,44 @@ export function SaleModal({
                                     fw={600}
                                     c={availableStock > 0 ? 'teal' : 'red'}
                                 >
-                                    Estoque: {availableStock} un.
+                                    Estoque Lote: {availableStock} un. (Total: {product.quantity} un.)
                                 </Text>
                             </Group>
                         </Group>
                     </Paper>
+
+                    {/* Seleção do Lote (Ordenado do mais antigo para o mais novo) */}
+                    {sortedBatches.length > 0 && (
+                        <Select
+                            label="Escolha o Lote para Venda"
+                            description="Ordenados prioritariamente do mais antigo (vencimento mais próximo) para o mais novo"
+                            leftSection={<Boxes size={16} color="#1c7ed6" />}
+                            data={sortedBatches.map((batch, index) => ({
+                                value: batch.id,
+                                label: `Lote ${index + 1} | Venc: ${formatDate(batch.expirationDate)}`,
+                            }))}
+                            value={selectedBatchId}
+                            onChange={(val) => {
+                                setSelectedBatchId(val);
+                                const batch = sortedBatches.find((b) => b.id === val);
+                                if (batch) {
+                                    const newPrice = isPersonalUse ? 0 : batch.sellingPrice || 0;
+                                    setSellingPrice(newPrice);
+                                    const newQty = Math.min(quantity || 1, batch.quantity);
+                                    setQuantity(newQty);
+                                    if (!isPersonalUse) {
+                                        setAmountPaid(newQty * newPrice);
+                                    }
+                                }
+                            }}
+                            styles={{
+                                dropdown: {
+                                    maxHeight: 180,
+                                    overflowY: 'auto',
+                                },
+                            }}
+                        />
+                    )}
 
                     <Autocomplete
                         label="Nome do Cliente (opcional)"
@@ -389,7 +460,7 @@ export function SaleModal({
                         <Grid.Col span={{ base: 12, sm: 6 }}>
                             <Paper p="xs" withBorder radius="md">
                                 <Text size="xs" c="dimmed" fw={600}>
-                                    Preço de Custo Unit.
+                                    Preço de Custo Unit. (Lote Escolhido)
                                 </Text>
                                 <Text fw={600} size="sm">
                                     R${' '}

@@ -2,6 +2,7 @@ import { api } from './api';
 
 export interface CreateSaleDTO {
     productId: string;
+    batchId?: string;
     quantity: number;
     sellingPrice?: number;
     amountPaid?: number;

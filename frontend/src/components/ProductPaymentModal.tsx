@@ -16,6 +16,7 @@ import { DollarSign, CheckCircle2, History, Copy, Check, MessageSquare } from 'l
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 import type { CustomerPurchaseItem } from '../services/customerService';
+import { formatDateDisplay, formatDateTimeDisplay } from '../utils/expirationUtils';
 
 interface ProductPaymentModalProps {
     opened: boolean;
@@ -86,9 +87,7 @@ export function ProductPaymentModal({
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
-        const saleDateStr = item.saleDate
-            ? new Date(item.saleDate).toLocaleDateString('pt-BR')
-            : '';
+        const saleDateStr = formatDateDisplay(item.saleDate);
 
         const greeting = customerName ? `Olá, *${customerName}*! 👋\n\n` : `Olá! 👋\n\n`;
 
@@ -112,9 +111,7 @@ export function ProductPaymentModal({
         if (item.payments && item.payments.length > 0) {
             text += `💳 *Histórico de Abatimentos:*\n`;
             item.payments.forEach((p, idx) => {
-                const pDateStr = p.paymentDate
-                    ? new Date(p.paymentDate).toLocaleDateString('pt-BR')
-                    : '';
+                const pDateStr = formatDateDisplay(p.paymentDate);
                 const pAmount = p.amount.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
@@ -366,14 +363,7 @@ export function ProductPaymentModal({
                                     <Table.Tr key={p.id || idx}>
                                         <Table.Td>
                                             <Text size="xs">
-                                                {p.paymentDate
-                                                    ? new Date(p.paymentDate).toLocaleDateString('pt-BR') +
-                                                      ' ' +
-                                                      new Date(p.paymentDate).toLocaleTimeString('pt-BR', {
-                                                          hour: '2-digit',
-                                                          minute: '2-digit',
-                                                      })
-                                                    : '-'}
+                                                {formatDateTimeDisplay(p.paymentDate) || '-'}
                                             </Text>
                                         </Table.Td>
                                         <Table.Td align="right">

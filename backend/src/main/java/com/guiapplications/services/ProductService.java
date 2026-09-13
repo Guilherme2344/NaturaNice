@@ -3,6 +3,7 @@ package com.guiapplications.services;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -11,6 +12,7 @@ import com.guiapplications.entities.Category;
 import com.guiapplications.entities.Family;
 import com.guiapplications.entities.Product;
 import com.guiapplications.entities.User;
+import com.guiapplications.entities.dto.ProductBatchResponseDTO;
 import com.guiapplications.entities.dto.ProductRequestDTO;
 import com.guiapplications.entities.dto.ProductResponseDTO;
 import com.guiapplications.exceptions.ResourceNotFoundException;
@@ -131,9 +133,38 @@ public class ProductService {
         return ProductResponseDTO.fromEntity(product);
     }
 
+    @Transactional
+    public void syncMissingBatches(User user) {
+        if (user == null) return;
+        List<Product> products = Product.listAllWithRelations(user);
+        boolean changedAny = false;
+        for (Product p : products) {
+            // Clean up any legacy ProductBatch rows that duplicate Lote 1 exactly
+            if (p.batches != null && !p.batches.isEmpty()) {
+                List<com.guiapplications.entities.ProductBatch> duplicateLote1 = p.batches.stream()
+                    .filter(b -> b.quantity != null && b.quantity.equals(p.quantity)
+                              && ((b.expirationDate == null && p.expirationDate == null) || (b.expirationDate != null && b.expirationDate.equals(p.expirationDate)))
+                              && ((b.purchasePrice == null && p.purchasePrice == null) || (b.purchasePrice != null && b.purchasePrice.equals(p.purchasePrice)))
+                              && ((b.sellingPrice == null && p.sellingPrice == null) || (b.sellingPrice != null && b.sellingPrice.equals(p.sellingPrice))))
+                    .toList();
+                if (!duplicateLote1.isEmpty()) {
+                    // Delete the first duplicate batch (the legacy Lote 1 duplicate)
+                    duplicateLote1.get(0).delete();
+                    changedAny = true;
+                }
+            }
+        }
+        if (changedAny) {
+            Product.getEntityManager().flush();
+            Product.getEntityManager().clear();
+        }
+    }
+
     // list all products for user
+    @Transactional
     public List<ProductResponseDTO> listAll(User user) {
         if (user == null) return List.of();
+        syncMissingBatches(user);
         List<Product> products = Product.listAllWithRelations(user);
         return products.stream()
                 .map(ProductResponseDTO::fromEntity)
@@ -152,21 +183,54 @@ public class ProductService {
     }
 
     // list all expired products
+    @Transactional
     public List<ProductResponseDTO> findExpired(User user) {
         if (user == null) return List.of();
-        return Product.findExpired(user)
-                .stream()
-                .map(ProductResponseDTO::fromEntity)
+        syncMissingBatches(user);
+        LocalDate today = LocalDate.now();
+        List<Product> products = Product.findExpired(user);
+
+        List<ProductResponseDTO> result = new ArrayList<>();
+        for (Product p : products) {
+            ProductResponseDTO fullDto = ProductResponseDTO.fromEntity(p);
+            if (fullDto.batches() == null) continue;
+
+            List<ProductBatchResponseDTO> expiredBatches = fullDto.batches().stream()
+                .filter(b -> b.expirationDate() == null || !b.expirationDate().isAfter(today))
                 .toList();
+
+            if (!expiredBatches.isEmpty()) {
+                result.add(ProductResponseDTO.withFilteredBatches(fullDto, expiredBatches));
+            }
+        }
+        return result;
     }
 
     // list all near expiration products
+    @Transactional
     public List<ProductResponseDTO> findNearExpiration(User user) {
         if (user == null) return List.of();
-        return Product.findNearExpiration(user)
-                .stream()
-                .map(ProductResponseDTO::fromEntity)
+        syncMissingBatches(user);
+        LocalDate today = LocalDate.now();
+        LocalDate hundredEightyDaysFromNow = today.plusDays(180);
+        List<Product> products = Product.findNearExpiration(user);
+
+        List<ProductResponseDTO> result = new ArrayList<>();
+        for (Product p : products) {
+            ProductResponseDTO fullDto = ProductResponseDTO.fromEntity(p);
+            if (fullDto.batches() == null) continue;
+
+            List<ProductBatchResponseDTO> nearBatches = fullDto.batches().stream()
+                .filter(b -> b.expirationDate() != null && 
+                             b.expirationDate().isAfter(today) && 
+                             !b.expirationDate().isAfter(hundredEightyDaysFromNow))
                 .toList();
+
+            if (!nearBatches.isEmpty()) {
+                result.add(ProductResponseDTO.withFilteredBatches(fullDto, nearBatches));
+            }
+        }
+        return result;
     }
 
     // update a product
@@ -184,16 +248,19 @@ public class ProductService {
         Category category = resolveCategory(dto.categoryId(), dto.categoryName(), user);
         Family family = resolveFamily(dto.familyId(), dto.familyName(), brand, user);
 
-        // update data
+        // update metadata
         product.name = trimmedName;
+        product.brand = brand;
+        product.category = category;
+        product.family = family;
+
         product.quantity = dto.quantity();
         product.purchaseDate = dto.purchaseDate() != null ? dto.purchaseDate() : (product.purchaseDate != null ? product.purchaseDate : LocalDate.now());
         product.expirationDate = dto.expirationDate();
         product.purchasePrice = resolvePurchasePrice(dto.purchasePrice(), dto.sellingPrice());
         product.sellingPrice = dto.sellingPrice();
-        product.brand = brand;
-        product.category = category;
-        product.family = family;
+
+        product.persist();
 
         return ProductResponseDTO.fromEntity(product);
     }

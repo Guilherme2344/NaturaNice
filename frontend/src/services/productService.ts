@@ -54,14 +54,20 @@ export const productService = {
         quantity: number,
         sellingPrice: number,
         amountPaid?: number,
-        customerName?: string
+        customerName?: string,
+        observation?: string,
+        isPersonalUse?: boolean,
+        batchId?: string
     ): Promise<void> => {
         await api.post('/sales', {
             productId,
+            batchId,
             quantity,
             sellingPrice,
             amountPaid,
             customerName,
+            observation,
+            isPersonalUse,
         });
     },
 };

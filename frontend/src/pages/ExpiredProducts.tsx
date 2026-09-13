@@ -105,7 +105,7 @@ export default function ExpiredProducts() {
 
             <ProductsTable
                 title="Produtos Vencidos"
-                subtitle="Itens com data expirada ou com validade indeterminada"
+                subtitle="Itens com data de validade vencida"
                 products={products}
                 loading={loading}
                 onEdit={handleOpenEdit}
