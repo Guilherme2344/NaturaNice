@@ -164,7 +164,6 @@ public class ProductService {
     @Transactional
     public List<ProductResponseDTO> listAll(User user) {
         if (user == null) return List.of();
-        syncMissingBatches(user);
         List<Product> products = Product.listAllWithRelations(user);
         return products.stream()
                 .map(ProductResponseDTO::fromEntity)
@@ -186,7 +185,6 @@ public class ProductService {
     @Transactional
     public List<ProductResponseDTO> findExpired(User user) {
         if (user == null) return List.of();
-        syncMissingBatches(user);
         LocalDate today = LocalDate.now();
         List<Product> products = Product.findExpired(user);
 
@@ -210,7 +208,6 @@ public class ProductService {
     @Transactional
     public List<ProductResponseDTO> findNearExpiration(User user) {
         if (user == null) return List.of();
-        syncMissingBatches(user);
         LocalDate today = LocalDate.now();
         LocalDate hundredEightyDaysFromNow = today.plusDays(180);
         List<Product> products = Product.findNearExpiration(user);

@@ -49,15 +49,6 @@ public class DatabaseSeeder {
         try {
             em.createNativeQuery("CREATE EXTENSION IF NOT EXISTS unaccent;").executeUpdate();
         } catch (Exception ignored) {}
-        try {
-            em.createNativeQuery("ALTER TABLE sale_items ALTER COLUMN product_id DROP NOT NULL;").executeUpdate();
-        } catch (Exception ignored) {}
-        try {
-            em.createNativeQuery("ALTER TABLE products ALTER COLUMN expirationdate DROP NOT NULL;").executeUpdate();
-        } catch (Exception ignored) {}
-        try {
-            em.createNativeQuery("ALTER TABLE products ALTER COLUMN \"expirationDate\" DROP NOT NULL;").executeUpdate();
-        } catch (Exception ignored) {}
     }
 	
     @Transactional

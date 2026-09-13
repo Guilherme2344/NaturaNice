@@ -404,16 +404,20 @@ export function SaleModal({
                                     </Group>
                                     <Badge
                                         color={
-                                            remainingBalance === 0
+                                            (Number(amountPaid) || 0) <= 0
+                                                ? 'red'
+                                                : remainingBalance === 0
                                                 ? 'teal'
                                                 : 'orange'
                                         }
                                         variant="filled"
                                         size="sm"
                                     >
-                                        {remainingBalance === 0
-                                            ? 'Totalmente Pago'
-                                            : 'Parcialmente Pago'}
+                                        {(Number(amountPaid) || 0) <= 0
+                                            ? 'NÃO PAGO'
+                                            : remainingBalance === 0
+                                            ? 'TOTALMENTE PAGO'
+                                            : 'PARCIALMENTE PAGO'}
                                     </Badge>
                                 </Group>
 
