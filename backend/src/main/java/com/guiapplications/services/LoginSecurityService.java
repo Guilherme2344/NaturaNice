@@ -51,40 +51,8 @@ public class LoginSecurityService {
 
     public void inspectProxyAndVpn(HttpServerRequest request, String email) {
         if (request == null) return;
-
         String clientIp = extractClientIp(request);
         LOG.info("Tentativa de login registrada para [" + email + "] a partir do IP: " + clientIp);
-
-        // List of headers that indicate proxy / VPN usage
-        String[] proxyHeaders = {
-            "Via",
-            "Proxy-Connection",
-            "X-Proxy-ID",
-            "X-BlueCoat-Via",
-            "Forwarded",
-            "X-Authenticated-User",
-            "CF-Connecting-IP",
-            "X-Client-IP"
-        };
-
-        for (String headerName : proxyHeaders) {
-            String val = request.getHeader(headerName);
-            if (val != null && !val.isBlank()) {
-                LOG.warn("Proxy/VPN detectado via cabeçalho [" + headerName + " = " + val + "] no IP: " + clientIp);
-                throw new IllegalArgumentException(
-                    "Uso de Proxy ou VPN detectado (cabeçalho: " + headerName + "). Por favor, desligue o Proxy/VPN para realizar o login."
-                );
-            }
-        }
-
-        // Check if X-Forwarded-For contains multiple proxy nodes
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && xff.contains(",")) {
-            LOG.warn("Cadeia de Proxy detectada em X-Forwarded-For [" + xff + "] no IP: " + clientIp);
-            throw new IllegalArgumentException(
-                "Uso de Proxy ou VPN em cadeia detectado. Por favor, desligue o Proxy/VPN para realizar o login."
-            );
-        }
     }
 
     public void checkRateLimit(String emailKey, String clientIp) {
