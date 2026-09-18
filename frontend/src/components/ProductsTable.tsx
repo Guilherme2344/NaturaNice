@@ -168,6 +168,17 @@ export default function ProductsTable({
         return (
             matchesSearch && matchesBrand && matchesCategory && matchesFamily
         );
+    }).sort((a, b) => {
+        if (!a.expirationDate && !b.expirationDate) {
+            return (a.name || '').localeCompare(b.name || '');
+        }
+        if (!a.expirationDate) return 1;
+        if (!b.expirationDate) return -1;
+
+        const cmp = a.expirationDate.localeCompare(b.expirationDate);
+        if (cmp !== 0) return cmp;
+
+        return (a.name || '').localeCompare(b.name || '');
     });
 
     // total pages
@@ -325,9 +336,6 @@ export default function ProductsTable({
                             <Table.Th style={{ whiteSpace: 'nowrap' }}>
                                 Valor Venda
                             </Table.Th>
-                            <Table.Th style={{ whiteSpace: 'nowrap' }}>
-                                Resultado
-                            </Table.Th>
                             <Table.Th
                                 style={{
                                     textAlign: 'right',
@@ -342,7 +350,7 @@ export default function ProductsTable({
                     <Table.Tbody>
                         {loading ? (
                             <Table.Tr>
-                                <Table.Td colSpan={9} align="center" py="xl">
+                                <Table.Td colSpan={8} align="center" py="xl">
                                     <Center
                                         style={{
                                             flexDirection: 'column',
@@ -885,152 +893,7 @@ export default function ProductsTable({
                                                             </Stack>
                                                         </Popover.Dropdown>
                                                     </Popover>
-                                                ) : null;
-                                            })()}
-                                        </Group>
-                                    </Table.Td>
-
-                                    {/* Resultado com vírgula */}
-                                    <Table.Td
-                                        fw={600}
-                                        style={{ whiteSpace: 'nowrap' }}
-                                    >
-                                        <Group
-                                            gap={4}
-                                            align="center"
-                                            wrap="nowrap"
-                                        >
-                                            <Text size="sm" fw={600}>
-                                                R${' '}
-                                                {formatCurrency(product.profit)}
-                                            </Text>
-                                            {(() => {
-                                                const sortedBatches = (
-                                                    product.batches || []
-                                                )
-                                                    .slice()
-                                                    .sort((a, b) => {
-                                                        if (
-                                                            !a.expirationDate &&
-                                                            !b.expirationDate
-                                                        )
-                                                            return 0;
-                                                        if (!a.expirationDate)
-                                                            return 1;
-                                                        if (!b.expirationDate)
-                                                            return -1;
-                                                        return a.expirationDate.localeCompare(
-                                                            b.expirationDate
-                                                        );
-                                                    });
-                                                return sortedBatches.length >
-                                                    1 ? (
-                                                    <Popover
-                                                        width={280}
-                                                        shadow="md"
-                                                        withArrow
-                                                        position="top"
-                                                    >
-                                                        <Popover.Target>
-                                                            <ActionIcon
-                                                                size="xs"
-                                                                variant="light"
-                                                                color="blue"
-                                                                style={{
-                                                                    cursor: 'pointer',
-                                                                }}
-                                                            >
-                                                                <Plus
-                                                                    size={12}
-                                                                />
-                                                            </ActionIcon>
-                                                        </Popover.Target>
-                                                        <Popover.Dropdown p="xs">
-                                                            <Text
-                                                                size="xs"
-                                                                fw={700}
-                                                                c="dimmed"
-                                                                mb={6}
-                                                            >
-                                                                Resultado
-                                                                (Lucro) por Lote
-                                                                (
-                                                                {
-                                                                    sortedBatches.length
-                                                                }{' '}
-                                                                lotes):
-                                                            </Text>
-                                                            <Stack
-                                                                gap={4}
-                                                                style={
-                                                                    sortedBatches.length >= 4
-                                                                        ? {
-                                                                              maxHeight: 75,
-                                                                              overflowY: 'auto',
-                                                                              paddingRight: 4,
-                                                                          }
-                                                                        : undefined
-                                                                }
-                                                            >
-                                                                {sortedBatches.map(
-                                                                    (
-                                                                        batch,
-                                                                        idx
-                                                                    ) => {
-                                                                        const batchProfit =
-                                                                            (batch.sellingPrice ||
-                                                                                0) -
-                                                                            (batch.purchasePrice ||
-                                                                                0);
-                                                                        return (
-                                                                            <Group
-                                                                                key={
-                                                                                    batch.id ||
-                                                                                    idx
-                                                                                }
-                                                                                justify="space-between"
-                                                                                wrap="nowrap"
-                                                                            >
-                                                                                <Text
-                                                                                    size="xs"
-                                                                                    fw={
-                                                                                        500
-                                                                                    }
-                                                                                >
-                                                                                    Lote{' '}
-                                                                                    {idx +
-                                                                                        1}{' '}
-                                                                                    (
-                                                                                    {
-                                                                                        batch.quantity
-                                                                                    }{' '}
-                                                                                    un.):
-                                                                                </Text>
-                                                                                <Text
-                                                                                    size="xs"
-                                                                                    fw={
-                                                                                        700
-                                                                                    }
-                                                                                    c={
-                                                                                        batchProfit >=
-                                                                                        0
-                                                                                            ? 'teal'
-                                                                                            : 'red'
-                                                                                    }
-                                                                                >
-                                                                                    R${' '}
-                                                                                    {formatCurrency(
-                                                                                        batchProfit
-                                                                                    )}
-                                                                                </Text>
-                                                                            </Group>
-                                                                        );
-                                                                    }
-                                                                )}
-                                                            </Stack>
-                                                        </Popover.Dropdown>
-                                                    </Popover>
-                                                ) : null;
+                                                 ) : null;
                                             })()}
                                         </Group>
                                     </Table.Td>
@@ -1104,7 +967,7 @@ export default function ProductsTable({
                             ))
                         ) : (
                             <Table.Tr>
-                                <Table.Td colSpan={9} align="center" py="xl">
+                                <Table.Td colSpan={8} align="center" py="xl">
                                     <Text c="dimmed">
                                         Nenhum produto encontrado.
                                     </Text>

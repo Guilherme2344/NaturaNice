@@ -3,10 +3,12 @@ import { Alert, Stack } from '@mantine/core';
 import { CheckCircle2 } from 'lucide-react';
 import ProductsTable, { type Product } from '../components/ProductsTable';
 import { ProductModal } from '../components/ProductModal';
+import { SaleModal } from '../components/SaleModal';
 import { DeleteModal } from '../components/DeleteModal';
 import {
     useExpiredProductsQuery,
     useUpdateProductMutation,
+    useCreateSaleMutation,
     useDeleteProductMutation,
 } from '../hooks/useProductsQuery';
 import {
@@ -23,10 +25,14 @@ export default function ExpiredProducts() {
     const { data: families = [] } = useFamiliesQuery();
 
     const updateProductMutation = useUpdateProductMutation();
+    const createSaleMutation = useCreateSaleMutation();
     const deleteProductMutation = useDeleteProductMutation();
 
     const [modalOpened, setModalOpened] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+    const [saleModalOpened, setSaleModalOpened] = useState(false);
+    const [productToSell, setProductToSell] = useState<Product | null>(null);
 
     const [deleteModalOpened, setDeleteModalOpened] = useState(false);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -55,6 +61,42 @@ export default function ExpiredProducts() {
             data,
         });
         setSuccessMessage(`Produto "${data.name}" atualizado com sucesso!`);
+    };
+
+    const handleOpenSale = (product: Product) => {
+        setProductToSell(product);
+        setSaleModalOpened(true);
+    };
+
+    const handleConfirmSale = async (
+        quantity: number,
+        sellingPrice: number,
+        amountPaid?: number,
+        customerName?: string,
+        observation?: string,
+        isPersonalUse?: boolean
+    ) => {
+        if (!productToSell) return;
+        setSuccessMessage('');
+        await createSaleMutation.mutateAsync({
+            productId: productToSell.id,
+            quantity,
+            sellingPrice,
+            amountPaid,
+            customerName,
+            observation,
+            isPersonalUse,
+        });
+
+        const now = new Date();
+        const formattedTime = now.toLocaleTimeString('pt-BR');
+        const formattedDate = now.toLocaleDateString('pt-BR');
+
+        setSuccessMessage(
+            isPersonalUse
+                ? `Uso pessoal do produto "${productToSell.name}" (${quantity} un.) registrado com sucesso às ${formattedTime} do dia ${formattedDate}!`
+                : `Venda do produto "${productToSell.name}" (${quantity} un.) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
+        );
     };
 
     const handleOpenDelete = (id: string) => {
@@ -109,6 +151,7 @@ export default function ExpiredProducts() {
                 products={products}
                 loading={loading}
                 onEdit={handleOpenEdit}
+                onSale={handleOpenSale}
                 onDelete={handleOpenDelete}
             />
 
@@ -120,6 +163,13 @@ export default function ExpiredProducts() {
                 families={families}
                 initialData={selectedProduct}
                 onSubmit={handleSubmitProduct}
+            />
+
+            <SaleModal
+                opened={saleModalOpened}
+                onClose={() => setSaleModalOpened(false)}
+                product={productToSell}
+                onConfirmSale={handleConfirmSale}
             />
 
             <DeleteModal
@@ -134,3 +184,4 @@ export default function ExpiredProducts() {
         </Stack>
     );
 }
+

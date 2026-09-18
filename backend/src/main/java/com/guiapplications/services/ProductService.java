@@ -160,6 +160,19 @@ public class ProductService {
         }
     }
 
+    private static final java.util.Comparator<ProductResponseDTO> EXPIRATION_COMPARATOR = (p1, p2) -> {
+        LocalDate d1 = p1.expirationDate();
+        LocalDate d2 = p2.expirationDate();
+        if (d1 == null && d2 == null) {
+            return (p1.name() != null ? p1.name() : "").compareToIgnoreCase(p2.name() != null ? p2.name() : "");
+        }
+        if (d1 == null) return 1;
+        if (d2 == null) return -1;
+        int cmp = d1.compareTo(d2);
+        if (cmp != 0) return cmp;
+        return (p1.name() != null ? p1.name() : "").compareToIgnoreCase(p2.name() != null ? p2.name() : "");
+    };
+
     // list all products for user
     @Transactional
     public List<ProductResponseDTO> listAll(User user) {
@@ -167,6 +180,7 @@ public class ProductService {
         List<Product> products = Product.listAllWithRelations(user);
         return products.stream()
                 .map(ProductResponseDTO::fromEntity)
+                .sorted(EXPIRATION_COMPARATOR)
                 .toList();
     }
 
@@ -178,6 +192,7 @@ public class ProductService {
         List<Product> products = Product.findWithFilters(query, familyName, brandName, categoryName, maxExpDate, user);
         return products.stream()
                 .map(ProductResponseDTO::fromEntity)
+                .sorted(EXPIRATION_COMPARATOR)
                 .toList();
     }
 
@@ -201,6 +216,7 @@ public class ProductService {
                 result.add(ProductResponseDTO.withFilteredBatches(fullDto, expiredBatches));
             }
         }
+        result.sort(EXPIRATION_COMPARATOR);
         return result;
     }
 
@@ -227,6 +243,7 @@ public class ProductService {
                 result.add(ProductResponseDTO.withFilteredBatches(fullDto, nearBatches));
             }
         }
+        result.sort(EXPIRATION_COMPARATOR);
         return result;
     }
 
