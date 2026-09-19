@@ -88,13 +88,13 @@ O **Natura Nice** é um sistema completo para gestão de estoque, controle de va
 ### 📐 Arquitetura & Diagramas
 
 #### Diagrama de Classe
-<img width="2097" height="1121" alt="diagrama_classe_produtos_mae" src="https://github.com/user-attachments/assets/6542df34-5e8f-48e7-85a7-cc198f74a3cc" />
+<img width="2373" height="1121" alt="diagrama_classe_produtos_mae" src="https://github.com/user-attachments/assets/022e2d73-70f7-4c4c-9fa6-e744260b1442" />
 
 #### Diagrama de Caso de Uso
-<img width="1902" height="1224" alt="diagrama_caso_uso_produtos_mae" src="https://github.com/user-attachments/assets/b85721f7-ab0f-4814-9871-13c9a058bda0" />
+<img width="1920" height="1224" alt="diagrama_caso_uso_produtos_mae" src="https://github.com/user-attachments/assets/19a93c76-d1b7-44df-91ed-941af2ddb595" />
 
 #### Diagrama Relacional
-<img width="1516" height="849" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/6ced5f96-d1a1-4cdc-b0d8-540299217e6b" />
+<img width="1516" height="896" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/13f1ae80-c101-4703-be62-1283b6a85ea4" />
 
 ---
 
@@ -196,13 +196,13 @@ npm run dev
 > *(Insert your system architecture, UML class diagrams, and Entity-Relationship ER diagrams here)*
 
 #### Class Diagram
-<img width="2097" height="1121" alt="diagrama_classe_produtos_mae" src="https://github.com/user-attachments/assets/6542df34-5e8f-48e7-85a7-cc198f74a3cc" />
+<img width="2373" height="1121" alt="diagrama_classe_produtos_mae" src="https://github.com/user-attachments/assets/022e2d73-70f7-4c4c-9fa6-e744260b1442" />
 
 #### Use Case Diagram
-<img width="1902" height="1224" alt="diagrama_caso_uso_produtos_mae" src="https://github.com/user-attachments/assets/b85721f7-ab0f-4814-9871-13c9a058bda0" />
+<img width="1920" height="1224" alt="diagrama_caso_uso_produtos_mae" src="https://github.com/user-attachments/assets/19a93c76-d1b7-44df-91ed-941af2ddb595" />
 
 #### ER Diagram
-<img width="1516" height="849" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/6ced5f96-d1a1-4cdc-b0d8-540299217e6b" />
+<img width="1516" height="896" alt="diagrama_relacional_produtos_mae" src="https://github.com/user-attachments/assets/13f1ae80-c101-4703-be62-1283b6a85ea4" />
 
 ---
 
