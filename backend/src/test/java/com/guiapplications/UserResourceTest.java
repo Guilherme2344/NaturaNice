@@ -26,7 +26,7 @@ public class UserResourceTest {
         CreateUserRequestDTO request = new CreateUserRequestDTO("Carlos Alberto", "carlos@teste.com");
 
         // 1. Create user
-        Integer userId = given()
+        String userId = given()
           .contentType(ContentType.JSON)
           .body(request)
           .when()

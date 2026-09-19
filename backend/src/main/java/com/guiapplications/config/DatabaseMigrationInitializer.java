@@ -37,9 +37,11 @@ public class DatabaseMigrationInitializer {
                 "FROM products p WHERE i.product_id = p.id AND (i.product_name IS NULL OR i.product_name = '')"
             ).executeUpdate();
 
-            // Ensure observation and is_personal_use columns exist in sales
+            // Ensure observation, is_personal_use, and payment_method columns exist in sales and sale_payments
             em.createNativeQuery("ALTER TABLE sales ADD COLUMN IF NOT EXISTS observation VARCHAR(2000)").executeUpdate();
             em.createNativeQuery("ALTER TABLE sales ADD COLUMN IF NOT EXISTS is_personal_use BOOLEAN DEFAULT FALSE").executeUpdate();
+            em.createNativeQuery("ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30)").executeUpdate();
+            em.createNativeQuery("ALTER TABLE sale_payments ADD COLUMN IF NOT EXISTS payment_method VARCHAR(30)").executeUpdate();
 
             // Update sales status check constraint to include UNPAID
             try {

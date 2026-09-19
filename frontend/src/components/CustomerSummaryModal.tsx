@@ -30,8 +30,11 @@ import {
     type Customer,
     type CustomerSummary,
     type CustomerPurchaseItem,
+    type PaymentMethod,
+    PAYMENT_METHOD_LABELS,
 } from '../services/customerService';
 import { formatDateDisplay } from '../utils/expirationUtils';
+import { cleanProductNameForWhatsapp } from '../utils/stringUtils';
 import { ProductPaymentModal } from './ProductPaymentModal';
 
 interface CustomerSummaryModalProps {
@@ -50,7 +53,8 @@ export function CustomerSummaryModal({
     const [copied, setCopied] = useState(false);
 
     // Selected product for ProductPaymentModal
-    const [selectedItem, setSelectedItem] = useState<CustomerPurchaseItem | null>(null);
+    const [selectedItem, setSelectedItem] =
+        useState<CustomerPurchaseItem | null>(null);
     const [paymentModalOpened, setPaymentModalOpened] = useState(false);
 
     const fetchSummary = () => {
@@ -62,11 +66,15 @@ export function CustomerSummaryModal({
                     setSummary(data);
                     // Update selectedItem if open
                     if (selectedItem) {
-                        const updated = data.items.find((i) => i.saleId === selectedItem.saleId);
+                        const updated = data.items.find(
+                            (i) => i.saleId === selectedItem.saleId
+                        );
                         if (updated) setSelectedItem(updated);
                     }
                 })
-                .catch((err) => console.error('Erro ao buscar resumo do cliente:', err))
+                .catch((err) =>
+                    console.error('Erro ao buscar resumo do cliente:', err)
+                )
                 .finally(() => setLoading(false));
         }
     };
@@ -90,73 +98,131 @@ export function CustomerSummaryModal({
     const generateWhatsappText = (): string => {
         if (!summary) return '';
 
+        let text = `Olá, *${summary.customerName}*!\n\n`;
+        text += `🛍️ Segue resumo das suas compras:\n\n`;
+
+        // Sort items (sales) chronologically (oldest to newest)
+        const sortedItems = (summary.items || []).slice().sort((a, b) => {
+            const dateA = new Date(a.saleDate).getTime();
+            const dateB = new Date(b.saleDate).getTime();
+            return dateA - dateB;
+        });
+
+        // Group sales by date (format DD/MM/YYYY)
+        const salesByDate: {
+            dateStr: string;
+            sales: CustomerPurchaseItem[];
+        }[] = [];
+        sortedItems.forEach((sale) => {
+            const dateStr = formatDateDisplay(sale.saleDate);
+            let group = salesByDate.find((g) => g.dateStr === dateStr);
+            if (!group) {
+                group = { dateStr, sales: [] };
+                salesByDate.push(group);
+            }
+            group.sales.push(sale);
+        });
+
+        // Render each date group
+        salesByDate.forEach((group) => {
+            text += `*${group.dateStr}*\n`;
+            group.sales.forEach((sale) => {
+                if (sale.products && sale.products.length > 0) {
+                    sale.products.forEach((p) => {
+                        const cleanName = cleanProductNameForWhatsapp(
+                            p.productName
+                        );
+                        const prodLabel =
+                            p.quantity > 1
+                                ? `${cleanName} (${p.quantity} un.)`
+                                : cleanName;
+                        const prodPrice = p.totalPrice.toLocaleString('pt-BR', {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                        });
+                        text += `° ${prodLabel} - R$ ${prodPrice}\n`;
+                    });
+                } else if (sale.productName) {
+                    const lines = sale.productName.split('\n');
+                    lines.forEach((line) => {
+                        const cleanLine = cleanProductNameForWhatsapp(line);
+                        text += `° ${cleanLine} - R$ ${sale.totalAmount.toLocaleString(
+                            'pt-BR',
+                            {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                            }
+                        )}\n`;
+                    });
+                }
+            });
+            text += `\n`;
+        });
+
         const formattedTotal = summary.totalAmount.toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
-        const formattedPaid = summary.totalPaid.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
+
+        text += `*Total comprado: R$ ${formattedTotal}*\n\n`;
+
+        // Collect all payments across all sales
+        const allPayments: {
+            date: string;
+            amount: number;
+            method?: PaymentMethod;
+            methodDescription?: string;
+        }[] = [];
+        sortedItems.forEach((sale) => {
+            if (sale.payments && sale.payments.length > 0) {
+                sale.payments.forEach((p) => {
+                    allPayments.push({
+                        date: p.paymentDate,
+                        amount: p.amount,
+                        method: p.paymentMethod,
+                        methodDescription: p.paymentMethodDescription,
+                    });
+                });
+            }
         });
-        const formattedRemaining = summary.totalRemaining.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
+
+        // Sort payments chronologically
+        allPayments.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            return dateA - dateB;
         });
 
-        let text = `Olá, *${summary.customerName}*! 👋\n\n`;
-        text += `Segue o resumo da sua conta na Natura Nice:\n\n`;
-
-        const pendingItems = summary.items ? summary.items.filter((item) => item.remainingAmount > 0) : [];
-
-        if (pendingItems.length > 0) {
-            text += `🛍️ *Produtos em Aberto (A Pagar):*\n`;
-            pendingItems.forEach((item) => {
-                const dateStr = formatDateDisplay(item.saleDate);
-                const itemTotal = item.totalAmount.toLocaleString('pt-BR', {
+        // Payment history section
+        if (allPayments.length > 0) {
+            text += `💵 *Histórico de Pagamentos*\n`;
+            allPayments.forEach((p) => {
+                const pDateStr = formatDateDisplay(p.date);
+                const pAmountStr = p.amount.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                 });
-
-                text += `• *${item.productName}* (x${item.quantity}) - Total: R$ ${itemTotal} [Data Compra: ${dateStr}]\n`;
-
-                if (item.payments && item.payments.length > 0) {
-                    item.payments.forEach((p, idx) => {
-                        const pDateStr = formatDateDisplay(p.paymentDate);
-                        const pAmount = p.amount.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                        });
-                        const pRem = p.remainingToPay.toLocaleString('pt-BR', {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                        });
-
-                        text += `   - Parcela ${item.payments!.length - idx} (${pDateStr}): Valor Pago R$ ${pAmount} | *A Pagar: R$ ${pRem}*\n`;
-                    });
-                } else {
-                    const itemPaid = item.amountPaid.toLocaleString('pt-BR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                    });
-                    const itemRemaining = item.remainingAmount.toLocaleString('pt-BR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                    });
-                    text += `   - Já Pago: R$ ${itemPaid} | *A Pagar: R$ ${itemRemaining}*\n`;
-                }
+                const methodStr =
+                    p.methodDescription ||
+                    (p.method ? PAYMENT_METHOD_LABELS[p.method] : '');
+                text += `° ${pDateStr} - R$ ${pAmountStr}${methodStr ? ` - ${methodStr}` : ''}\n`;
             });
             text += `\n`;
         }
 
-        text += `📊 *Resumo Financeiro da Conta:*\n`;
-        text += `• Valor Total Comprado: R$ ${formattedTotal}\n`;
-        text += `• Valor Já Pago: R$ ${formattedPaid}\n`;
+        // Total section
+        const formattedRemaining = summary.totalRemaining.toLocaleString(
+            'pt-BR',
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }
+        );
 
         if (summary.totalRemaining > 0) {
-            text += `• *Valor Restante A Pagar: R$ ${formattedRemaining}*\n\n`;
-            text += `Para combinar o pagamento do valor pendente, basta me responder por aqui! `;
+            text += `*Saldo a pagar: R$ ${formattedRemaining}*\n\n`;
         } else {
-            text += `• *Situação: Conta Totalmente Quitada!* 🎉\n\n`;
+            text += `*Saldo a pagar: R$ 0,00 (Conta Quitada!)* 🎉\n\n`;
         }
 
         text += `Qualquer dúvida estou à disposição! 😊`;
@@ -202,34 +268,29 @@ export function CustomerSummaryModal({
                             {/* Summary Cards */}
                             <Grid>
                                 <Grid.Col span={{ base: 12, sm: 4 }}>
-                                    <Paper p="sm" withBorder radius="md" bg="gray.0">
+                                    <Paper
+                                        p="sm"
+                                        withBorder
+                                        radius="md"
+                                        bg="gray.0"
+                                    >
                                         <Text size="xs" c="dimmed" fw={600}>
                                             Total de Compras
                                         </Text>
-                                        <Text fw={800} size="lg" c="gray.8" mt={4}>
+                                        <Text
+                                            fw={800}
+                                            size="lg"
+                                            c="gray.8"
+                                            mt={4}
+                                        >
                                             R${' '}
-                                            {summary.totalAmount.toLocaleString('pt-BR', {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
-                                        </Text>
-                                    </Paper>
-                                </Grid.Col>
-
-                                <Grid.Col span={{ base: 12, sm: 4 }}>
-                                    <Paper p="sm" withBorder radius="md" bg="teal.0">
-                                        <Group gap={4}>
-                                            <CheckCircle2 size={16} color="#099268" />
-                                            <Text size="xs" c="teal.9" fw={700}>
-                                                Valor Já Pago
-                                            </Text>
-                                        </Group>
-                                        <Text fw={800} size="lg" c="teal.9" mt={4}>
-                                            R${' '}
-                                            {summary.totalPaid.toLocaleString('pt-BR', {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
+                                            {summary.totalAmount.toLocaleString(
+                                                'pt-BR',
+                                                {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                }
+                                            )}
                                         </Text>
                                     </Paper>
                                 </Grid.Col>
@@ -239,16 +300,62 @@ export function CustomerSummaryModal({
                                         p="sm"
                                         withBorder
                                         radius="md"
-                                        bg={summary.totalRemaining > 0 ? 'red.0' : 'teal.0'}
+                                        bg="teal.0"
+                                    >
+                                        <Group gap={4}>
+                                            <CheckCircle2
+                                                size={16}
+                                                color="#099268"
+                                            />
+                                            <Text size="xs" c="teal.9" fw={700}>
+                                                Valor Já Pago
+                                            </Text>
+                                        </Group>
+                                        <Text
+                                            fw={800}
+                                            size="lg"
+                                            c="teal.9"
+                                            mt={4}
+                                        >
+                                            R${' '}
+                                            {summary.totalPaid.toLocaleString(
+                                                'pt-BR',
+                                                {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                }
+                                            )}
+                                        </Text>
+                                    </Paper>
+                                </Grid.Col>
+
+                                <Grid.Col span={{ base: 12, sm: 4 }}>
+                                    <Paper
+                                        p="sm"
+                                        withBorder
+                                        radius="md"
+                                        bg={
+                                            summary.totalRemaining > 0
+                                                ? 'red.0'
+                                                : 'teal.0'
+                                        }
                                     >
                                         <Group gap={4}>
                                             <Clock
                                                 size={16}
-                                                color={summary.totalRemaining > 0 ? '#e03131' : '#099268'}
+                                                color={
+                                                    summary.totalRemaining > 0
+                                                        ? '#e03131'
+                                                        : '#099268'
+                                                }
                                             />
                                             <Text
                                                 size="xs"
-                                                c={summary.totalRemaining > 0 ? 'red.9' : 'teal.9'}
+                                                c={
+                                                    summary.totalRemaining > 0
+                                                        ? 'red.9'
+                                                        : 'teal.9'
+                                                }
                                                 fw={700}
                                             >
                                                 {summary.totalRemaining > 0
@@ -259,14 +366,21 @@ export function CustomerSummaryModal({
                                         <Text
                                             fw={800}
                                             size="lg"
-                                            c={summary.totalRemaining > 0 ? 'red.9' : 'teal.9'}
+                                            c={
+                                                summary.totalRemaining > 0
+                                                    ? 'red.9'
+                                                    : 'teal.9'
+                                            }
                                             mt={4}
                                         >
                                             R${' '}
-                                            {summary.totalRemaining.toLocaleString('pt-BR', {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
+                                            {summary.totalRemaining.toLocaleString(
+                                                'pt-BR',
+                                                {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2,
+                                                }
+                                            )}
                                         </Text>
                                     </Paper>
                                 </Grid.Col>
@@ -280,16 +394,25 @@ export function CustomerSummaryModal({
                                             Texto de Cobrança / Resumo WhatsApp
                                         </Text>
                                         <Text size="xs" c="dimmed">
-                                            Copie a mensagem formatada para enviar diretamente ao cliente.
+                                            Copie a mensagem formatada para
+                                            enviar diretamente ao cliente.
                                         </Text>
                                     </div>
                                     <Button
                                         size="xs"
                                         color={copied ? 'teal' : 'blue'}
-                                        leftSection={copied ? <Check size={14} /> : <Copy size={14} />}
+                                        leftSection={
+                                            copied ? (
+                                                <Check size={14} />
+                                            ) : (
+                                                <Copy size={14} />
+                                            )
+                                        }
                                         onClick={handleCopyWhatsappText}
                                     >
-                                        {copied ? 'Copiado!' : 'Copiar Texto WhatsApp'}
+                                        {copied
+                                            ? 'Copiado!'
+                                            : 'Copiar Texto WhatsApp'}
                                     </Button>
                                 </Group>
 
@@ -301,7 +424,8 @@ export function CustomerSummaryModal({
                                         mt="xs"
                                         p="xs"
                                     >
-                                        Texto copiado para a área de transferência com sucesso!
+                                        Texto copiado para a área de
+                                        transferência com sucesso!
                                     </Alert>
                                 )}
                             </Paper>
@@ -312,57 +436,135 @@ export function CustomerSummaryModal({
                             </Text>
 
                             <Table.ScrollContainer minWidth={0}>
-                                <Table striped highlightOnHover verticalSpacing="sm">
+                                <Table
+                                    striped
+                                    highlightOnHover
+                                    verticalSpacing="sm"
+                                >
                                     <Table.Thead>
                                         <Table.Tr>
                                             <Table.Th>Data Compra</Table.Th>
                                             <Table.Th>Produto</Table.Th>
-                                            <Table.Th style={{ textAlign: 'center' }}>Qtd</Table.Th>
-                                            <Table.Th style={{ textAlign: 'right' }}>Total</Table.Th>
-                                            <Table.Th style={{ textAlign: 'right' }}>Já Pago</Table.Th>
-                                            <Table.Th style={{ textAlign: 'right' }}>A Pagar</Table.Th>
-                                            <Table.Th style={{ textAlign: 'center' }}>Status</Table.Th>
-                                            <Table.Th style={{ textAlign: 'center' }}>Ação</Table.Th>
+                                            <Table.Th
+                                                style={{ textAlign: 'center' }}
+                                            >
+                                                Qtd
+                                            </Table.Th>
+                                            <Table.Th
+                                                style={{ textAlign: 'right' }}
+                                            >
+                                                Total
+                                            </Table.Th>
+                                            <Table.Th
+                                                style={{ textAlign: 'right' }}
+                                            >
+                                                Já Pago
+                                            </Table.Th>
+                                            <Table.Th
+                                                style={{ textAlign: 'right' }}
+                                            >
+                                                A Pagar
+                                            </Table.Th>
+                                            <Table.Th
+                                                style={{ textAlign: 'center' }}
+                                            >
+                                                Status
+                                            </Table.Th>
+                                            <Table.Th
+                                                style={{ textAlign: 'center' }}
+                                            >
+                                                Ação
+                                            </Table.Th>
                                         </Table.Tr>
                                     </Table.Thead>
                                     <Table.Tbody>
-                                        {summary.items && summary.items.length > 0 ? (
+                                        {summary.items &&
+                                        summary.items.length > 0 ? (
                                             summary.items.map((item) => (
                                                 <Table.Tr key={item.saleId}>
                                                     <Table.Td>
                                                         <Text size="xs">
-                                                            {formatDateDisplay(item.saleDate)}
+                                                            {formatDateDisplay(
+                                                                item.saleDate
+                                                            )}
                                                         </Text>
                                                     </Table.Td>
                                                     <Table.Td>
-                                                        <Group gap={6} align="center" wrap="nowrap">
-                                                            <Text size="xs" fw={600}>
-                                                                {item.productName}
+                                                        <Group
+                                                            gap={6}
+                                                            align="center"
+                                                            wrap="nowrap"
+                                                        >
+                                                            <Text
+                                                                size="xs"
+                                                                fw={600}
+                                                                style={{
+                                                                    whiteSpace:
+                                                                        'pre-line',
+                                                                }}
+                                                            >
+                                                                {
+                                                                    item.productName
+                                                                }
                                                             </Text>
                                                             {item.isPersonalUse && (
-                                                                <Badge color="teal" variant="light" size="xs">
+                                                                <Badge
+                                                                    color="teal"
+                                                                    variant="light"
+                                                                    size="xs"
+                                                                >
                                                                     Uso Pessoal
                                                                 </Badge>
                                                             )}
                                                             {item.observation && (
-                                                                <Popover width={260} shadow="md" withArrow position="top">
+                                                                <Popover
+                                                                    width={260}
+                                                                    shadow="md"
+                                                                    withArrow
+                                                                    position="top"
+                                                                >
                                                                     <Popover.Target>
                                                                         <ActionIcon
                                                                             variant="light"
                                                                             color="blue"
                                                                             size="xs"
                                                                             aria-label="Ver Observação"
-                                                                            style={{ cursor: 'pointer' }}
+                                                                            style={{
+                                                                                cursor: 'pointer',
+                                                                            }}
                                                                         >
-                                                                            <MessageSquare size={12} />
+                                                                            <MessageSquare
+                                                                                size={
+                                                                                    12
+                                                                                }
+                                                                            />
                                                                         </ActionIcon>
                                                                     </Popover.Target>
                                                                     <Popover.Dropdown p="xs">
-                                                                        <Text size="xs" fw={700} c="dimmed" mb={4}>
-                                                                            Observação da Venda:
+                                                                        <Text
+                                                                            size="xs"
+                                                                            fw={
+                                                                                700
+                                                                            }
+                                                                            c="dimmed"
+                                                                            mb={
+                                                                                4
+                                                                            }
+                                                                        >
+                                                                            Observação
+                                                                            da
+                                                                            Venda:
                                                                         </Text>
-                                                                        <Text size="xs" style={{ whiteSpace: 'pre-wrap' }}>
-                                                                            {item.observation}
+                                                                        <Text
+                                                                            size="xs"
+                                                                            style={{
+                                                                                whiteSpace:
+                                                                                    'pre-wrap',
+                                                                            }}
+                                                                        >
+                                                                            {
+                                                                                item.observation
+                                                                            }
                                                                         </Text>
                                                                     </Popover.Dropdown>
                                                                 </Popover>
@@ -370,61 +572,107 @@ export function CustomerSummaryModal({
                                                         </Group>
                                                     </Table.Td>
                                                     <Table.Td align="center">
-                                                        <Text size="xs">{item.quantity}</Text>
-                                                    </Table.Td>
-                                                    <Table.Td align="right">
-                                                        <Text size="xs" fw={600}>
-                                                            R${' '}
-                                                            {item.totalAmount.toLocaleString('pt-BR', {
-                                                                minimumFractionDigits: 2,
-                                                                maximumFractionDigits: 2,
-                                                            })}
-                                                        </Text>
-                                                    </Table.Td>
-                                                    <Table.Td align="right">
-                                                        <Text size="xs" c="teal.9">
-                                                            R${' '}
-                                                            {item.amountPaid.toLocaleString('pt-BR', {
-                                                                minimumFractionDigits: 2,
-                                                                maximumFractionDigits: 2,
-                                                            })}
+                                                        <Text size="xs">
+                                                            {item.quantity}
                                                         </Text>
                                                     </Table.Td>
                                                     <Table.Td align="right">
                                                         <Text
                                                             size="xs"
-                                                            c={item.remainingAmount > 0 ? 'red.9' : 'gray.6'}
-                                                            fw={item.remainingAmount > 0 ? 700 : 400}
+                                                            fw={600}
                                                         >
                                                             R${' '}
-                                                            {item.remainingAmount.toLocaleString('pt-BR', {
-                                                                minimumFractionDigits: 2,
-                                                                maximumFractionDigits: 2,
-                                                            })}
+                                                            {item.totalAmount.toLocaleString(
+                                                                'pt-BR',
+                                                                {
+                                                                    minimumFractionDigits: 2,
+                                                                    maximumFractionDigits: 2,
+                                                                }
+                                                            )}
+                                                        </Text>
+                                                    </Table.Td>
+                                                    <Table.Td align="right">
+                                                        <Text
+                                                            size="xs"
+                                                            c="teal.9"
+                                                        >
+                                                            R${' '}
+                                                            {item.amountPaid.toLocaleString(
+                                                                'pt-BR',
+                                                                {
+                                                                    minimumFractionDigits: 2,
+                                                                    maximumFractionDigits: 2,
+                                                                }
+                                                            )}
+                                                        </Text>
+                                                    </Table.Td>
+                                                    <Table.Td align="right">
+                                                        <Text
+                                                            size="xs"
+                                                            c={
+                                                                item.remainingAmount >
+                                                                0
+                                                                    ? 'red.9'
+                                                                    : 'gray.6'
+                                                            }
+                                                            fw={
+                                                                item.remainingAmount >
+                                                                0
+                                                                    ? 700
+                                                                    : 400
+                                                            }
+                                                        >
+                                                            R${' '}
+                                                            {item.remainingAmount.toLocaleString(
+                                                                'pt-BR',
+                                                                {
+                                                                    minimumFractionDigits: 2,
+                                                                    maximumFractionDigits: 2,
+                                                                }
+                                                            )}
                                                         </Text>
                                                     </Table.Td>
                                                     <Table.Td align="center">
                                                         <Badge
                                                             color={
-                                                                item.status === 'PAID' || item.remainingAmount === 0
+                                                                item.status ===
+                                                                    'PAID' ||
+                                                                item.remainingAmount ===
+                                                                    0
                                                                     ? 'teal'
-                                                                    : item.status === 'UNPAID' || item.amountPaid === 0
-                                                                    ? 'red'
-                                                                    : 'orange'
+                                                                    : item.status ===
+                                                                            'UNPAID' ||
+                                                                        item.amountPaid ===
+                                                                            0
+                                                                      ? 'red'
+                                                                      : 'orange'
                                                             }
                                                             size="xs"
                                                         >
-                                                            {item.statusDescription}
+                                                            {
+                                                                item.statusDescription
+                                                            }
                                                         </Badge>
                                                     </Table.Td>
                                                     <Table.Td align="center">
-                                                        {item.remainingAmount > 0 ? (
+                                                        {item.remainingAmount >
+                                                        0 ? (
                                                             <Button
                                                                 size="xs"
                                                                 color="orange"
                                                                 variant="light"
-                                                                leftSection={<DollarSign size={14} />}
-                                                                onClick={() => handleOpenPaymentModal(item)}
+                                                                leftSection={
+                                                                    <DollarSign
+                                                                        size={
+                                                                            14
+                                                                        }
+                                                                    />
+                                                                }
+                                                                onClick={() =>
+                                                                    handleOpenPaymentModal(
+                                                                        item
+                                                                    )
+                                                                }
                                                             >
                                                                 Abater
                                                             </Button>
@@ -433,8 +681,18 @@ export function CustomerSummaryModal({
                                                                 size="xs"
                                                                 color="blue"
                                                                 variant="subtle"
-                                                                leftSection={<History size={14} />}
-                                                                onClick={() => handleOpenPaymentModal(item)}
+                                                                leftSection={
+                                                                    <History
+                                                                        size={
+                                                                            14
+                                                                        }
+                                                                    />
+                                                                }
+                                                                onClick={() =>
+                                                                    handleOpenPaymentModal(
+                                                                        item
+                                                                    )
+                                                                }
                                                             >
                                                                 Ver Histórico
                                                             </Button>
@@ -444,9 +702,15 @@ export function CustomerSummaryModal({
                                             ))
                                         ) : (
                                             <Table.Tr>
-                                                <Table.Td colSpan={8} align="center" py="md">
+                                                <Table.Td
+                                                    colSpan={8}
+                                                    align="center"
+                                                    py="md"
+                                                >
                                                     <Text size="xs" c="dimmed">
-                                                        Nenhuma compra registrada para este cliente.
+                                                        Nenhuma compra
+                                                        registrada para este
+                                                        cliente.
                                                     </Text>
                                                 </Table.Td>
                                             </Table.Tr>

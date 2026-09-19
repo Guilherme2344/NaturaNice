@@ -20,6 +20,7 @@ import {
     Grid,
     CloseButton,
     Popover,
+    Checkbox,
 } from '@mantine/core';
 import { Edit, Trash2, Plus, Search, DollarSign, Boxes } from 'lucide-react';
 
@@ -81,8 +82,10 @@ interface ProductsTableProps {
     onEdit?: (product: Product) => void;
     onDelete?: (id: string) => void;
     onAdd?: () => void;
-    onSale?: (product: Product) => void;
+    onSale?: (products: Product[]) => void;
     onAddLote?: (product: Product) => void;
+    selectedIds?: string[];
+    onSelectedIdsChange?: (ids: string[]) => void;
 }
 
 export default function ProductsTable({
@@ -95,6 +98,8 @@ export default function ProductsTable({
     onAdd,
     onSale,
     onAddLote,
+    selectedIds: controlledSelectedIds,
+    onSelectedIdsChange,
 }: ProductsTableProps) {
     const [search, setSearch] = useState('');
     const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
@@ -104,6 +109,26 @@ export default function ProductsTable({
     const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
     const [activePage, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<string | null>('5');
+    const [internalSelectedIds, setInternalSelectedIds] = useState<string[]>(
+        []
+    );
+
+    const selectedIds =
+        controlledSelectedIds !== undefined
+            ? controlledSelectedIds
+            : internalSelectedIds;
+
+    const setSelectedIds = (
+        updater: string[] | ((prev: string[]) => string[])
+    ) => {
+        const next =
+            typeof updater === 'function' ? updater(selectedIds) : updater;
+        if (controlledSelectedIds !== undefined) {
+            onSelectedIdsChange?.(next);
+        } else {
+            setInternalSelectedIds(next);
+        }
+    };
 
     const itemsPerPage = Number(pageSize) || 5;
 
@@ -149,37 +174,43 @@ export default function ProductsTable({
         )
     ).sort((a, b) => a.localeCompare(b));
 
-    const filteredProducts = (products || []).filter((product) => {
-        const query = normalizeText(search.trim());
-        const matchesSearch =
-            !query ||
-            normalizeText(product.name || '').includes(query) ||
-            normalizeText(product.brand?.name || '').includes(query) ||
-            normalizeText(product.category?.name || '').includes(query) ||
-            normalizeText(product.family?.name || '').includes(query);
+    const filteredProducts = (products || [])
+        .filter((product) => {
+            const query = normalizeText(search.trim());
+            const matchesSearch =
+                !query ||
+                normalizeText(product.name || '').includes(query) ||
+                normalizeText(product.brand?.name || '').includes(query) ||
+                normalizeText(product.category?.name || '').includes(query) ||
+                normalizeText(product.family?.name || '').includes(query);
 
-        const matchesBrand =
-            !selectedBrand || product.brand?.name === selectedBrand;
-        const matchesCategory =
-            !selectedCategory || product.category?.name === selectedCategory;
-        const matchesFamily =
-            !selectedFamily || product.family?.name === selectedFamily;
+            const matchesBrand =
+                !selectedBrand || product.brand?.name === selectedBrand;
+            const matchesCategory =
+                !selectedCategory ||
+                product.category?.name === selectedCategory;
+            const matchesFamily =
+                !selectedFamily || product.family?.name === selectedFamily;
 
-        return (
-            matchesSearch && matchesBrand && matchesCategory && matchesFamily
-        );
-    }).sort((a, b) => {
-        if (!a.expirationDate && !b.expirationDate) {
+            return (
+                matchesSearch &&
+                matchesBrand &&
+                matchesCategory &&
+                matchesFamily
+            );
+        })
+        .sort((a, b) => {
+            if (!a.expirationDate && !b.expirationDate) {
+                return (a.name || '').localeCompare(b.name || '');
+            }
+            if (!a.expirationDate) return 1;
+            if (!b.expirationDate) return -1;
+
+            const cmp = a.expirationDate.localeCompare(b.expirationDate);
+            if (cmp !== 0) return cmp;
+
             return (a.name || '').localeCompare(b.name || '');
-        }
-        if (!a.expirationDate) return 1;
-        if (!b.expirationDate) return -1;
-
-        const cmp = a.expirationDate.localeCompare(b.expirationDate);
-        if (cmp !== 0) return cmp;
-
-        return (a.name || '').localeCompare(b.name || '');
-    });
+        });
 
     // total pages
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
@@ -189,6 +220,20 @@ export default function ProductsTable({
         (activePage - 1) * itemsPerPage,
         activePage * itemsPerPage
     );
+
+    const selectedProducts = products.filter((p) => selectedIds.includes(p.id));
+
+    const handleToggleProduct = (id: string) => {
+        setSelectedIds((prev) =>
+            prev.includes(id)
+                ? prev.filter((item) => item !== id)
+                : [...prev, id]
+        );
+    };
+
+    const handleClearSelection = () => {
+        setSelectedIds([]);
+    };
 
     return (
         <Paper shadow="xs" p="md" radius="md" withBorder>
@@ -304,6 +349,109 @@ export default function ProductsTable({
                 </Grid.Col>
             </Grid>
 
+            {/* Action Bar when items are selected */}
+            {selectedProducts.length > 0 && (
+                <Paper
+                    p="xs"
+                    mb="md"
+                    radius="md"
+                    withBorder
+                    style={{
+                        position: 'sticky',
+                        top: 60,
+                        zIndex: 90,
+                        backgroundColor: '#f4f9ff',
+                        borderColor: '#74c0fc',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+                    }}
+                >
+                    <Group justify="space-between" wrap="wrap" gap="xs">
+                        <Group gap="xs">
+                            <Badge size="lg" variant="filled" color="blue">
+                                {selectedProducts.length}{' '}
+                                {selectedProducts.length === 1
+                                    ? 'produto selecionado'
+                                    : 'produtos selecionados'}
+                            </Badge>
+                            <Button
+                                variant="subtle"
+                                color="gray"
+                                size="xs"
+                                onClick={handleClearSelection}
+                            >
+                                Limpar seleção
+                            </Button>
+                        </Group>
+
+                        <Group gap="xs" wrap="wrap">
+                            {onSale && (
+                                <Button
+                                    size="xs"
+                                    color="teal"
+                                    leftSection={<DollarSign size={16} />}
+                                    disabled={selectedProducts.every(
+                                        (p) => (p.quantity || 0) <= 0
+                                    )}
+                                    onClick={() => onSale(selectedProducts)}
+                                >
+                                    {selectedProducts.length === 1
+                                        ? 'Efetivar Venda'
+                                        : `Efetivar Venda (${selectedProducts.length} itens)`}
+                                </Button>
+                            )}
+
+                            {selectedProducts.length === 1 && onAddLote && (
+                                <Button
+                                    size="xs"
+                                    variant="light"
+                                    color="indigo"
+                                    leftSection={<Boxes size={16} />}
+                                    onClick={() =>
+                                        onAddLote(selectedProducts[0])
+                                    }
+                                >
+                                    Cadastrar Lote
+                                </Button>
+                            )}
+
+                            {selectedProducts.length === 1 && onEdit && (
+                                <Button
+                                    size="xs"
+                                    variant="light"
+                                    color="blue"
+                                    leftSection={<Edit size={16} />}
+                                    onClick={() => onEdit(selectedProducts[0])}
+                                >
+                                    Editar
+                                </Button>
+                            )}
+
+                            {selectedProducts.length === 1 && onDelete && (
+                                <Button
+                                    size="xs"
+                                    variant="light"
+                                    color="red"
+                                    leftSection={<Trash2 size={16} />}
+                                    disabled={
+                                        selectedProducts[0].canDelete === false
+                                    }
+                                    title={
+                                        selectedProducts[0].canDelete === false
+                                            ? 'Não é possível excluir: existem vendas associadas a este produto'
+                                            : undefined
+                                    }
+                                    onClick={() =>
+                                        onDelete(selectedProducts[0].id)
+                                    }
+                                >
+                                    Excluir
+                                </Button>
+                            )}
+                        </Group>
+                    </Group>
+                </Paper>
+            )}
+
             {/* Table */}
             <Table.ScrollContainer minWidth={1050}>
                 <Table striped highlightOnHover verticalSpacing="sm">
@@ -338,12 +486,11 @@ export default function ProductsTable({
                             </Table.Th>
                             <Table.Th
                                 style={{
-                                    textAlign: 'right',
+                                    textAlign: 'center',
+                                    width: 50,
                                     whiteSpace: 'nowrap',
                                 }}
-                            >
-                                Ações
-                            </Table.Th>
+                            />
                         </Table.Tr>
                     </Table.Thead>
 
@@ -366,7 +513,17 @@ export default function ProductsTable({
                             </Table.Tr>
                         ) : paginatedProducts.length > 0 ? (
                             paginatedProducts.map((product) => (
-                                <Table.Tr key={product.id}>
+                                <Table.Tr
+                                    key={product.id}
+                                    style={
+                                        selectedIds.includes(product.id)
+                                            ? {
+                                                  backgroundColor:
+                                                      'rgba(28, 126, 214, 0.08)',
+                                              }
+                                            : undefined
+                                    }
+                                >
                                     <Table.Td style={{ whiteSpace: 'nowrap' }}>
                                         <Group gap="xs" wrap="nowrap">
                                             <ColorSwatch
@@ -574,10 +731,12 @@ export default function ProductsTable({
                                                             <Stack
                                                                 gap={4}
                                                                 style={
-                                                                    sortedBatches.length >= 4
+                                                                    sortedBatches.length >=
+                                                                    4
                                                                         ? {
                                                                               maxHeight: 75,
-                                                                              overflowY: 'auto',
+                                                                              overflowY:
+                                                                                  'auto',
                                                                               paddingRight: 4,
                                                                           }
                                                                         : undefined
@@ -706,10 +865,12 @@ export default function ProductsTable({
                                                             <Stack
                                                                 gap={4}
                                                                 style={
-                                                                    sortedBatches.length >= 4
+                                                                    sortedBatches.length >=
+                                                                    4
                                                                         ? {
                                                                               maxHeight: 75,
-                                                                              overflowY: 'auto',
+                                                                              overflowY:
+                                                                                  'auto',
                                                                               paddingRight: 4,
                                                                           }
                                                                         : undefined
@@ -839,10 +1000,12 @@ export default function ProductsTable({
                                                             <Stack
                                                                 gap={4}
                                                                 style={
-                                                                    sortedBatches.length >= 4
+                                                                    sortedBatches.length >=
+                                                                    4
                                                                         ? {
                                                                               maxHeight: 75,
-                                                                              overflowY: 'auto',
+                                                                              overflowY:
+                                                                                  'auto',
                                                                               paddingRight: 4,
                                                                           }
                                                                         : undefined
@@ -893,75 +1056,24 @@ export default function ProductsTable({
                                                             </Stack>
                                                         </Popover.Dropdown>
                                                     </Popover>
-                                                 ) : null;
+                                                ) : null;
                                             })()}
                                         </Group>
                                     </Table.Td>
 
-                                    <Table.Td align="right">
-                                        <Group gap="xs" justify="flex-end">
-                                            {onSale && (
-                                                <ActionIcon
-                                                    variant="light"
-                                                    color="teal"
-                                                    title={
-                                                        product.quantity > 0
-                                                            ? 'Efetivar Venda'
-                                                            : 'Sem Estoque'
-                                                    }
-                                                    disabled={
-                                                        product.quantity <= 0
-                                                    }
-                                                    onClick={() =>
-                                                        onSale(product)
-                                                    }
-                                                >
-                                                    <DollarSign size={16} />
-                                                </ActionIcon>
+                                    <Table.Td
+                                        align="center"
+                                        style={{ width: 50 }}
+                                    >
+                                        <Checkbox
+                                            aria-label={`Selecionar produto ${product.name}`}
+                                            checked={selectedIds.includes(
+                                                product.id
                                             )}
-
-                                            {onAddLote && (
-                                                <ActionIcon
-                                                    variant="light"
-                                                    color="indigo"
-                                                    title="Cadastrar Lote"
-                                                    onClick={() =>
-                                                        onAddLote(product)
-                                                    }
-                                                >
-                                                    <Boxes size={16} />
-                                                </ActionIcon>
-                                            )}
-
-                                            <ActionIcon
-                                                variant="light"
-                                                color="blue"
-                                                title="Editar produto"
-                                                onClick={() =>
-                                                    onEdit?.(product)
-                                                }
-                                            >
-                                                <Edit size={16} />
-                                            </ActionIcon>
-
-                                            <ActionIcon
-                                                variant="light"
-                                                color="red"
-                                                title={
-                                                    product.canDelete === false
-                                                        ? 'Não é possível excluir: existem vendas associadas a este produto'
-                                                        : 'Excluir produto'
-                                                }
-                                                disabled={
-                                                    product.canDelete === false
-                                                }
-                                                onClick={() =>
-                                                    onDelete?.(product.id)
-                                                }
-                                            >
-                                                <Trash2 size={16} />
-                                            </ActionIcon>
-                                        </Group>
+                                            onChange={() =>
+                                                handleToggleProduct(product.id)
+                                            }
+                                        />
                                     </Table.Td>
                                 </Table.Tr>
                             ))

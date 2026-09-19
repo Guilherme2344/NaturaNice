@@ -94,7 +94,7 @@ public class CustomerResource {
             @HeaderParam("X-User-Id") String userIdHeader
     ) {
         User user = UserResolver.resolveUser(authHeader, userIdHeader);
-        CustomerSummaryDTO updatedSummary = customerService.addCustomerPayment(id, dto.amount(), user);
+        CustomerSummaryDTO updatedSummary = customerService.addCustomerPayment(id, dto.amount(), dto.paymentMethod(), user);
         return Response.ok(updatedSummary).build();
     }
 

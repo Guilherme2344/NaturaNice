@@ -120,4 +120,85 @@ public class SaleResourceTest {
              .body("status", equalTo("UNPAID"))
              .body("statusDescription", equalTo("Não pago"));
     }
+
+    @Test
+    public void testCreateMultiProductSale() {
+        Product product = Product.find("name", "Produto Teste Venda").firstResult();
+        UUID productId = product.id;
+
+        com.guiapplications.entities.dto.SaleItemRequestDTO item =
+            new com.guiapplications.entities.dto.SaleItemRequestDTO(productId, 2, new BigDecimal("30.00"));
+
+        SaleRequestDTO request = new SaleRequestDTO(
+            null, null, null, null, new BigDecimal("60.00"), "Multi Cliente", "Venda de teste", false, java.util.List.of(item)
+        );
+
+        given()
+          .contentType(ContentType.JSON)
+          .body(request)
+          .when()
+          .post("/sales")
+          .then()
+             .statusCode(201)
+             .body("saleId", notNullValue())
+             .body("quantity", equalTo(2))
+             .body("totalAmount", equalTo(60.0f))
+             .body("status", equalTo("PAID"));
+    }
+
+    @Test
+    public void testCreateSaleWithPaymentMethod() {
+        Product product = Product.find("name", "Produto Teste Venda").firstResult();
+        UUID productId = product.id;
+
+        SaleRequestDTO request = new SaleRequestDTO(
+            productId, null, 1, new BigDecimal("25.00"), new BigDecimal("25.00"), "Ana Paula", "Teste Pix", false, null,
+            com.guiapplications.enums.PaymentMethod.PIX
+        );
+
+        given()
+          .contentType(ContentType.JSON)
+          .body(request)
+          .when()
+          .post("/sales")
+          .then()
+             .statusCode(201)
+             .body("saleId", notNullValue())
+             .body("paymentMethod", equalTo("PIX"))
+             .body("paymentMethodDescription", equalTo("Pix"));
+    }
+
+    @Test
+    public void testAddSalePaymentWithPaymentMethod() {
+        Product product = Product.find("name", "Produto Teste Venda").firstResult();
+        UUID productId = product.id;
+
+        SaleRequestDTO request = new SaleRequestDTO(
+            productId, 1, new BigDecimal("50.00"), BigDecimal.ZERO, "Marcos Devedor"
+        );
+
+        String saleIdStr = given()
+          .contentType(ContentType.JSON)
+          .body(request)
+          .when()
+          .post("/sales")
+          .then()
+             .statusCode(201)
+             .extract()
+             .path("saleId");
+
+        UUID saleId = UUID.fromString(saleIdStr);
+
+        given()
+          .contentType(ContentType.JSON)
+          .body(java.util.Map.of("amount", 20.00, "paymentMethod", "CARD"))
+          .when()
+          .post("/sales/" + saleId + "/payments")
+          .then()
+             .statusCode(200);
+
+        com.guiapplications.entities.SalePayment payment =
+            com.guiapplications.entities.SalePayment.find("sale.id", saleId).firstResult();
+        assertEquals(com.guiapplications.enums.PaymentMethod.CARD, payment.paymentMethod);
+    }
 }

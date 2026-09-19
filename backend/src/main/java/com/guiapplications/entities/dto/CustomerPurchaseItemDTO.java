@@ -18,5 +18,8 @@ public record CustomerPurchaseItemDTO(
     String statusDescription,
     List<SalePaymentDTO> payments,
     String observation,
-    Boolean isPersonalUse
+    Boolean isPersonalUse,
+    List<CustomerSaleProductDTO> products,
+    String paymentMethod,
+    String paymentMethodDescription
 ) {}

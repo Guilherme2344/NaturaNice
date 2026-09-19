@@ -7,15 +7,19 @@ import java.time.LocalDateTime;
 import java.util.HexFormat;
 
 import com.guiapplications.entities.PasswordResetToken;
+import com.guiapplications.entities.TwoFactorToken;
 import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.ChangePasswordRequestDTO;
 import com.guiapplications.entities.dto.ForgotPasswordRequestDTO;
 import com.guiapplications.entities.dto.LoginRequestDTO;
 import com.guiapplications.entities.dto.LoginResponseDTO;
+import com.guiapplications.entities.dto.ResendTwoFactorRequestDTO;
 import com.guiapplications.entities.dto.ResetPasswordRequestDTO;
+import com.guiapplications.entities.dto.TwoFactorVerifyRequestDTO;
 import com.guiapplications.entities.dto.UserResponseDTO;
 import com.guiapplications.entities.dto.VerifyCodeRequestDTO;
 import com.guiapplications.events.PasswordResetRequestedEvent;
+import com.guiapplications.events.TwoFactorCodeRequestedEvent;
 import com.guiapplications.exceptions.ResourceNotFoundException;
 import com.guiapplications.utils.JwtUtil;
 
@@ -32,6 +36,9 @@ public class AuthService {
 
     @Inject
     Event<PasswordResetRequestedEvent> passwordResetEvent;
+
+    @Inject
+    Event<TwoFactorCodeRequestedEvent> twoFactorCodeEvent;
 
     @Inject
     LoginSecurityService loginSecurityService;
@@ -66,8 +73,54 @@ public class AuthService {
             throw new IllegalArgumentException("E-mail ou senha inválidos.");
         }
 
-        // Login successful: reset rate limit attempts
+        // Credentials are valid: reset rate limit attempts
         loginSecurityService.recordSuccess(emailKey, clientIp);
+
+        // Clean any existing 2FA tokens for this email
+        TwoFactorToken.deleteByEmail(emailKey);
+
+        // Generate a 6-digit secure random code for 2FA
+        int codeInt = SECURE_RANDOM.nextInt(900000) + 100000;
+        String code = String.valueOf(codeInt);
+
+        TwoFactorToken token = new TwoFactorToken();
+        token.email = emailKey;
+        token.code = code;
+        token.expirationTime = LocalDateTime.now().plusMinutes(10); // 10-minute expiration
+        token.user = user;
+        token.persist();
+
+        // Send 2FA code asynchronously via email
+        twoFactorCodeEvent.fireAsync(new TwoFactorCodeRequestedEvent(emailKey, code));
+
+        return new LoginResponseDTO(true, emailKey, null, null);
+    }
+
+    @Transactional
+    public LoginResponseDTO verifyTwoFactor(TwoFactorVerifyRequestDTO dto) {
+        if (dto.email() == null || dto.email().isBlank()) {
+            throw new IllegalArgumentException("E-mail é obrigatório.");
+        }
+        if (dto.code() == null || dto.code().isBlank()) {
+            throw new IllegalArgumentException("O código de verificação é obrigatório.");
+        }
+
+        String emailKey = dto.email().trim().toLowerCase();
+        TwoFactorToken token = TwoFactorToken.findByEmailAndCode(emailKey, dto.code());
+        if (token == null || token.isExpired()) {
+            throw new IllegalArgumentException("Código de verificação (2FA) inválido ou expirado (validade de 10 minutos).");
+        }
+
+        User user = token.user;
+        if (user == null) {
+            user = User.findByEmail(emailKey);
+        }
+        if (user == null) {
+            throw new ResourceNotFoundException("Usuário não encontrado.");
+        }
+
+        // Invalidate token after successful verification
+        TwoFactorToken.deleteByEmail(emailKey);
 
         UserResponseDTO userDTO = new UserResponseDTO(
             user.id,
@@ -80,7 +133,36 @@ public class AuthService {
         // Generate signed JWT Bearer Token
         String jwtToken = JwtUtil.generateToken(user);
 
-        return new LoginResponseDTO(jwtToken, userDTO);
+        return new LoginResponseDTO(false, user.email, jwtToken, userDTO);
+    }
+
+    @Transactional
+    public void resendTwoFactor(ResendTwoFactorRequestDTO dto) {
+        if (dto.email() == null || dto.email().isBlank()) {
+            throw new IllegalArgumentException("E-mail é obrigatório.");
+        }
+
+        String emailKey = dto.email().trim().toLowerCase();
+        User user = User.findByEmail(emailKey);
+        if (user == null) {
+            throw new IllegalArgumentException("Usuário não encontrado.");
+        }
+
+        // Clean previous tokens
+        TwoFactorToken.deleteByEmail(emailKey);
+
+        // Generate a new 6-digit code
+        int codeInt = SECURE_RANDOM.nextInt(900000) + 100000;
+        String code = String.valueOf(codeInt);
+
+        TwoFactorToken token = new TwoFactorToken();
+        token.email = emailKey;
+        token.code = code;
+        token.expirationTime = LocalDateTime.now().plusMinutes(10);
+        token.user = user;
+        token.persist();
+
+        twoFactorCodeEvent.fireAsync(new TwoFactorCodeRequestedEvent(emailKey, code));
     }
 
     @Transactional

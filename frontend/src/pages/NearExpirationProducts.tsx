@@ -17,6 +17,7 @@ import {
     useFamiliesQuery,
 } from '../hooks/useEntitiesQuery';
 import type { CreateProductDTO } from '../services/productService';
+import type { CreateSaleDTO } from '../services/saleService';
 
 export default function NearExpirationProducts() {
     const { data: products = [], isLoading: loading } = useNearExpirationProductsQuery();
@@ -28,9 +29,12 @@ export default function NearExpirationProducts() {
     const [modalOpened, setModalOpened] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+    // Selection state
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+
     // Sale modal states
     const [saleModalOpened, setSaleModalOpened] = useState(false);
-    const [productToSell, setProductToSell] = useState<Product | null>(null);
+    const [productsToSell, setProductsToSell] = useState<Product[]>([]);
 
     // Delete modal states
     const [deleteModalOpened, setDeleteModalOpened] = useState(false);
@@ -68,39 +72,27 @@ export default function NearExpirationProducts() {
         setSuccessMessage(`Produto "${data.name}" atualizado com sucesso!`);
     };
 
-    const handleOpenSale = (product: Product) => {
-        setProductToSell(product);
+    const handleOpenSale = (selected: Product[]) => {
+        setProductsToSell(selected);
         setSaleModalOpened(true);
     };
 
-    const handleConfirmSale = async (
-        quantity: number,
-        sellingPrice: number,
-        amountPaid?: number,
-        customerName?: string,
-        observation?: string,
-        isPersonalUse?: boolean
-    ) => {
-        if (!productToSell) return;
+    const handleConfirmSale = async (saleData: CreateSaleDTO) => {
         setSuccessMessage('');
-        await createSaleMutation.mutateAsync({
-            productId: productToSell.id,
-            quantity,
-            sellingPrice,
-            amountPaid,
-            customerName,
-            observation,
-            isPersonalUse,
-        });
+        await createSaleMutation.mutateAsync(saleData);
+        setSelectedProductIds([]);
 
         const now = new Date();
         const formattedTime = now.toLocaleTimeString('pt-BR');
         const formattedDate = now.toLocaleDateString('pt-BR');
 
+        const count = saleData.items ? saleData.items.length : 1;
+        const itemNames = productsToSell.map((p) => `"${p.name}"`).join(', ');
+
         setSuccessMessage(
-            isPersonalUse
-                ? `Uso pessoal do produto "${productToSell.name}" (${quantity} un.) registrado com sucesso às ${formattedTime} do dia ${formattedDate}!`
-                : `Venda do produto "${productToSell.name}" (${quantity} un.) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
+            saleData.isPersonalUse
+                ? `Uso pessoal (${count} produto(s): ${itemNames}) registrado com sucesso às ${formattedTime} do dia ${formattedDate}!`
+                : `Venda (${count} produto(s): ${itemNames}) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
         );
     };
 
@@ -121,6 +113,7 @@ export default function NearExpirationProducts() {
             await deleteProductMutation.mutateAsync(productToDelete.id);
             setDeleteModalOpened(false);
             setSuccessMessage(`Produto "${productToDelete.name}" excluído com sucesso!`);
+            setSelectedProductIds([]);
             setProductToDelete(null);
         } catch (err: any) {
             if (err?.response?.status === 409) {
@@ -158,6 +151,8 @@ export default function NearExpirationProducts() {
                 onEdit={handleOpenEdit}
                 onSale={handleOpenSale}
                 onDelete={handleOpenDelete}
+                selectedIds={selectedProductIds}
+                onSelectedIdsChange={setSelectedProductIds}
             />
 
             <ProductModal
@@ -173,7 +168,7 @@ export default function NearExpirationProducts() {
             <SaleModal
                 opened={saleModalOpened}
                 onClose={() => setSaleModalOpened(false)}
-                product={productToSell}
+                products={productsToSell}
                 onConfirmSale={handleConfirmSale}
             />
 

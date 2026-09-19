@@ -1,5 +1,19 @@
 import { api } from './api';
 
+export type PaymentMethod = 'CARD' | 'CASH' | 'PIX';
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+    CARD: 'Cartão',
+    CASH: 'Dinheiro',
+    PIX: 'Pix',
+};
+
+export const PAYMENT_METHOD_OPTIONS = [
+    { value: 'CARD', label: 'Cartão' },
+    { value: 'CASH', label: 'Dinheiro' },
+    { value: 'PIX', label: 'Pix' },
+];
+
 export interface Customer {
     id: string;
     name: string;
@@ -12,6 +26,15 @@ export interface SalePayment {
     amount: number;
     cumulativePaid: number;
     remainingToPay: number;
+    paymentMethod?: PaymentMethod;
+    paymentMethodDescription?: string;
+}
+
+export interface CustomerSaleProduct {
+    productName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
 }
 
 export interface CustomerPurchaseItem {
@@ -28,6 +51,9 @@ export interface CustomerPurchaseItem {
     payments?: SalePayment[];
     observation?: string;
     isPersonalUse?: boolean;
+    products?: CustomerSaleProduct[];
+    paymentMethod?: PaymentMethod;
+    paymentMethodDescription?: string;
 }
 
 export interface CustomerSummary {

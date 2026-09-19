@@ -20,5 +20,7 @@ public record SaleResponseDTO(
     String statusDescription,
     String customerName,
     String observation,
-    Boolean isPersonalUse
+    Boolean isPersonalUse,
+    String paymentMethod,
+    String paymentMethodDescription
 ) {}

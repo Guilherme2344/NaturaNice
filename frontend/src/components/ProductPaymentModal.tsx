@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Modal,
     Button,
@@ -11,12 +11,30 @@ import {
     Table,
     NumberInput,
     Alert,
+    Select,
 } from '@mantine/core';
-import { DollarSign, CheckCircle2, History, Copy, Check, MessageSquare } from 'lucide-react';
+import {
+    DollarSign,
+    CheckCircle2,
+    History,
+    Copy,
+    Check,
+    MessageSquare,
+    CreditCard,
+} from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import type { CustomerPurchaseItem } from '../services/customerService';
-import { formatDateDisplay, formatDateTimeDisplay } from '../utils/expirationUtils';
+import {
+    type CustomerPurchaseItem,
+    type PaymentMethod,
+    PAYMENT_METHOD_OPTIONS,
+    PAYMENT_METHOD_LABELS,
+} from '../services/customerService';
+import {
+    formatDateDisplay,
+    formatDateTimeDisplay,
+} from '../utils/expirationUtils';
+import { cleanProductNameForWhatsapp } from '../utils/stringUtils';
 
 interface ProductPaymentModalProps {
     opened: boolean;
@@ -34,6 +52,9 @@ export function ProductPaymentModal({
     onPaymentSuccess,
 }: ProductPaymentModalProps) {
     const [amount, setAmount] = useState<number | ''>('');
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(
+        null
+    );
     const [loading, setLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -41,22 +62,43 @@ export function ProductPaymentModal({
 
     const queryClient = useQueryClient();
 
+    useEffect(() => {
+        if (opened) {
+            setAmount('');
+            setPaymentMethod(null);
+            setErrorMsg('');
+            setSuccessMsg('');
+            setCopied(false);
+        }
+    }, [opened, item?.saleId]);
+
     if (!item) return null;
 
     const handleAddSalePayment = async () => {
         if (!amount || Number(amount) <= 0) return;
+        if (!paymentMethod) {
+            setErrorMsg('Selecione a forma de pagamento.');
+            return;
+        }
         try {
             setLoading(true);
             setErrorMsg('');
             setSuccessMsg('');
 
             const val = Number(amount);
-            await api.post(`/sales/${item.saleId}/payments`, { amount: val });
+            await api.post(`/sales/${item.saleId}/payments`, {
+                amount: val,
+                paymentMethod,
+            });
 
             setAmount('');
+            setPaymentMethod(null);
             setSuccessMsg(
-                `Abatimento de R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} registrado para ${item.productName}!`
+                `Abatimento de R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${PAYMENT_METHOD_LABELS[paymentMethod]}) registrado para ${item.productName}!`
             );
+            setTimeout(() => {
+                setSuccessMsg('');
+            }, 4000);
 
             queryClient.invalidateQueries({ queryKey: ['customers'] });
             queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -65,7 +107,8 @@ export function ProductPaymentModal({
             onPaymentSuccess();
         } catch (err: any) {
             setErrorMsg(
-                err?.response?.data?.message || 'Erro ao registrar abatimento de pagamento.'
+                err?.response?.data?.message ||
+                    'Erro ao registrar abatimento de pagamento.'
             );
         } finally {
             setLoading(false);
@@ -83,33 +126,46 @@ export function ProductPaymentModal({
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
-        const formattedRemaining = item.remainingAmount.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        });
+        const formattedRemaining = item.remainingAmount.toLocaleString(
+            'pt-BR',
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }
+        );
         const saleDateStr = formatDateDisplay(item.saleDate);
 
-        const greeting = customerName ? `Olá, *${customerName}*! 👋\n\n` : `Olá! 👋\n\n`;
+        const greeting = customerName
+            ? `Olá, *${customerName}*! 👋\n\n`
+            : `Olá! 👋\n\n`;
+
+        const isMultiProduct = item.productName.includes('\n');
 
         let text = greeting;
-        text += `Segue o resumo do pagamento do produto *${item.productName}* na Natura Nice:\n\n`;
+        text += isMultiProduct
+            ? `Segue o resumo do pagamento dos produtos abaixo na Natura Nice:\n\n`
+            : `Segue o resumo do pagamento do produto abaixo na Natura Nice:\n\n`;
         text += `📦 *Detalhes da Compra:*\n`;
-        text += `• Produto: *${item.productName}* (x${item.quantity})\n`;
-        text += `• Data da Compra: ${saleDateStr}\n`;
-        text += `• Valor Total do Produto: R$ ${formattedTotal}\n`;
-        text += `• Valor Já Pago: R$ ${formattedPaid}\n`;
-        if (item.observation) {
-            text += `• Observação: ${item.observation}\n`;
+        if (isMultiProduct) {
+            text += `• *Produtos:*\n`;
+            item.productName.split('\n').forEach((p) => {
+                text += `   - ${cleanProductNameForWhatsapp(p)}\n`;
+            });
+        } else {
+            text += `• Produto: *${cleanProductNameForWhatsapp(item.productName)}* (x${item.quantity})\n`;
         }
+        text += `• *Data da Compra*: ${saleDateStr}\n`;
+        text += `• *Valor Total do Produto*: R$ ${formattedTotal}\n`;
+        text += `• *Valor Já Pago*: R$ ${formattedPaid}\n`;
 
         if (item.remainingAmount > 0) {
             text += `• *Valor Restante A Pagar: R$ ${formattedRemaining}*\n\n`;
         } else {
-            text += `• *Situação: Produto Totalmente Quitado!* 🎉\n\n`;
+            text += `• *Situação: ${isMultiProduct ? 'Produtos Totalmente Quitados' : 'Produto Totalmente Quitado'}!* 🎉\n\n`;
         }
 
         if (item.payments && item.payments.length > 0) {
-            text += `💳 *Histórico de Abatimentos:*\n`;
+            text += `💵 *Histórico de Abatimentos:*\n`;
             item.payments.forEach((p, idx) => {
                 const pDateStr = formatDateDisplay(p.paymentDate);
                 const pAmount = p.amount.toLocaleString('pt-BR', {
@@ -120,8 +176,13 @@ export function ProductPaymentModal({
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                 });
+                const methodStr =
+                    p.paymentMethodDescription ||
+                    (p.paymentMethod
+                        ? PAYMENT_METHOD_LABELS[p.paymentMethod]
+                        : '');
 
-                text += `• Parcela ${item.payments!.length - idx} (${pDateStr}): Abatido R$ ${pAmount} | *A Pagar R$ ${pRem}*\n`;
+                text += `• Parcela ${item.payments!.length - idx} (${pDateStr}): Abatido R$ ${pAmount}${methodStr ? ` - ${methodStr}` : ''} | *A Pagar R$ ${pRem}*\n`;
             });
             text += `\n`;
         }
@@ -151,7 +212,13 @@ export function ProductPaymentModal({
                 <Group gap="xs">
                     <DollarSign size={22} color="#1c7ed6" />
                     <Text fw={700} size="lg">
-                        {isFullyPaid ? `Histórico de Pagamento - ${item.productName}` : `Abater Pagamento - ${item.productName}`}
+                        {item.productName.includes('\n')
+                            ? isFullyPaid
+                                ? 'Histórico de Pagamento'
+                                : 'Abater Pagamento'
+                            : isFullyPaid
+                              ? `Histórico de Pagamento - ${item.productName}`
+                              : `Abater Pagamento - ${item.productName}`}
                     </Text>
                     {item.isPersonalUse ? (
                         <Badge color="teal" variant="light" size="sm">
@@ -160,11 +227,13 @@ export function ProductPaymentModal({
                     ) : (
                         <Badge
                             color={
-                                item.status === 'PAID' || item.remainingAmount === 0
+                                item.status === 'PAID' ||
+                                item.remainingAmount === 0
                                     ? 'teal'
-                                    : item.status === 'UNPAID' || item.amountPaid === 0
-                                    ? 'red'
-                                    : 'orange'
+                                    : item.status === 'UNPAID' ||
+                                        item.amountPaid === 0
+                                      ? 'red'
+                                      : 'orange'
                             }
                             variant="light"
                             size="sm"
@@ -179,10 +248,29 @@ export function ProductPaymentModal({
             radius="md"
         >
             <Stack gap="md">
+                {item.productName.includes('\n') && (
+                    <Paper p="xs" withBorder radius="md" bg="blue.0">
+                        <Text size="xs" fw={700} c="blue.9" mb={2}>
+                            Produtos desta Venda:
+                        </Text>
+                        <Text
+                            size="xs"
+                            fw={600}
+                            style={{ whiteSpace: 'pre-line' }}
+                        >
+                            {item.productName}
+                        </Text>
+                    </Paper>
+                )}
+
                 {item.observation && (
                     <Paper p="xs" withBorder radius="md" bg="yellow.0">
                         <Group gap="xs" align="flex-start" wrap="nowrap">
-                            <MessageSquare size={16} color="#d97706" style={{ marginTop: 2, flexShrink: 0 }} />
+                            <MessageSquare
+                                size={16}
+                                color="#d97706"
+                                style={{ marginTop: 2, flexShrink: 0 }}
+                            />
                             <div>
                                 <Text size="xs" fw={700} c="yellow.9">
                                     Observação:
@@ -261,37 +349,65 @@ export function ProductPaymentModal({
                 {!isFullyPaid && (
                     <Paper p="sm" withBorder radius="md" bg="orange.0">
                         <Text fw={700} size="sm" c="orange.9" mb="xs">
-                            Digite o Valor para Abater:
+                            Digite os Dados para Abater Pagamento:
                         </Text>
-                        <Group align="flex-end" gap="xs">
-                            <NumberInput
-                                placeholder="R$ 0,00"
-                                prefix="R$ "
-                                decimalScale={2}
-                                decimalSeparator=","
-                                thousandSeparator="."
-                                selectAllOnFocus
-                                min={0.01}
-                                max={item.remainingAmount}
-                                value={amount}
-                                onChange={(val) => {
-                                    setAmount(val === '' ? '' : Number(val));
-                                    setErrorMsg('');
-                                }}
-                                style={{ flex: 1 }}
-                                size="sm"
-                            />
-                            <Button
-                                color="orange"
-                                size="sm"
-                                leftSection={<DollarSign size={16} />}
-                                loading={loading}
-                                disabled={!amount || Number(amount) <= 0}
-                                onClick={handleAddSalePayment}
-                            >
-                                Abater Pagamento
-                            </Button>
-                        </Group>
+                        <Grid align="flex-end">
+                            <Grid.Col span={{ base: 12, sm: 4.5 }}>
+                                <NumberInput
+                                    label="Valor a Abater"
+                                    placeholder="R$ 0,00"
+                                    prefix="R$ "
+                                    decimalScale={2}
+                                    decimalSeparator=","
+                                    thousandSeparator="."
+                                    selectAllOnFocus
+                                    min={0.01}
+                                    max={item.remainingAmount}
+                                    value={amount}
+                                    onChange={(val) => {
+                                        setAmount(
+                                            val === '' ? '' : Number(val)
+                                        );
+                                        setErrorMsg('');
+                                        setSuccessMsg('');
+                                    }}
+                                    size="sm"
+                                />
+                            </Grid.Col>
+                            <Grid.Col span={{ base: 12, sm: 4.5 }}>
+                                <Select
+                                    label="Forma de Pagamento"
+                                    placeholder="Selecione..."
+                                    data={PAYMENT_METHOD_OPTIONS}
+                                    value={paymentMethod}
+                                    onChange={(val) => {
+                                        setPaymentMethod(val as PaymentMethod);
+                                        setErrorMsg('');
+                                        setSuccessMsg('');
+                                    }}
+                                    leftSection={<CreditCard size={16} />}
+                                    size="sm"
+                                    allowDeselect={false}
+                                />
+                            </Grid.Col>
+                            <Grid.Col span={{ base: 12, sm: 3 }}>
+                                <Button
+                                    color="orange"
+                                    size="sm"
+                                    fullWidth
+                                    leftSection={<DollarSign size={16} />}
+                                    loading={loading}
+                                    disabled={
+                                        !amount ||
+                                        Number(amount) <= 0 ||
+                                        !paymentMethod
+                                    }
+                                    onClick={handleAddSalePayment}
+                                >
+                                    Abater
+                                </Button>
+                            </Grid.Col>
+                        </Grid>
                         {errorMsg && (
                             <Text size="xs" c="red" mt={4}>
                                 {errorMsg}
@@ -313,13 +429,20 @@ export function ProductPaymentModal({
                                 Texto do Produto para WhatsApp
                             </Text>
                             <Text size="xs" c="dimmed">
-                                Copie a mensagem formatada deste produto específico para enviar ao cliente.
+                                Copie a mensagem formatada deste produto
+                                específico para enviar ao cliente.
                             </Text>
                         </div>
                         <Button
                             size="xs"
                             color={copied ? 'teal' : 'blue'}
-                            leftSection={copied ? <Check size={14} /> : <Copy size={14} />}
+                            leftSection={
+                                copied ? (
+                                    <Check size={14} />
+                                ) : (
+                                    <Copy size={14} />
+                                )
+                            }
                             onClick={handleCopyWhatsappText}
                         >
                             {copied ? 'Copiado!' : 'Copiar Texto WhatsApp'}
@@ -334,7 +457,8 @@ export function ProductPaymentModal({
                             mt="xs"
                             p="xs"
                         >
-                            Texto do produto copiado para a área de transferência com sucesso!
+                            Texto do produto copiado para a área de
+                            transferência com sucesso!
                         </Alert>
                     )}
                 </Paper>
@@ -347,14 +471,21 @@ export function ProductPaymentModal({
                     </Text>
                 </Group>
 
-                <Table.ScrollContainer minWidth={450}>
+                <Table.ScrollContainer minWidth={550}>
                     <Table striped highlightOnHover verticalSpacing="xs">
                         <Table.Thead>
                             <Table.Tr>
                                 <Table.Th>Data do Pagamento</Table.Th>
-                                <Table.Th style={{ textAlign: 'right' }}>Valor Pago</Table.Th>
-                                <Table.Th style={{ textAlign: 'right' }}>Total Acumulado</Table.Th>
-                                <Table.Th style={{ textAlign: 'right' }}>A Pagar</Table.Th>
+                                <Table.Th>Forma de Pagamento</Table.Th>
+                                <Table.Th style={{ textAlign: 'right' }}>
+                                    Valor Pago
+                                </Table.Th>
+                                <Table.Th style={{ textAlign: 'right' }}>
+                                    Total Acumulado
+                                </Table.Th>
+                                <Table.Th style={{ textAlign: 'right' }}>
+                                    A Pagar
+                                </Table.Th>
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
@@ -363,47 +494,92 @@ export function ProductPaymentModal({
                                     <Table.Tr key={p.id || idx}>
                                         <Table.Td>
                                             <Text size="xs">
-                                                {formatDateTimeDisplay(p.paymentDate) || '-'}
+                                                {formatDateTimeDisplay(
+                                                    p.paymentDate
+                                                ) || '-'}
                                             </Text>
+                                        </Table.Td>
+                                        <Table.Td>
+                                            <Badge
+                                                size="xs"
+                                                variant="light"
+                                                color={
+                                                    p.paymentMethod === 'PIX'
+                                                        ? 'teal'
+                                                        : p.paymentMethod ===
+                                                            'CARD'
+                                                          ? 'blue'
+                                                          : 'gray'
+                                                }
+                                            >
+                                                {p.paymentMethodDescription ||
+                                                    (p.paymentMethod
+                                                        ? PAYMENT_METHOD_LABELS[
+                                                              p.paymentMethod
+                                                          ]
+                                                        : '-')}
+                                            </Badge>
                                         </Table.Td>
                                         <Table.Td align="right">
                                             <Text size="xs" fw={700} c="teal.9">
                                                 R${' '}
-                                                {p.amount.toLocaleString('pt-BR', {
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2,
-                                                })}
+                                                {p.amount.toLocaleString(
+                                                    'pt-BR',
+                                                    {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2,
+                                                    }
+                                                )}
                                             </Text>
                                         </Table.Td>
                                         <Table.Td align="right">
                                             <Text size="xs" c="blue.8">
                                                 R${' '}
-                                                {p.cumulativePaid.toLocaleString('pt-BR', {
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2,
-                                                })}
+                                                {p.cumulativePaid.toLocaleString(
+                                                    'pt-BR',
+                                                    {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2,
+                                                    }
+                                                )}
                                             </Text>
                                         </Table.Td>
                                         <Table.Td align="right">
                                             <Text
                                                 size="xs"
-                                                c={p.remainingToPay > 0 ? 'red.9' : 'teal.9'}
-                                                fw={p.remainingToPay > 0 ? 700 : 400}
+                                                c={
+                                                    p.remainingToPay > 0
+                                                        ? 'red.9'
+                                                        : 'teal.9'
+                                                }
+                                                fw={
+                                                    p.remainingToPay > 0
+                                                        ? 700
+                                                        : 400
+                                                }
                                             >
                                                 R${' '}
-                                                {p.remainingToPay.toLocaleString('pt-BR', {
-                                                    minimumFractionDigits: 2,
-                                                    maximumFractionDigits: 2,
-                                                })}
+                                                {p.remainingToPay.toLocaleString(
+                                                    'pt-BR',
+                                                    {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2,
+                                                    }
+                                                )}
                                             </Text>
                                         </Table.Td>
                                     </Table.Tr>
                                 ))
                             ) : (
                                 <Table.Tr>
-                                    <Table.Td colSpan={4} align="center" py="md">
+                                    <Table.Td
+                                        colSpan={5}
+                                        align="center"
+                                        py="md"
+                                    >
                                         <Text size="xs" c="dimmed">
-                                            Nenhum histórico de parcela registrado para este produto.
+                                            Nenhum histórico de parcela
+                                            registrado para este produto.
                                         </Text>
                                     </Table.Td>
                                 </Table.Tr>

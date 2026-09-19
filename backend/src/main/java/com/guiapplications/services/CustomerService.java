@@ -17,8 +17,10 @@ import com.guiapplications.entities.User;
 import com.guiapplications.entities.dto.CustomerPurchaseItemDTO;
 import com.guiapplications.entities.dto.CustomerRequestDTO;
 import com.guiapplications.entities.dto.CustomerResponseDTO;
+import com.guiapplications.entities.dto.CustomerSaleProductDTO;
 import com.guiapplications.entities.dto.CustomerSummaryDTO;
 import com.guiapplications.entities.dto.SalePaymentDTO;
+import com.guiapplications.enums.PaymentMethod;
 import com.guiapplications.enums.SaleStatus;
 import com.guiapplications.exceptions.ResourceAlreadyExistsException;
 import com.guiapplications.exceptions.ResourceInUseException;
@@ -171,25 +173,38 @@ public class CustomerService {
 
         for (Sale sale : sales) {
             BigDecimal saleTotal = BigDecimal.ZERO;
-            String productName = "Produto não informado";
-            Integer quantity = 0;
+            int totalQuantity = 0;
             BigDecimal unitPrice = BigDecimal.ZERO;
+            List<String> prodDescriptions = new ArrayList<>();
 
+            List<CustomerSaleProductDTO> saleProducts = new ArrayList<>();
             if (sale.items != null && !sale.items.isEmpty()) {
-                SaleItem firstItem = sale.items.get(0);
-                if (firstItem.productName != null && !firstItem.productName.isBlank()) {
-                    productName = firstItem.productName;
-                } else if (firstItem.product != null && firstItem.product.name != null) {
-                    productName = firstItem.product.name;
-                } else {
-                    productName = "Produto indisponível";
-                }
-                quantity = firstItem.quantity;
-                unitPrice = firstItem.sellingPrice;
-
                 for (SaleItem item : sale.items) {
-                    saleTotal = saleTotal.add(item.getTotalAmount());
+                    String pName = item.productName != null && !item.productName.isBlank()
+                        ? item.productName
+                        : (item.product != null && item.product.name != null ? item.product.name : "Produto não informado");
+                    int qty = item.quantity != null ? item.quantity : 0;
+                    BigDecimal itemSellingPrice = item.sellingPrice != null ? item.sellingPrice : BigDecimal.ZERO;
+                    BigDecimal itemTotal = item.getTotalAmount();
+                    saleProducts.add(new CustomerSaleProductDTO(pName, qty, itemSellingPrice, itemTotal));
+
+                    totalQuantity += qty;
+                    saleTotal = saleTotal.add(itemTotal);
+                    if (unitPrice.compareTo(BigDecimal.ZERO) == 0 && item.sellingPrice != null) {
+                        unitPrice = item.sellingPrice;
+                    }
+
+                    if (sale.items.size() > 1 && qty > 0) {
+                        prodDescriptions.add(pName + " (" + qty + " un.)");
+                    } else {
+                        prodDescriptions.add(pName);
+                    }
                 }
+            }
+
+            String fullProductName = prodDescriptions.isEmpty() ? "Produto indisponível" : String.join("\n", prodDescriptions);
+            if (saleProducts.isEmpty()) {
+                saleProducts.add(new CustomerSaleProductDTO(fullProductName, totalQuantity, unitPrice, saleTotal));
             }
 
             BigDecimal amountPaid = sale.amountPaid != null ? sale.amountPaid : BigDecimal.ZERO;
@@ -232,7 +247,15 @@ public class CustomerService {
                 runningPaid = runningPaid.add(initialPaymentAmount);
                 BigDecimal rem = saleTotal.subtract(runningPaid);
                 if (rem.compareTo(BigDecimal.ZERO) < 0) rem = BigDecimal.ZERO;
-                paymentDTOs.add(new SalePaymentDTO(null, sale.saleDate, initialPaymentAmount, runningPaid, rem));
+                paymentDTOs.add(new SalePaymentDTO(
+                    null,
+                    sale.saleDate,
+                    initialPaymentAmount,
+                    runningPaid,
+                    rem,
+                    sale.paymentMethod != null ? sale.paymentMethod.name() : null,
+                    sale.paymentMethod != null ? sale.paymentMethod.getDescription() : null
+                ));
             }
 
             if (paymentsList != null && !paymentsList.isEmpty()) {
@@ -240,7 +263,15 @@ public class CustomerService {
                     runningPaid = runningPaid.add(p.amount);
                     BigDecimal rem = saleTotal.subtract(runningPaid);
                     if (rem.compareTo(BigDecimal.ZERO) < 0) rem = BigDecimal.ZERO;
-                    paymentDTOs.add(new SalePaymentDTO(p.id, p.paymentDate, p.amount, runningPaid, rem));
+                    paymentDTOs.add(new SalePaymentDTO(
+                        p.id,
+                        p.paymentDate,
+                        p.amount,
+                        runningPaid,
+                        rem,
+                        p.paymentMethod != null ? p.paymentMethod.name() : (sale.paymentMethod != null ? sale.paymentMethod.name() : null),
+                        p.paymentMethod != null ? p.paymentMethod.getDescription() : (sale.paymentMethod != null ? sale.paymentMethod.getDescription() : null)
+                    ));
                 }
             }
 
@@ -250,8 +281,8 @@ public class CustomerService {
             items.add(new CustomerPurchaseItemDTO(
                 sale.id,
                 sale.saleDate,
-                productName,
-                quantity,
+                fullProductName,
+                totalQuantity,
                 unitPrice,
                 saleTotal,
                 amountPaid,
@@ -260,7 +291,10 @@ public class CustomerService {
                 statusDesc,
                 paymentDTOs,
                 sale.observation,
-                Boolean.TRUE.equals(sale.isPersonalUse)
+                Boolean.TRUE.equals(sale.isPersonalUse),
+                saleProducts,
+                sale.paymentMethod != null ? sale.paymentMethod.name() : null,
+                sale.paymentMethod != null ? sale.paymentMethod.getDescription() : null
             ));
         }
 
@@ -282,6 +316,11 @@ public class CustomerService {
     // Apply additional payment to customer's outstanding debts (oldest sales first) and record installment
     @Transactional
     public CustomerSummaryDTO addCustomerPayment(UUID customerId, BigDecimal additionalPayment, User user) {
+        return addCustomerPayment(customerId, additionalPayment, null, user);
+    }
+
+    @Transactional
+    public CustomerSummaryDTO addCustomerPayment(UUID customerId, BigDecimal additionalPayment, PaymentMethod paymentMethod, User user) {
         if (user == null) {
             throw new IllegalArgumentException("Sessão inválida ou expirada. Faça login novamente.");
         }
@@ -337,6 +376,7 @@ public class CustomerService {
                 paymentRecord.sale = sale;
                 paymentRecord.paymentDate = now;
                 paymentRecord.amount = paymentForSale;
+                paymentRecord.paymentMethod = paymentMethod;
                 paymentRecord.persist();
 
                 remainingToApply = remainingToApply.subtract(paymentForSale);

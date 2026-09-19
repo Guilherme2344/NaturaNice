@@ -5,7 +5,7 @@ import {
     useEffect,
     type ReactNode,
 } from 'react';
-import { authService, type User } from '../services/authService';
+import { authService, type User, type LoginResponse } from '../services/authService';
 
 const MAX_SESSION_DURATION_MS = 60 * 60 * 1000; // 1 hour in miliseconds
 
@@ -14,7 +14,8 @@ interface AuthContextType {
     token: string | null;
     isAuthenticated: boolean;
     isAdmin: boolean;
-    login: (email: string, password: string) => Promise<User>;
+    login: (email: string, password: string) => Promise<LoginResponse>;
+    verifyTwoFactor: (email: string, code: string) => Promise<User>;
     logout: () => void;
     updateUser: (updatedUser: User) => void;
 }
@@ -79,8 +80,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, [token]);
 
-    const login = async (email: string, password: string): Promise<User> => {
+    const login = async (email: string, password: string): Promise<LoginResponse> => {
         const response = await authService.login(email, password);
+        if (!response.twoFactorRequired && response.user && response.token) {
+            setUser(response.user);
+            setToken(response.token);
+            localStorage.setItem('app_login_time', String(Date.now()));
+        }
+        return response;
+    };
+
+    const verifyTwoFactor = async (email: string, code: string): Promise<User> => {
+        const response = await authService.verifyTwoFactor(email, code);
+        if (!response.user || !response.token) {
+            throw new Error('Falha ao autenticar.');
+        }
         setUser(response.user);
         setToken(response.token);
         localStorage.setItem('app_login_time', String(Date.now()));
@@ -110,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated,
                 isAdmin,
                 login,
+                verifyTwoFactor,
                 logout,
                 updateUser,
             }}

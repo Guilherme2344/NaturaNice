@@ -29,3 +29,14 @@ export const accentInsensitiveFilter: OptionsFilter = ({ options, search }) => {
         return normalizeText(item.label || item.value).includes(query);
     });
 };
+
+/**
+ * Remove sufixos indesejados como " - AGN" para exibição limpa em mensagens do WhatsApp.
+ * Exemplo: "Sabonete Tododia - AGN" -> "Sabonete Tododia"
+ *          "Base Glam - AGN (1 un.)" -> "Base Glam (1 un.)"
+ */
+export const cleanProductNameForWhatsapp = (name: string = ''): string => {
+    return name
+        .replace(/\s*[-–—]\s*AGN\b/gi, '')
+        .trim();
+};

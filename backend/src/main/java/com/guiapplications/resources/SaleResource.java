@@ -42,7 +42,7 @@ public class SaleResource {
                        .build();
     }
 
-    public record PaymentRequest(BigDecimal amount) {}
+    public record PaymentRequest(BigDecimal amount, com.guiapplications.enums.PaymentMethod paymentMethod) {}
 
     @POST
     @Path("/{id}/payments")
@@ -53,7 +53,7 @@ public class SaleResource {
             @HeaderParam("X-User-Id") String userIdHeader
     ) {
         User user = UserResolver.resolveUser(authHeader, userIdHeader);
-        saleService.addSalePayment(saleId, request.amount(), user);
+        saleService.addSalePayment(saleId, request.amount(), request.paymentMethod(), user);
         return Response.ok(Map.of("message", "Abatimento de pagamento registrado com sucesso.")).build();
     }
 }

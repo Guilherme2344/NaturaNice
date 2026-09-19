@@ -9,13 +9,25 @@ export interface User {
 }
 
 export interface LoginResponse {
-    token: string;
-    user: User;
+    twoFactorRequired?: boolean;
+    email?: string;
+    token?: string;
+    user?: User;
 }
 
 export const authService = {
     login: async (email: string, password: string): Promise<LoginResponse> => {
         const response = await api.post<LoginResponse>('/auth/login', { email, password });
+        return response.data;
+    },
+
+    verifyTwoFactor: async (email: string, code: string): Promise<LoginResponse> => {
+        const response = await api.post<LoginResponse>('/auth/verify-2fa', { email, code });
+        return response.data;
+    },
+
+    resendTwoFactor: async (email: string): Promise<{ message: string }> => {
+        const response = await api.post<{ message: string }>('/auth/resend-2fa', { email });
         return response.data;
     },
 

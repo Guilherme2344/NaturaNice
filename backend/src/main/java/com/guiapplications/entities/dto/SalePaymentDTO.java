@@ -9,5 +9,7 @@ public record SalePaymentDTO(
     LocalDateTime paymentDate,
     BigDecimal amount,
     BigDecimal cumulativePaid,
-    BigDecimal remainingToPay
+    BigDecimal remainingToPay,
+    String paymentMethod,
+    String paymentMethodDescription
 ) {}

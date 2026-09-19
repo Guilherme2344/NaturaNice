@@ -22,6 +22,7 @@ import {
 } from '../hooks/useEntitiesQuery';
 import type { CreateProductDTO } from '../services/productService';
 import type { CreateProductBatchDTO } from '../services/productBatchService';
+import type { CreateSaleDTO } from '../services/saleService';
 
 export default function Products() {
     const { data: products = [], isLoading: loadingProducts } = useProductsQuery();
@@ -50,9 +51,12 @@ export default function Products() {
     const [productForDeleteSelection, setProductForDeleteSelection] = useState<Product | null>(null);
     const [selectedBatchToDelete, setSelectedBatchToDelete] = useState<ProductBatch | null>(null);
 
+    // Selection state
+    const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+
     // Sale modal states
     const [saleModalOpened, setSaleModalOpened] = useState(false);
-    const [productToSell, setProductToSell] = useState<Product | null>(null);
+    const [productsToSell, setProductsToSell] = useState<Product[]>([]);
 
     // Delete modal states
     const [deleteModalOpened, setDeleteModalOpened] = useState(false);
@@ -102,8 +106,8 @@ export default function Products() {
         }
     };
 
-    const handleOpenSale = (product: Product) => {
-        setProductToSell(product);
+    const handleOpenSale = (selected: Product[]) => {
+        setProductsToSell(selected);
         setSaleModalOpened(true);
     };
 
@@ -161,36 +165,22 @@ export default function Products() {
         }
     };
 
-    const handleConfirmSale = async (
-        quantity: number,
-        sellingPrice: number,
-        amountPaid?: number,
-        customerName?: string,
-        observation?: string,
-        isPersonalUse?: boolean,
-        batchId?: string
-    ) => {
-        if (!productToSell) return;
+    const handleConfirmSale = async (saleData: CreateSaleDTO) => {
         setSuccessMessage('');
-        await createSaleMutation.mutateAsync({
-            productId: productToSell.id,
-            batchId,
-            quantity,
-            sellingPrice,
-            amountPaid,
-            customerName,
-            observation,
-            isPersonalUse,
-        });
+        await createSaleMutation.mutateAsync(saleData);
+        setSelectedProductIds([]);
 
         const now = new Date();
         const formattedTime = now.toLocaleTimeString('pt-BR');
         const formattedDate = now.toLocaleDateString('pt-BR');
 
+        const count = saleData.items ? saleData.items.length : 1;
+        const itemNames = productsToSell.map((p) => `"${p.name}"`).join(', ');
+
         setSuccessMessage(
-            isPersonalUse
-                ? `Uso pessoal do produto "${productToSell.name}" (${quantity} un.) registrado com sucesso às ${formattedTime} do dia ${formattedDate}!`
-                : `Venda do produto "${productToSell.name}" (${quantity} un.) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
+            saleData.isPersonalUse
+                ? `Uso pessoal (${count} produto(s): ${itemNames}) registrado com sucesso às ${formattedTime} do dia ${formattedDate}!`
+                : `Venda (${count} produto(s): ${itemNames}) registrada com sucesso às ${formattedTime} do dia ${formattedDate}!`
         );
     };
 
@@ -222,6 +212,7 @@ export default function Products() {
                     `Produto "${productToDelete.name}" excluído com sucesso!`
                 );
             }
+            setSelectedProductIds([]);
             setProductToDelete(null);
             setSelectedBatchToDelete(null);
         } catch (err: any) {
@@ -260,6 +251,8 @@ export default function Products() {
                 onDelete={handleOpenDelete}
                 onSale={handleOpenSale}
                 onAddLote={handleOpenBatchModal}
+                selectedIds={selectedProductIds}
+                onSelectedIdsChange={setSelectedProductIds}
             />
 
             {/* Modal de Escolha do Lote para Edição (Passo 1 quando o produto tem > 1 lote) */}
@@ -295,7 +288,7 @@ export default function Products() {
             <SaleModal
                 opened={saleModalOpened}
                 onClose={() => setSaleModalOpened(false)}
-                product={productToSell}
+                products={productsToSell}
                 onConfirmSale={handleConfirmSale}
             />
 

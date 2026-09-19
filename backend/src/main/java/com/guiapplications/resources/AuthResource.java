@@ -6,7 +6,9 @@ import com.guiapplications.entities.dto.ChangePasswordRequestDTO;
 import com.guiapplications.entities.dto.ForgotPasswordRequestDTO;
 import com.guiapplications.entities.dto.LoginRequestDTO;
 import com.guiapplications.entities.dto.LoginResponseDTO;
+import com.guiapplications.entities.dto.ResendTwoFactorRequestDTO;
 import com.guiapplications.entities.dto.ResetPasswordRequestDTO;
+import com.guiapplications.entities.dto.TwoFactorVerifyRequestDTO;
 import com.guiapplications.entities.dto.UserResponseDTO;
 import com.guiapplications.entities.dto.VerifyCodeRequestDTO;
 import com.guiapplications.services.AuthService;
@@ -35,6 +37,32 @@ public class AuthResource {
         try {
             LoginResponseDTO response = authService.login(dto, request);
             return Response.ok(response).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("message", e.getMessage()))
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("/verify-2fa")
+    public Response verifyTwoFactor(TwoFactorVerifyRequestDTO dto) {
+        try {
+            LoginResponseDTO response = authService.verifyTwoFactor(dto);
+            return Response.ok(response).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("message", e.getMessage()))
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("/resend-2fa")
+    public Response resendTwoFactor(ResendTwoFactorRequestDTO dto) {
+        try {
+            authService.resendTwoFactor(dto);
+            return Response.ok(Map.of("message", "Código de verificação reenviado com sucesso para o seu e-mail.")).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Map.of("message", e.getMessage()))

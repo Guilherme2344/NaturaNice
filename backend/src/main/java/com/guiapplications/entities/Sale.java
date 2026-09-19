@@ -2,11 +2,15 @@ package com.guiapplications.entities;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import com.guiapplications.entities.dto.DailySalesSummaryDTO;
 import com.guiapplications.entities.dto.MonthlySalesSummaryDTO;
+import com.guiapplications.enums.PaymentMethod;
 import com.guiapplications.enums.SaleStatus;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
@@ -54,6 +58,10 @@ public class Sale extends PanacheEntityBase {
     @Column(name = "is_personal_use", nullable = true, columnDefinition = "boolean default false")
     public Boolean isPersonalUse = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", length = 30)
+    public PaymentMethod paymentMethod;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = true)
     public Customer customer;
@@ -89,18 +97,10 @@ public class Sale extends PanacheEntityBase {
         }
 
         StringBuilder jpql = new StringBuilder(
-            "SELECT new com.guiapplications.entities.dto.DailySalesSummaryDTO(" +
-            "  s.saleDate, " +
-            "  COALESCE(i.productName, p.name, 'Produto não informado'), " +
-            "  COALESCE(c.name, 'Cliente não informado'), " +
-            "  SUM(i.sellingPrice * i.quantity), " +
-            "  SUM(i.purchasePrice * i.quantity), " +
-            "  SUM((i.sellingPrice - i.purchasePrice) * i.quantity), " +
-            "  SUM(i.quantity), " +
-            "  s.isPersonalUse, " +
-            "  s.observation " +
-            ") " +
-            "FROM SaleItem i JOIN i.sale s LEFT JOIN i.product p LEFT JOIN s.customer c " +
+            "SELECT DISTINCT s FROM Sale s " +
+            "LEFT JOIN FETCH s.items i " +
+            "LEFT JOIN FETCH i.product " +
+            "LEFT JOIN FETCH s.customer c " +
             "WHERE s.saleDate >= :start AND s.saleDate <= :end AND s.user = :user "
         );
 
@@ -108,11 +108,10 @@ public class Sale extends PanacheEntityBase {
             jpql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :customerName ");
         }
 
-        jpql.append("GROUP BY s.saleDate, COALESCE(i.productName, p.name, 'Produto não informado'), COALESCE(c.name, 'Cliente não informado'), s.id, s.isPersonalUse, s.observation ");
         jpql.append("ORDER BY s.saleDate DESC");
 
-        TypedQuery<DailySalesSummaryDTO> query = getEntityManager()
-                .createQuery(jpql.toString(), DailySalesSummaryDTO.class)
+        TypedQuery<Sale> query = getEntityManager()
+                .createQuery(jpql.toString(), Sale.class)
                 .setParameter("start", start)
                 .setParameter("end", end)
                 .setParameter("user", user);
@@ -121,7 +120,56 @@ public class Sale extends PanacheEntityBase {
             query.setParameter("customerName", "%" + customerName.trim().toLowerCase() + "%");
         }
 
-        return query.getResultList();
+        List<Sale> sales = query.getResultList();
+        List<DailySalesSummaryDTO> result = new ArrayList<>();
+
+        for (Sale s : sales) {
+            BigDecimal revenue = BigDecimal.ZERO;
+            BigDecimal cost = BigDecimal.ZERO;
+            long itemsSold = 0;
+            List<String> prodDescriptions = new ArrayList<>();
+
+            if (s.items != null) {
+                for (SaleItem item : s.items) {
+                    String pName = item.productName != null && !item.productName.isBlank()
+                        ? item.productName
+                        : (item.product != null && item.product.name != null ? item.product.name : "Produto não informado");
+                    int qty = item.quantity != null ? item.quantity : 0;
+                    itemsSold += qty;
+
+                    if (!Boolean.TRUE.equals(s.isPersonalUse)) {
+                        BigDecimal itemRev = item.sellingPrice != null ? item.sellingPrice.multiply(BigDecimal.valueOf(qty)) : BigDecimal.ZERO;
+                        BigDecimal itemCost = item.purchasePrice != null ? item.purchasePrice.multiply(BigDecimal.valueOf(qty)) : BigDecimal.ZERO;
+                        revenue = revenue.add(itemRev);
+                        cost = cost.add(itemCost);
+                    }
+
+                    if (s.items.size() > 1 && qty > 0) {
+                        prodDescriptions.add(pName + " (" + qty + " un.)");
+                    } else {
+                        prodDescriptions.add(pName);
+                    }
+                }
+            }
+
+            BigDecimal profit = Boolean.TRUE.equals(s.isPersonalUse) ? BigDecimal.ZERO : s.calculateTotalProfit();
+            String fullProductName = prodDescriptions.isEmpty() ? "Produto não informado" : String.join("\n", prodDescriptions);
+            String custName = s.customer != null && s.customer.name != null ? s.customer.name : "Cliente não informado";
+
+            result.add(new DailySalesSummaryDTO(
+                s.saleDate,
+                fullProductName,
+                custName,
+                revenue,
+                cost,
+                profit,
+                itemsSold,
+                s.isPersonalUse,
+                s.observation
+            ));
+        }
+
+        return result;
     }
     
     // monthly summary
@@ -131,14 +179,10 @@ public class Sale extends PanacheEntityBase {
         }
 
         StringBuilder jpql = new StringBuilder(
-            "SELECT new com.guiapplications.entities.dto.MonthlySalesSummaryDTO(" +
-            "  MONTH(s.saleDate), " +
-            "  SUM(i.sellingPrice * i.quantity), " +
-            "  SUM(i.purchasePrice * i.quantity), " +
-            "  SUM((i.sellingPrice - i.purchasePrice) * i.quantity), " +
-            "  SUM(i.quantity) " +
-            ") " +
-            "FROM SaleItem i JOIN i.sale s LEFT JOIN s.customer c " +
+            "SELECT DISTINCT s FROM Sale s " +
+            "LEFT JOIN FETCH s.items i " +
+            "LEFT JOIN FETCH i.product " +
+            "LEFT JOIN FETCH s.customer c " +
             "WHERE s.saleDate >= :start AND s.saleDate <= :end AND s.user = :user "
         );
 
@@ -146,11 +190,10 @@ public class Sale extends PanacheEntityBase {
             jpql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :customerName ");
         }
 
-        jpql.append("GROUP BY MONTH(s.saleDate) ");
-        jpql.append("ORDER BY MONTH(s.saleDate) ASC");
+        jpql.append("ORDER BY s.saleDate ASC");
 
-        TypedQuery<MonthlySalesSummaryDTO> query = getEntityManager()
-                .createQuery(jpql.toString(), MonthlySalesSummaryDTO.class)
+        TypedQuery<Sale> query = getEntityManager()
+                .createQuery(jpql.toString(), Sale.class)
                 .setParameter("start", start)
                 .setParameter("end", end)
                 .setParameter("user", user);
@@ -159,6 +202,44 @@ public class Sale extends PanacheEntityBase {
             query.setParameter("customerName", "%" + customerName.trim().toLowerCase() + "%");
         }
 
-        return query.getResultList();
+        List<Sale> sales = query.getResultList();
+        Map<Integer, MonthlySalesSummaryDTO> map = new TreeMap<>();
+
+        for (Sale s : sales) {
+            int month = s.saleDate.getMonthValue();
+            BigDecimal saleRev = BigDecimal.ZERO;
+            BigDecimal saleCost = BigDecimal.ZERO;
+            long saleItemsSold = 0;
+
+            if (s.items != null) {
+                for (SaleItem item : s.items) {
+                    int qty = item.quantity != null ? item.quantity : 0;
+                    saleItemsSold += qty;
+                    if (!Boolean.TRUE.equals(s.isPersonalUse)) {
+                        BigDecimal itemRev = item.sellingPrice != null ? item.sellingPrice.multiply(BigDecimal.valueOf(qty)) : BigDecimal.ZERO;
+                        BigDecimal itemCost = item.purchasePrice != null ? item.purchasePrice.multiply(BigDecimal.valueOf(qty)) : BigDecimal.ZERO;
+                        saleRev = saleRev.add(itemRev);
+                        saleCost = saleCost.add(itemCost);
+                    }
+                }
+            }
+
+            BigDecimal saleProfit = Boolean.TRUE.equals(s.isPersonalUse) ? BigDecimal.ZERO : s.calculateTotalProfit();
+
+            MonthlySalesSummaryDTO existing = map.get(month);
+            if (existing == null) {
+                map.put(month, new MonthlySalesSummaryDTO(month, saleRev, saleCost, saleProfit, saleItemsSold));
+            } else {
+                map.put(month, new MonthlySalesSummaryDTO(
+                    month,
+                    existing.revenue().add(saleRev),
+                    existing.cost().add(saleCost),
+                    existing.profit().add(saleProfit),
+                    existing.itemsSold() + saleItemsSold
+                ));
+            }
+        }
+
+        return new ArrayList<>(map.values());
     }
 }

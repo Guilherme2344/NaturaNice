@@ -399,7 +399,7 @@ export function ReportView({
                                         <Table.Tr key={index}>
                                             <Table.Td fw={600}>{row.label}</Table.Td>
                                             {type === 'monthly' && (
-                                                <Table.Td fw={600} c="dark.4">
+                                                <Table.Td fw={600} c="dark.4" style={{ whiteSpace: 'pre-line' }}>
                                                     {row.productName || 'Produto não informado'}
                                                 </Table.Td>
                                             )}

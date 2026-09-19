@@ -59,4 +59,26 @@ public class EmailEventsObserver {
                      "SMTP_PASSWORD (Senha de App de 16 dígitos do Google) e defina SMTP_MOCK=false.");
         }
     }
+
+    // Send two-factor authentication verification code email
+    public void onTwoFactorCodeRequested(@ObservesAsync TwoFactorCodeRequestedEvent event) {
+        String htmlBody = "<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; max-width: 500px;'>" +
+                          "<h2 style='color: #099268;'>Código de Acesso (2FA) - Natura Nice</h2>" +
+                          "<p>Olá,</p>" +
+                          "<p>Foi solicitada uma tentativa de login na sua conta. Digite o código de 6 dígitos abaixo para concluir o acesso:</p>" +
+                          "<div style='background-color: #f4f6f8; padding: 15px; text-align: center; border-radius: 6px; font-size: 26px; font-weight: bold; letter-spacing: 5px; color: #099268; margin: 20px 0;'>" +
+                          event.code() +
+                          "</div>" +
+                          "<p style='font-size: 12px; color: #888;'>Este código de verificação expira em 10 minutos. Se você não tentou fazer login, proteja sua conta e altere sua senha imediatamente.</p>" +
+                          "</div>";
+
+        try {
+            mailer.send(Mail.withHtml(event.email(), "Código de Verificação de Login (2FA) - Natura Nice", htmlBody));
+            LOG.info("[SMTP MAILER] Código 2FA enviado com sucesso para: " + event.email());
+        } catch (Exception e) {
+            LOG.warn("[SMTP MAILER NOTICE] Falha ao enviar e-mail com código 2FA (" + e.getMessage() +
+                     "). Para enviar e-mails reais via Gmail, configure no arquivo backend/.env: SMTP_USERNAME, " +
+                     "SMTP_PASSWORD (Senha de App de 16 dígitos do Google) e defina SMTP_MOCK=false.");
+        }
+    }
 }
