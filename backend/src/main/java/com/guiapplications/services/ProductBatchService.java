@@ -191,9 +191,30 @@ public class ProductBatchService {
         if (user == null) return List.of();
         List<Product> products = Product.listAllWithRelations(user);
         List<ProductBatchResponseDTO> result = new ArrayList<>();
-        for (Product p : products) {
-            result.addAll(findByProduct(p.id, user));
+        for (Product product : products) {
+            ProductBatchResponseDTO lote1 = new ProductBatchResponseDTO(
+                product.id,
+                product.id,
+                product.name,
+                product.quantity != null ? product.quantity : 0,
+                product.purchaseDate != null ? product.purchaseDate : LocalDate.now(),
+                product.expirationDate,
+                product.purchasePrice != null ? product.purchasePrice : BigDecimal.ZERO,
+                product.sellingPrice != null ? product.sellingPrice : BigDecimal.ZERO
+            );
+            result.add(lote1);
+
+            if (product.batches != null) {
+                for (ProductBatch b : product.batches) {
+                    result.add(ProductBatchResponseDTO.fromEntity(b));
+                }
+            }
         }
+
+        result.sort(Comparator.comparing(
+            (ProductBatchResponseDTO b) -> b.expirationDate() == null ? LocalDate.MAX : b.expirationDate()
+        ).thenComparing(b -> b.purchaseDate() != null ? b.purchaseDate() : LocalDate.MIN));
+
         return result;
     }
 }
