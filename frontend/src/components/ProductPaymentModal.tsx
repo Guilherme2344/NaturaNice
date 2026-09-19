@@ -34,7 +34,10 @@ import {
     formatDateDisplay,
     formatDateTimeDisplay,
 } from '../utils/expirationUtils';
-import { cleanProductNameForWhatsapp } from '../utils/stringUtils';
+import {
+    cleanProductNameForWhatsapp,
+    cleanCustomerNameForWhatsapp,
+} from '../utils/stringUtils';
 
 interface ProductPaymentModalProps {
     opened: boolean;
@@ -135,8 +138,11 @@ export function ProductPaymentModal({
         );
         const saleDateStr = formatDateDisplay(item.saleDate);
 
-        const greeting = customerName
-            ? `Olá, *${customerName}*! 👋\n\n`
+        const cleanCustName = customerName
+            ? cleanCustomerNameForWhatsapp(customerName)
+            : '';
+        const greeting = cleanCustName
+            ? `Olá, *${cleanCustName}*! 👋\n\n`
             : `Olá! 👋\n\n`;
 
         const isMultiProduct = item.productName.includes('\n');

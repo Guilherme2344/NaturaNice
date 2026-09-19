@@ -34,7 +34,10 @@ import {
     PAYMENT_METHOD_LABELS,
 } from '../services/customerService';
 import { formatDateDisplay } from '../utils/expirationUtils';
-import { cleanProductNameForWhatsapp } from '../utils/stringUtils';
+import {
+    cleanProductNameForWhatsapp,
+    cleanCustomerNameForWhatsapp,
+} from '../utils/stringUtils';
 import { ProductPaymentModal } from './ProductPaymentModal';
 
 interface CustomerSummaryModalProps {
@@ -98,7 +101,8 @@ export function CustomerSummaryModal({
     const generateWhatsappText = (): string => {
         if (!summary) return '';
 
-        let text = `Olá, *${summary.customerName}*!\n\n`;
+        const cleanCustName = cleanCustomerNameForWhatsapp(summary.customerName);
+        let text = `Olá, *${cleanCustName}*!\n\n`;
         text += `🛍️ Segue resumo das suas compras:\n\n`;
 
         // Sort items (sales) chronologically (oldest to newest)
