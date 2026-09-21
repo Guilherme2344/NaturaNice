@@ -163,12 +163,27 @@ export function CustomerSummaryModal({
             text += `\n`;
         });
 
-        const formattedTotal = summary.totalAmount.toLocaleString('pt-BR', {
+        const totalDiscount = (summary.items || []).reduce(
+            (sum, it) => sum + (it.discount || 0),
+            0
+        );
+        const grossTotal = (summary.items || []).reduce(
+            (sum, it) =>
+                sum + (it.grossAmount || it.totalAmount + (it.discount || 0)),
+            0
+        );
+
+        const formattedGross = grossTotal.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+        const formattedDiscount = totalDiscount.toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
         });
 
-        text += `*Total comprado: R$ ${formattedTotal}*\n\n`;
+        text += `*Total comprado: R$ ${formattedGross}*\n\n`;
+        text += `*Desconto: R$ ${formattedDiscount}*\n\n`;
 
         // Collect all payments across all sales
         const allPayments: {

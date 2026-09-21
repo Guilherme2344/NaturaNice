@@ -25,6 +25,7 @@ import {
     BarChart3,
     User,
     MessageSquare,
+    CreditCard,
 } from 'lucide-react';
 import type { DailySalesSummary, MonthlySalesSummary } from '../services/reportService';
 import { customerService, type Customer } from '../services/customerService';
@@ -54,6 +55,11 @@ interface BreakdownRow {
     itemsSold: number;
     isPersonalUse?: boolean;
     observation?: string;
+    amountPaid?: number;
+    remainingAmount?: number;
+    status?: 'PAID' | 'PARTIALLY_PAID' | 'UNPAID';
+    statusDescription?: string;
+    discount?: number;
 }
 
 interface ReportViewProps {
@@ -66,6 +72,8 @@ interface ReportViewProps {
     onMonthChange?: (month: number) => void;
     selectedCustomer?: string;
     onCustomerChange?: (customerName: string) => void;
+    selectedStatus?: string;
+    onStatusChange?: (status: string) => void;
     totalRevenue: number;
     totalCost: number;
     totalProfit: number;
@@ -84,6 +92,8 @@ export function ReportView({
     onMonthChange,
     selectedCustomer = '',
     onCustomerChange,
+    selectedStatus = '',
+    onStatusChange,
     totalRevenue = 0,
     totalCost = 0,
     totalProfit = 0,
@@ -117,6 +127,13 @@ export function ReportView({
         ...customers.map((c) => ({ value: c.name, label: c.name })),
     ];
 
+    const paymentStatusOptions = [
+        { value: '', label: 'Todas as Situações' },
+        { value: 'PAID', label: 'Pago' },
+        { value: 'PARTIALLY_PAID', label: 'Parcialmente pago' },
+        { value: 'UNPAID', label: 'Não pago' },
+    ];
+
     const formatCurrency = (val: number) =>
         `R$ ${(val || 0).toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
@@ -128,11 +145,8 @@ export function ReportView({
 
         // Jackson date array format: [year, month, day, hour, minute, second]
         if (Array.isArray(dateValue)) {
-            const [year, month, day, hour, minute, second] = dateValue;
+            const [year, month, day] = dateValue;
             const pad = (n: number) => String(n || 0).padStart(2, '0');
-            if (hour !== undefined && minute !== undefined) {
-                return `${pad(day)}/${pad(month)}/${year} ${pad(hour)}:${pad(minute)}:${pad(second || 0)}`;
-            }
             return `${pad(day)}/${pad(month)}/${year}`;
         }
 
@@ -140,12 +154,11 @@ export function ReportView({
 
         // ISO string date and time format: YYYY-MM-DDTHH:mm:ss
         if (str.includes('T') || str.includes(' ')) {
-            const [datePart, timePart] = str.split(/[T ]/);
+            const [datePart] = str.split(/[T ]/);
             const dateComponents = datePart.split('-');
             if (dateComponents.length === 3) {
                 const [year, month, day] = dateComponents;
-                const cleanTime = timePart ? timePart.split('.')[0] : '';
-                return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year} ${cleanTime}`;
+                return `${day.padStart(2, '0')}/${month.padStart(2, '0')}/${year}`;
             }
         }
 
@@ -188,6 +201,42 @@ export function ReportView({
         };
     };
 
+    const getPaymentBadge = (row: BreakdownRow) => {
+        if (row.isPersonalUse) {
+            return (
+                <Badge color="teal" variant="light" size="sm">
+                    Uso Pessoal
+                </Badge>
+            );
+        }
+        if (row.status === 'PAID') {
+            return (
+                <Badge color="teal" variant="filled" size="sm">
+                    Pago
+                </Badge>
+            );
+        }
+        if (row.status === 'PARTIALLY_PAID') {
+            return (
+                <Badge color="orange" variant="filled" size="sm">
+                    Parcialmente pago
+                </Badge>
+            );
+        }
+        if (row.status === 'UNPAID') {
+            return (
+                <Badge color="red" variant="filled" size="sm">
+                    Não pago
+                </Badge>
+            );
+        }
+        return (
+            <Badge color="gray" variant="light" size="sm">
+                {row.statusDescription || 'Indefinido'}
+            </Badge>
+        );
+    };
+
     const totalProfitMeta = getProfitIndicator(totalProfit);
     const TotalProfitIcon = totalProfitMeta.Icon;
 
@@ -204,6 +253,11 @@ export function ReportView({
                 itemsSold: item.itemsSold,
                 isPersonalUse: item.isPersonalUse,
                 observation: item.observation,
+                amountPaid: item.amountPaid,
+                remainingAmount: item.remainingAmount,
+                status: item.status,
+                statusDescription: item.statusDescription,
+                discount: item.discount,
             };
         } else {
             return {
@@ -247,9 +301,22 @@ export function ReportView({
                                 data={customerOptions}
                                 value={selectedCustomer}
                                 onChange={(val) => onCustomerChange(val || '')}
-                                style={{ width: 180 }}
+                                style={{ width: 170 }}
                                 size="xs"
                                 leftSection={<User size={14} />}
+                                clearable
+                            />
+                        )}
+                        {type === 'monthly' && onStatusChange && (
+                            <Select
+                                label="Situação"
+                                placeholder="Todas as Situações"
+                                data={paymentStatusOptions}
+                                value={selectedStatus}
+                                onChange={(val) => onStatusChange(val || '')}
+                                style={{ width: 170 }}
+                                size="xs"
+                                leftSection={<CreditCard size={14} />}
                                 clearable
                             />
                         )}
@@ -374,19 +441,26 @@ export function ReportView({
                         </Text>
                     </Center>
                 ) : rows.length > 0 ? (
-                    <Table.ScrollContainer minWidth={700}>
+                    <Table.ScrollContainer minWidth={1150}>
                         <Table striped highlightOnHover verticalSpacing="sm">
                             <Table.Thead>
                                 <Table.Tr>
-                                    <Table.Th>{type === 'monthly' ? 'Data e Hora' : 'Mês'}</Table.Th>
+                                    <Table.Th>{type === 'monthly' ? 'Data' : 'Mês'}</Table.Th>
                                     {type === 'monthly' && <Table.Th>Produto</Table.Th>}
+                                    <Table.Th>Qtd. Vendida</Table.Th>
                                     {type === 'monthly' && <Table.Th>Cliente</Table.Th>}
                                     <Table.Th>Faturamento</Table.Th>
                                     <Table.Th>Custo</Table.Th>
                                     <Table.Th>Lucro</Table.Th>
-                                    <Table.Th>Qtd. Vendida</Table.Th>
+                                    {type === 'monthly' && (
+                                        <Table.Th style={{ textAlign: 'center' }}>
+                                            Situação
+                                        </Table.Th>
+                                    )}
+                                    {type === 'monthly' && <Table.Th>Recebido</Table.Th>}
+                                    {type === 'monthly' && <Table.Th>A Receber</Table.Th>}
                                     <Table.Th>Margem (%)</Table.Th>
-                                    <Table.Th style={{ width: 44, textAlign: 'center' }}></Table.Th>
+                                    <Table.Th style={{ textAlign: 'center' }}>Observação</Table.Th>
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
@@ -403,6 +477,7 @@ export function ReportView({
                                                     {row.productName || 'Produto não informado'}
                                                 </Table.Td>
                                             )}
+                                            <Table.Td fw={500}>{row.itemsSold} un.</Table.Td>
                                             {type === 'monthly' && (
                                                 <Table.Td fw={500} c="gray.7">
                                                     {row.isPersonalUse ? (
@@ -421,7 +496,24 @@ export function ReportView({
                                             <Table.Td fw={700} c={rowMeta.textColor}>
                                                 {row.profit === 0 ? '-' : formatCurrency(row.profit)}
                                             </Table.Td>
-                                            <Table.Td fw={500}>{row.itemsSold} un.</Table.Td>
+                                            {type === 'monthly' && (
+                                                <Table.Td style={{ textAlign: 'center' }}>
+                                                    {getPaymentBadge(row)}
+                                                </Table.Td>
+                                            )}
+                                            {type === 'monthly' && (
+                                                <Table.Td fw={600} c="teal">
+                                                    {formatCurrency(row.amountPaid || 0)}
+                                                </Table.Td>
+                                            )}
+                                            {type === 'monthly' && (
+                                                <Table.Td
+                                                    fw={600}
+                                                    c={(row.remainingAmount || 0) > 0 ? 'red' : 'gray.5'}
+                                                >
+                                                    {formatCurrency(row.remainingAmount || 0)}
+                                                </Table.Td>
+                                            )}
                                             <Table.Td>
                                                 <Badge
                                                     variant="light"

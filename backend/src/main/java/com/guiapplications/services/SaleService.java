@@ -70,7 +70,7 @@ public class SaleService {
         String observation = dto.observation() != null && !dto.observation().isBlank() ? dto.observation().trim() : null;
 
         Sale sale = new Sale();
-        sale.saleDate = LocalDateTime.now();
+        sale.saleDate = dto.saleDate() != null ? dto.saleDate() : LocalDateTime.now();
         sale.customer = customer;
         sale.user = user;
         sale.observation = observation;
@@ -192,7 +192,10 @@ public class SaleService {
                         product.quantity -= deduct;
                         toDeduct -= deduct;
                     } else {
-                        com.guiapplications.entities.ProductBatch pb = com.guiapplications.entities.ProductBatch.findById(c.id);
+                        com.guiapplications.entities.ProductBatch pb = existingExtraBatches.stream()
+                            .filter(b -> b.id != null && b.id.equals(c.id))
+                            .findFirst()
+                            .orElseGet(() -> com.guiapplications.entities.ProductBatch.findById(c.id));
                         if (pb != null) {
                             int deduct = Math.min(pb.quantity, toDeduct);
                             pb.quantity -= deduct;
@@ -235,6 +238,16 @@ public class SaleService {
             totalSaleProfit = totalSaleProfit.add(itemProfit);
         }
 
+        BigDecimal discount = isPersonalUse ? BigDecimal.ZERO : (dto.discount() != null ? dto.discount() : BigDecimal.ZERO);
+        if (discount.compareTo(BigDecimal.ZERO) < 0) {
+            discount = BigDecimal.ZERO;
+        }
+
+        BigDecimal netSaleAmount = totalSaleAmount.subtract(discount);
+        if (netSaleAmount.compareTo(BigDecimal.ZERO) < 0) {
+            netSaleAmount = BigDecimal.ZERO;
+        }
+
         BigDecimal amountPaid;
         SaleStatus status;
 
@@ -242,10 +255,11 @@ public class SaleService {
             amountPaid = BigDecimal.ZERO;
             status = SaleStatus.PAID;
         } else {
-            amountPaid = dto.amountPaid() != null ? dto.amountPaid() : totalSaleAmount;
-            status = SaleStatus.calculate(amountPaid, totalSaleAmount);
+            amountPaid = dto.amountPaid() != null ? dto.amountPaid() : netSaleAmount;
+            status = SaleStatus.calculate(amountPaid, netSaleAmount);
         }
 
+        sale.discount = discount;
         sale.amountPaid = amountPaid;
         sale.status = status;
         sale.paymentMethod = dto.paymentMethod();
@@ -260,7 +274,7 @@ public class SaleService {
             initialPayment.persist();
         }
 
-        BigDecimal remainingAmount = totalSaleAmount.subtract(amountPaid);
+        BigDecimal remainingAmount = netSaleAmount.subtract(amountPaid);
         if (remainingAmount.compareTo(BigDecimal.ZERO) < 0) {
             remainingAmount = BigDecimal.ZERO;
         }
@@ -275,17 +289,19 @@ public class SaleService {
             totalSaleQuantity,
             firstPurchasePrice,
             firstSellingPrice,
-            totalSaleAmount,
+            netSaleAmount,
             amountPaid,
             remainingAmount,
-            totalSaleProfit,
+            isPersonalUse ? BigDecimal.ZERO : sale.calculateTotalProfit(),
             status.name(),
             status.getDescription(),
             customer != null ? customer.name : null,
             sale.observation,
             sale.isPersonalUse,
             sale.paymentMethod != null ? sale.paymentMethod.name() : null,
-            sale.paymentMethod != null ? sale.paymentMethod.getDescription() : null
+            sale.paymentMethod != null ? sale.paymentMethod.getDescription() : null,
+            sale.discount,
+            totalSaleAmount
         );
     }
 
@@ -303,11 +319,17 @@ public class SaleService {
             throw new ResourceNotFoundException("Venda não encontrada com o ID: " + saleId);
         }
 
-        BigDecimal saleTotal = BigDecimal.ZERO;
+        BigDecimal saleGross = BigDecimal.ZERO;
         if (sale.items != null) {
             for (SaleItem item : sale.items) {
-                saleTotal = saleTotal.add(item.getTotalAmount());
+                saleGross = saleGross.add(item.getTotalAmount());
             }
+        }
+
+        BigDecimal saleDiscount = sale.discount != null ? sale.discount : BigDecimal.ZERO;
+        BigDecimal saleTotal = saleGross.subtract(saleDiscount);
+        if (saleTotal.compareTo(BigDecimal.ZERO) < 0) {
+            saleTotal = BigDecimal.ZERO;
         }
 
         BigDecimal currentPaid = sale.amountPaid != null ? sale.amountPaid : (sale.status == SaleStatus.PAID ? saleTotal : BigDecimal.ZERO);

@@ -19,6 +19,8 @@ export interface CreateSaleDTO {
     observation?: string;
     isPersonalUse?: boolean;
     paymentMethod?: PaymentMethod;
+    discount?: number;
+    saleDate?: string;
 }
 
 export interface SaleResponse {
@@ -40,6 +42,8 @@ export interface SaleResponse {
     isPersonalUse?: boolean;
     paymentMethod?: PaymentMethod;
     paymentMethodDescription?: string;
+    discount?: number;
+    grossAmount?: number;
 }
 
 export const saleService = {

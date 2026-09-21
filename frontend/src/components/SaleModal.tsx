@@ -15,6 +15,7 @@ import {
     Textarea,
     Select,
     ScrollArea,
+    TextInput,
 } from '@mantine/core';
 import {
     DollarSign,
@@ -25,6 +26,8 @@ import {
     Boxes,
     ShoppingCart,
     CreditCard,
+    Calendar,
+    Tag,
 } from 'lucide-react';
 import type { Product } from './ProductsTable';
 import {
@@ -76,6 +79,10 @@ export function SaleModal({
     const [amountPaid, setAmountPaid] = useState<number | string>(0);
     const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null);
     const [customerName, setCustomerName] = useState<string>('');
+    const [saleDate, setSaleDate] = useState<string>(() =>
+        new Date().toISOString().split('T')[0]
+    );
+    const [discount, setDiscount] = useState<number | ''>('');
     const [observation, setObservation] = useState<string>('');
     const [isPersonalUse, setIsPersonalUse] = useState<boolean>(false);
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -86,6 +93,8 @@ export function SaleModal({
         if (opened) {
             setErrors({});
             setPaymentMethod(null);
+            setSaleDate(new Date().toISOString().split('T')[0]);
+            setDiscount('');
             customerService
                 .getAll()
                 .then((data) => setCustomers(data))
@@ -119,6 +128,8 @@ export function SaleModal({
 
             setItemsState(initialItems);
             setCustomerName('');
+            setSaleDate(new Date().toISOString().split('T')[0]);
+            setDiscount('');
             setObservation('');
             setIsPersonalUse(false);
             setPaymentMethod(null);
@@ -186,10 +197,19 @@ export function SaleModal({
         };
     });
 
+    const totalGrossAmount = totalSaleAmount;
+    const valDiscount = isPersonalUse ? 0 : Number(discount) || 0;
+    const totalNetSaleAmount = isPersonalUse
+        ? 0
+        : Math.max(0, totalGrossAmount - valDiscount);
+    const finalEstimatedProfit = isPersonalUse
+        ? 0
+        : Math.max(0, totalEstimatedProfit - valDiscount);
+
     const currentAmountPaid = isPersonalUse ? 0 : Number(amountPaid) || 0;
     const remainingBalance = isPersonalUse
         ? 0
-        : Math.max(0, totalSaleAmount - currentAmountPaid);
+        : Math.max(0, totalNetSaleAmount - currentAmountPaid);
 
     // Helpers to update individual items
     const handleUpdateItem = (
@@ -207,22 +227,35 @@ export function SaleModal({
                     (sum, it) => sum + it.quantity * it.sellingPrice,
                     0
                 );
-                setAmountPaid(newTotal);
+                const disc = typeof discount === 'number' ? discount : 0;
+                setAmountPaid(Math.max(0, newTotal - disc));
             }
             return next;
         });
+    };
+
+    const handleDiscountChange = (val: number | string) => {
+        const numVal = val !== '' ? Number(val) : '';
+        setDiscount(numVal);
+        if (!isPersonalUse) {
+            const disc = typeof numVal === 'number' ? numVal : 0;
+            const newNet = Math.max(0, totalGrossAmount - disc);
+            setAmountPaid(newNet);
+        }
     };
 
     const handleTogglePersonalUse = (checked: boolean) => {
         setIsPersonalUse(checked);
         if (checked) {
             setAmountPaid(0);
+            setDiscount('');
         } else {
             const recomputedTotal = itemsState.reduce(
                 (sum, it) => sum + it.quantity * it.sellingPrice,
                 0
             );
-            setAmountPaid(recomputedTotal);
+            const disc = typeof discount === 'number' ? discount : 0;
+            setAmountPaid(Math.max(0, recomputedTotal - disc));
         }
     };
 
@@ -265,8 +298,8 @@ export function SaleModal({
 
         if (
             !isPersonalUse &&
-            Number(amountPaid) === totalSaleAmount &&
-            totalSaleAmount > 0 &&
+            Number(amountPaid) === totalNetSaleAmount &&
+            totalNetSaleAmount > 0 &&
             !paymentMethod
         ) {
             newErrors['paymentMethod'] = 'Selecione o método de pagamento.';
@@ -290,10 +323,12 @@ export function SaleModal({
                 customerName: customerName.trim() || undefined,
                 observation: observation.trim() || undefined,
                 isPersonalUse,
+                discount: isPersonalUse ? 0 : (Number(discount) || 0),
+                saleDate: saleDate ? `${saleDate}T12:00:00` : undefined,
                 paymentMethod:
                     !isPersonalUse &&
-                    Number(amountPaid) === totalSaleAmount &&
-                    totalSaleAmount > 0 &&
+                    Number(amountPaid) === totalNetSaleAmount &&
+                    totalNetSaleAmount > 0 &&
                     paymentMethod
                         ? paymentMethod
                         : undefined,
@@ -727,23 +762,37 @@ export function SaleModal({
                         </Stack>
                     )}
 
-                    {/* Common section: Customer, Personal Use, Observation */}
-                    <Autocomplete
-                        label="Nome do Cliente (opcional)"
-                        placeholder="Digite ou escolha um cliente"
-                        data={customers.map((c) => c.name)}
-                        maxLength={100}
-                        value={customerName}
-                        onChange={setCustomerName}
-                        filter={accentInsensitiveFilter}
-                        styles={{
-                            dropdown: {
-                                maxHeight: 140,
-                                overflowY: 'auto',
-                            },
-                        }}
-                        leftSection={<User size={16} />}
-                    />
+                    {/* Common section: Customer, Date, Personal Use, Observation */}
+                    <Grid>
+                        <Grid.Col span={{ base: 12, sm: 7 }}>
+                            <Autocomplete
+                                label="Nome do Cliente (opcional)"
+                                placeholder="Digite ou escolha um cliente"
+                                data={customers.map((c) => c.name)}
+                                maxLength={100}
+                                value={customerName}
+                                onChange={setCustomerName}
+                                filter={accentInsensitiveFilter}
+                                styles={{
+                                    dropdown: {
+                                        maxHeight: 140,
+                                        overflowY: 'auto',
+                                    },
+                                }}
+                                leftSection={<User size={16} />}
+                            />
+                        </Grid.Col>
+                        <Grid.Col span={{ base: 12, sm: 5 }}>
+                            <TextInput
+                                type="date"
+                                label="Data da Venda"
+                                required
+                                value={saleDate}
+                                onChange={(e) => setSaleDate(e.currentTarget.value)}
+                                leftSection={<Calendar size={16} />}
+                            />
+                        </Grid.Col>
+                    </Grid>
 
                     <Checkbox
                         label="Uso Pessoal"
@@ -797,26 +846,45 @@ export function SaleModal({
                                     </Badge>
                                 </Group>
 
-                                <NumberInput
-                                    label="Valor Já Pago pelo Cliente (R$)"
-                                    placeholder="0,00"
-                                    value={amountPaid}
-                                    onChange={(val) =>
-                                        setAmountPaid(
-                                            val !== '' ? Number(val) : 0
-                                        )
-                                    }
-                                    prefix="R$ "
-                                    decimalScale={2}
-                                    decimalSeparator=","
-                                    thousandSeparator="."
-                                    selectAllOnFocus
-                                    min={0}
-                                    max={totalSaleAmount}
-                                />
+                                <Grid>
+                                    <Grid.Col span={{ base: 12, sm: 6 }}>
+                                        <NumberInput
+                                            label="Desconto (R$) (opcional)"
+                                            placeholder="0,00"
+                                            value={discount}
+                                            onChange={handleDiscountChange}
+                                            prefix="R$ "
+                                            decimalScale={2}
+                                            decimalSeparator=","
+                                            thousandSeparator="."
+                                            min={0}
+                                            max={totalGrossAmount}
+                                            leftSection={<Tag size={16} />}
+                                        />
+                                    </Grid.Col>
+                                    <Grid.Col span={{ base: 12, sm: 6 }}>
+                                        <NumberInput
+                                            label="Valor Já Pago pelo Cliente (R$)"
+                                            placeholder="0,00"
+                                            value={amountPaid}
+                                            onChange={(val) =>
+                                                setAmountPaid(
+                                                    val !== '' ? Number(val) : 0
+                                                )
+                                            }
+                                            prefix="R$ "
+                                            decimalScale={2}
+                                            decimalSeparator=","
+                                            thousandSeparator="."
+                                            selectAllOnFocus
+                                            min={0}
+                                            max={totalNetSaleAmount}
+                                        />
+                                    </Grid.Col>
+                                </Grid>
 
-                                {Number(amountPaid) === totalSaleAmount &&
-                                    totalSaleAmount > 0 && (
+                                {Number(amountPaid) === totalNetSaleAmount &&
+                                    totalNetSaleAmount > 0 && (
                                         <Select
                                             label="Método de Pagamento"
                                             placeholder="Selecione a forma de pagamento"
@@ -870,16 +938,21 @@ export function SaleModal({
                                 <Group gap={6}>
                                     <DollarSign size={18} color="#12b886" />
                                     <Text size="xs" fw={700} c="teal">
-                                        Total da Venda
+                                        {valDiscount > 0 ? 'Total com Desconto' : 'Total da Venda'}
                                     </Text>
                                 </Group>
                                 <Text fw={800} size="lg" c="teal" mt={4}>
                                     R${' '}
-                                    {totalSaleAmount.toLocaleString('pt-BR', {
+                                    {totalNetSaleAmount.toLocaleString('pt-BR', {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                     })}
                                 </Text>
+                                {valDiscount > 0 && (
+                                    <Text size="xs" c="dimmed" mt={2}>
+                                        Subtotal: R$ {totalGrossAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Desconto: - R$ {valDiscount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </Text>
+                                )}
                             </Paper>
                         </Grid.Col>
                         <Grid.Col span={{ base: 12, sm: 6 }}>
@@ -888,7 +961,7 @@ export function SaleModal({
                                 radius="md"
                                 style={{
                                     backgroundColor:
-                                        totalEstimatedProfit >= 0
+                                        finalEstimatedProfit >= 0
                                             ? 'rgba(9, 146, 104, 0.08)'
                                             : 'rgba(224, 49, 49, 0.08)',
                                 }}
@@ -897,7 +970,7 @@ export function SaleModal({
                                     <TrendingUp
                                         size={18}
                                         color={
-                                            totalEstimatedProfit >= 0
+                                            finalEstimatedProfit >= 0
                                                 ? '#099268'
                                                 : 'red'
                                         }
@@ -906,7 +979,7 @@ export function SaleModal({
                                         size="xs"
                                         fw={700}
                                         c={
-                                            totalEstimatedProfit >= 0
+                                            finalEstimatedProfit >= 0
                                                 ? 'teal'
                                                 : 'red'
                                         }
@@ -918,14 +991,14 @@ export function SaleModal({
                                     fw={800}
                                     size="lg"
                                     c={
-                                        totalEstimatedProfit >= 0
+                                        finalEstimatedProfit >= 0
                                             ? 'teal'
                                             : 'red'
                                     }
                                     mt={4}
                                 >
                                     R${' '}
-                                    {totalEstimatedProfit.toLocaleString(
+                                    {finalEstimatedProfit.toLocaleString(
                                         'pt-BR',
                                         {
                                             minimumFractionDigits: 2,

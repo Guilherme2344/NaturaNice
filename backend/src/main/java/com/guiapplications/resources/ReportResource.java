@@ -30,6 +30,7 @@ public class ReportResource {
             @QueryParam("year") Integer year,
             @QueryParam("month") Integer month,
             @QueryParam("customerName") String customerName,
+            @QueryParam("status") String status,
             @HeaderParam("Authorization") String authHeader,
             @HeaderParam("X-User-Id") String userIdHeader) {
 
@@ -37,7 +38,7 @@ public class ReportResource {
         int selectedYear = (year != null) ? year : LocalDate.now().getYear();
         int selectedMonth = (month != null) ? month : LocalDate.now().getMonthValue();
 
-        return reportService.getMonthlyReport(selectedYear, selectedMonth, customerName, user);
+        return reportService.getMonthlyReport(selectedYear, selectedMonth, customerName, status, user);
     }
 
     // annual report

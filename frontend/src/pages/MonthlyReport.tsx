@@ -7,13 +7,19 @@ export default function MonthlyReport() {
     const [year, setYear] = useState<number>(today.getFullYear());
     const [month, setMonth] = useState<number>(today.getMonth() + 1);
     const [customer, setCustomer] = useState<string>('');
+    const [status, setStatus] = useState<string>('');
     const [report, setReport] = useState<MonthlySalesReport | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
 
     const fetchReport = async () => {
         try {
             setLoading(true);
-            const data = await reportService.getMonthlyReport(year, month, customer);
+            const data = await reportService.getMonthlyReport(
+                year,
+                month,
+                customer,
+                status
+            );
             setReport(data);
         } catch (error) {
             console.error('Erro ao carregar relatório mensal:', error);
@@ -24,12 +30,12 @@ export default function MonthlyReport() {
 
     useEffect(() => {
         fetchReport();
-    }, [year, month, customer]);
+    }, [year, month, customer, status]);
 
     return (
         <ReportView
             title="Relatório de Vendas Mensal"
-            subtitle="Visão consolidadas das vendas e lucratividade diária do mês selecionado"
+            subtitle="Visão consolidada das vendas e lucratividade diária do mês selecionado"
             type="monthly"
             selectedYear={year}
             onYearChange={setYear}
@@ -37,6 +43,8 @@ export default function MonthlyReport() {
             onMonthChange={setMonth}
             selectedCustomer={customer}
             onCustomerChange={setCustomer}
+            selectedStatus={status}
+            onStatusChange={setStatus}
             totalRevenue={report?.totalRevenue || 0}
             totalCost={report?.totalCost || 0}
             totalProfit={report?.totalProfit || 0}

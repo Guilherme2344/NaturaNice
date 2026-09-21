@@ -58,6 +58,9 @@ public class Sale extends PanacheEntityBase {
     @Column(name = "is_personal_use", nullable = true, columnDefinition = "boolean default false")
     public Boolean isPersonalUse = false;
 
+    @Column(name = "discount", nullable = true, precision = 10, scale = 2, columnDefinition = "numeric(10,2) default 0.00")
+    public BigDecimal discount = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", length = 30)
     public PaymentMethod paymentMethod;
@@ -87,11 +90,18 @@ public class Sale extends PanacheEntityBase {
         for (SaleItem item : items) {
             total = total.add(item.getTotalProfit());
         }
+        if (discount != null && discount.compareTo(BigDecimal.ZERO) > 0) {
+            total = total.subtract(discount);
+        }
         return total;
     }
     
     // daily sales summary
     public static List<DailySalesSummaryDTO> getDailySummaries(LocalDateTime start, LocalDateTime end, String customerName, User user) {
+        return getDailySummaries(start, end, customerName, null, user);
+    }
+
+    public static List<DailySalesSummaryDTO> getDailySummaries(LocalDateTime start, LocalDateTime end, String customerName, String status, User user) {
         if (user == null) {
             return List.of();
         }
@@ -108,6 +118,14 @@ public class Sale extends PanacheEntityBase {
             jpql.append(" AND CAST(unaccent(LOWER(c.name)) AS String) LIKE :customerName ");
         }
 
+        SaleStatus parsedStatus = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                parsedStatus = SaleStatus.valueOf(status.trim().toUpperCase());
+                jpql.append(" AND s.status = :status ");
+            } catch (Exception ignored) {}
+        }
+
         jpql.append("ORDER BY s.saleDate DESC");
 
         TypedQuery<Sale> query = getEntityManager()
@@ -120,11 +138,15 @@ public class Sale extends PanacheEntityBase {
             query.setParameter("customerName", "%" + customerName.trim().toLowerCase() + "%");
         }
 
+        if (parsedStatus != null) {
+            query.setParameter("status", parsedStatus);
+        }
+
         List<Sale> sales = query.getResultList();
         List<DailySalesSummaryDTO> result = new ArrayList<>();
 
         for (Sale s : sales) {
-            BigDecimal revenue = BigDecimal.ZERO;
+            BigDecimal grossRevenue = BigDecimal.ZERO;
             BigDecimal cost = BigDecimal.ZERO;
             long itemsSold = 0;
             List<String> prodDescriptions = new ArrayList<>();
@@ -137,22 +159,52 @@ public class Sale extends PanacheEntityBase {
                     int qty = item.quantity != null ? item.quantity : 0;
                     itemsSold += qty;
 
+                    BigDecimal itemRev = item.sellingPrice != null ? item.sellingPrice.multiply(BigDecimal.valueOf(qty)) : BigDecimal.ZERO;
+                    BigDecimal itemCost = item.purchasePrice != null ? item.purchasePrice.multiply(BigDecimal.valueOf(qty)) : BigDecimal.ZERO;
+
                     if (!Boolean.TRUE.equals(s.isPersonalUse)) {
-                        BigDecimal itemRev = item.sellingPrice != null ? item.sellingPrice.multiply(BigDecimal.valueOf(qty)) : BigDecimal.ZERO;
-                        BigDecimal itemCost = item.purchasePrice != null ? item.purchasePrice.multiply(BigDecimal.valueOf(qty)) : BigDecimal.ZERO;
-                        revenue = revenue.add(itemRev);
+                        grossRevenue = grossRevenue.add(itemRev);
                         cost = cost.add(itemCost);
                     }
 
                     if (s.items.size() > 1 && qty > 0) {
-                        prodDescriptions.add(pName + " (" + qty + " un.)");
+                        String formattedItemRev = itemRev.setScale(2, java.math.RoundingMode.HALF_UP).toString().replace('.', ',');
+                        prodDescriptions.add(pName + " (" + qty + " un. - R$ " + formattedItemRev + ")");
                     } else {
                         prodDescriptions.add(pName);
                     }
                 }
             }
 
-            BigDecimal profit = Boolean.TRUE.equals(s.isPersonalUse) ? BigDecimal.ZERO : s.calculateTotalProfit();
+            BigDecimal saleDiscount = s.discount != null ? s.discount : BigDecimal.ZERO;
+            BigDecimal netRevenue = grossRevenue.subtract(saleDiscount);
+            if (netRevenue.compareTo(BigDecimal.ZERO) < 0) {
+                netRevenue = BigDecimal.ZERO;
+            }
+
+            BigDecimal revenue;
+            BigDecimal profit;
+            BigDecimal amountPaid;
+            BigDecimal remainingAmount;
+            SaleStatus saleStatus;
+
+            if (Boolean.TRUE.equals(s.isPersonalUse)) {
+                revenue = BigDecimal.ZERO;
+                profit = BigDecimal.ZERO;
+                amountPaid = BigDecimal.ZERO;
+                remainingAmount = BigDecimal.ZERO;
+                saleStatus = SaleStatus.PAID;
+            } else {
+                revenue = netRevenue;
+                profit = s.calculateTotalProfit();
+                amountPaid = s.amountPaid != null ? s.amountPaid : (s.status == SaleStatus.PAID ? netRevenue : BigDecimal.ZERO);
+                remainingAmount = netRevenue.subtract(amountPaid);
+                if (remainingAmount.compareTo(BigDecimal.ZERO) < 0) {
+                    remainingAmount = BigDecimal.ZERO;
+                }
+                saleStatus = s.status != null ? s.status : SaleStatus.calculate(amountPaid, netRevenue);
+            }
+
             String fullProductName = prodDescriptions.isEmpty() ? "Produto não informado" : String.join("\n", prodDescriptions);
             String custName = s.customer != null && s.customer.name != null ? s.customer.name : "Cliente não informado";
 
@@ -165,7 +217,12 @@ public class Sale extends PanacheEntityBase {
                 profit,
                 itemsSold,
                 s.isPersonalUse,
-                s.observation
+                s.observation,
+                amountPaid,
+                remainingAmount,
+                saleStatus.name(),
+                saleStatus.getDescription(),
+                saleDiscount
             ));
         }
 
@@ -222,6 +279,11 @@ public class Sale extends PanacheEntityBase {
                         saleCost = saleCost.add(itemCost);
                     }
                 }
+            }
+
+            if (!Boolean.TRUE.equals(s.isPersonalUse) && s.discount != null && s.discount.compareTo(BigDecimal.ZERO) > 0) {
+                saleRev = saleRev.subtract(s.discount);
+                if (saleRev.compareTo(BigDecimal.ZERO) < 0) saleRev = BigDecimal.ZERO;
             }
 
             BigDecimal saleProfit = Boolean.TRUE.equals(s.isPersonalUse) ? BigDecimal.ZERO : s.calculateTotalProfit();

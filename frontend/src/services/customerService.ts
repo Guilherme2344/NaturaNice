@@ -54,6 +54,8 @@ export interface CustomerPurchaseItem {
     products?: CustomerSaleProduct[];
     paymentMethod?: PaymentMethod;
     paymentMethodDescription?: string;
+    discount?: number;
+    grossAmount?: number;
 }
 
 export interface CustomerSummary {

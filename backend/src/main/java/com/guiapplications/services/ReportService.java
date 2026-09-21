@@ -21,6 +21,10 @@ public class ReportService {
 
     // monthly report
     public MonthlySalesReportDTO getMonthlyReport(int year, int month, String customerName, User user) {
+        return getMonthlyReport(year, month, customerName, null, user);
+    }
+
+    public MonthlySalesReportDTO getMonthlyReport(int year, int month, String customerName, String status, User user) {
         if (user == null) {
             return new MonthlySalesReportDTO(year, month, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, 0, List.of());
         }
@@ -28,7 +32,7 @@ public class ReportService {
         LocalDateTime start = yearMonth.atDay(1).atStartOfDay();
         LocalDateTime end = yearMonth.atEndOfMonth().atTime(LocalTime.MAX);
 
-        List<DailySalesSummaryDTO> dailySummaries = Sale.getDailySummaries(start, end, customerName, user);
+        List<DailySalesSummaryDTO> dailySummaries = Sale.getDailySummaries(start, end, customerName, status, user);
 
         BigDecimal totalRevenue = BigDecimal.ZERO;
         BigDecimal totalCost = BigDecimal.ZERO;

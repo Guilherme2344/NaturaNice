@@ -172,7 +172,7 @@ public class CustomerService {
         List<CustomerPurchaseItemDTO> items = new ArrayList<>();
 
         for (Sale sale : sales) {
-            BigDecimal saleTotal = BigDecimal.ZERO;
+            BigDecimal saleGross = BigDecimal.ZERO;
             int totalQuantity = 0;
             BigDecimal unitPrice = BigDecimal.ZERO;
             List<String> prodDescriptions = new ArrayList<>();
@@ -189,40 +189,47 @@ public class CustomerService {
                     saleProducts.add(new CustomerSaleProductDTO(pName, qty, itemSellingPrice, itemTotal));
 
                     totalQuantity += qty;
-                    saleTotal = saleTotal.add(itemTotal);
+                    saleGross = saleGross.add(itemTotal);
                     if (unitPrice.compareTo(BigDecimal.ZERO) == 0 && item.sellingPrice != null) {
                         unitPrice = item.sellingPrice;
                     }
 
                     if (sale.items.size() > 1 && qty > 0) {
-                        prodDescriptions.add(pName + " (" + qty + " un.)");
+                        String formattedItemTotal = itemTotal.setScale(2, java.math.RoundingMode.HALF_UP).toString().replace('.', ',');
+                        prodDescriptions.add(pName + " (" + qty + " un. - R$ " + formattedItemTotal + ")");
                     } else {
                         prodDescriptions.add(pName);
                     }
                 }
             }
 
+            BigDecimal saleDiscount = sale.discount != null ? sale.discount : BigDecimal.ZERO;
+            BigDecimal saleNet = saleGross.subtract(saleDiscount);
+            if (saleNet.compareTo(BigDecimal.ZERO) < 0) {
+                saleNet = BigDecimal.ZERO;
+            }
+
             String fullProductName = prodDescriptions.isEmpty() ? "Produto indisponível" : String.join("\n", prodDescriptions);
             if (saleProducts.isEmpty()) {
-                saleProducts.add(new CustomerSaleProductDTO(fullProductName, totalQuantity, unitPrice, saleTotal));
+                saleProducts.add(new CustomerSaleProductDTO(fullProductName, totalQuantity, unitPrice, saleNet));
             }
 
             BigDecimal amountPaid = sale.amountPaid != null ? sale.amountPaid : BigDecimal.ZERO;
             SaleStatus saleStatus = sale.status;
 
             if (sale.amountPaid == null && (saleStatus == null || saleStatus == SaleStatus.PAID)) {
-                amountPaid = saleTotal;
+                amountPaid = saleNet;
                 saleStatus = SaleStatus.PAID;
             } else {
-                saleStatus = SaleStatus.calculate(amountPaid, saleTotal);
+                saleStatus = SaleStatus.calculate(amountPaid, saleNet);
             }
 
-            BigDecimal remainingAmount = saleTotal.subtract(amountPaid);
+            BigDecimal remainingAmount = saleNet.subtract(amountPaid);
             if (remainingAmount.compareTo(BigDecimal.ZERO) < 0) {
                 remainingAmount = BigDecimal.ZERO;
             }
 
-            totalAmount = totalAmount.add(saleTotal);
+            totalAmount = totalAmount.add(saleNet);
             totalPaid = totalPaid.add(amountPaid);
 
             String statusStr = saleStatus.name();
@@ -245,7 +252,7 @@ public class CustomerService {
             if (amountPaid.compareTo(paymentsSum) > 0) {
                 BigDecimal initialPaymentAmount = amountPaid.subtract(paymentsSum);
                 runningPaid = runningPaid.add(initialPaymentAmount);
-                BigDecimal rem = saleTotal.subtract(runningPaid);
+                BigDecimal rem = saleNet.subtract(runningPaid);
                 if (rem.compareTo(BigDecimal.ZERO) < 0) rem = BigDecimal.ZERO;
                 paymentDTOs.add(new SalePaymentDTO(
                     null,
@@ -261,7 +268,7 @@ public class CustomerService {
             if (paymentsList != null && !paymentsList.isEmpty()) {
                 for (SalePayment p : paymentsList) {
                     runningPaid = runningPaid.add(p.amount);
-                    BigDecimal rem = saleTotal.subtract(runningPaid);
+                    BigDecimal rem = saleNet.subtract(runningPaid);
                     if (rem.compareTo(BigDecimal.ZERO) < 0) rem = BigDecimal.ZERO;
                     paymentDTOs.add(new SalePaymentDTO(
                         p.id,
@@ -284,7 +291,7 @@ public class CustomerService {
                 fullProductName,
                 totalQuantity,
                 unitPrice,
-                saleTotal,
+                saleNet,
                 amountPaid,
                 remainingAmount,
                 statusStr,
@@ -294,7 +301,9 @@ public class CustomerService {
                 Boolean.TRUE.equals(sale.isPersonalUse),
                 saleProducts,
                 sale.paymentMethod != null ? sale.paymentMethod.name() : null,
-                sale.paymentMethod != null ? sale.paymentMethod.getDescription() : null
+                sale.paymentMethod != null ? sale.paymentMethod.getDescription() : null,
+                sale.discount,
+                saleGross
             ));
         }
 

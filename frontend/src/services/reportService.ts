@@ -10,6 +10,11 @@ export interface DailySalesSummary {
     itemsSold: number;
     isPersonalUse?: boolean;
     observation?: string;
+    amountPaid?: number;
+    remainingAmount?: number;
+    status?: 'PAID' | 'PARTIALLY_PAID' | 'UNPAID';
+    statusDescription?: string;
+    discount?: number;
 }
 
 export interface MonthlySalesSummary {
@@ -47,13 +52,17 @@ export const reportService = {
     getMonthlyReport: async (
         year?: number,
         month?: number,
-        customerName?: string
+        customerName?: string,
+        status?: string
     ): Promise<MonthlySalesReport> => {
         const params: Record<string, string | number> = {};
         if (year) params.year = year;
         if (month) params.month = month;
         if (customerName && customerName.trim() !== '') {
             params.customerName = customerName.trim();
+        }
+        if (status && status.trim() !== '') {
+            params.status = status.trim();
         }
         const response = await api.get<MonthlySalesReport>('/report/monthly', { params });
         return response.data;

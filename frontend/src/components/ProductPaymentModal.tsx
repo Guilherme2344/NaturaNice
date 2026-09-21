@@ -121,64 +121,79 @@ export function ProductPaymentModal({
     const generateProductWhatsappText = (): string => {
         if (!item) return '';
 
-        const formattedTotal = item.totalAmount.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        });
-        const formattedPaid = item.amountPaid.toLocaleString('pt-BR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        });
-        const formattedRemaining = item.remainingAmount.toLocaleString(
-            'pt-BR',
-            {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-            }
-        );
-        const saleDateStr = formatDateDisplay(item.saleDate);
-
         const cleanCustName = customerName
             ? cleanCustomerNameForWhatsapp(customerName)
             : '';
         const greeting = cleanCustName
-            ? `Olá, *${cleanCustName}*! 👋\n\n`
-            : `Olá! 👋\n\n`;
-
-        const isMultiProduct = item.productName.includes('\n');
+            ? `Olá, *${cleanCustName}*!\n\n`
+            : `Olá!\n\n`;
 
         let text = greeting;
-        text += isMultiProduct
-            ? `Segue o resumo do pagamento dos produtos abaixo na Natura Nice:\n\n`
-            : `Segue o resumo do pagamento do produto abaixo na Natura Nice:\n\n`;
-        text += `📦 *Detalhes da Compra:*\n`;
-        if (isMultiProduct) {
-            text += `• *Produtos:*\n`;
-            item.productName.split('\n').forEach((p) => {
-                text += `   - ${cleanProductNameForWhatsapp(p)}\n`;
-            });
-        } else {
-            text += `• Produto: *${cleanProductNameForWhatsapp(item.productName)}* (x${item.quantity})\n`;
-        }
-        text += `• *Data da Compra*: ${saleDateStr}\n`;
-        text += `• *Valor Total do Produto*: R$ ${formattedTotal}\n`;
-        text += `• *Valor Já Pago*: R$ ${formattedPaid}\n`;
+        text += `🛍️ Segue resumo das suas compras:\n\n`;
 
-        if (item.remainingAmount > 0) {
-            text += `• *Valor Restante A Pagar: R$ ${formattedRemaining}*\n\n`;
-        } else {
-            text += `• *Situação: ${isMultiProduct ? 'Produtos Totalmente Quitados' : 'Produto Totalmente Quitado'}!* 🎉\n\n`;
-        }
+        const saleDateStr = formatDateDisplay(item.saleDate);
+        text += `*${saleDateStr}*\n`;
 
-        if (item.payments && item.payments.length > 0) {
-            text += `💵 *Histórico de Abatimentos:*\n`;
-            item.payments.forEach((p, idx) => {
-                const pDateStr = formatDateDisplay(p.paymentDate);
-                const pAmount = p.amount.toLocaleString('pt-BR', {
+        if (item.products && item.products.length > 0) {
+            item.products.forEach((p) => {
+                const cleanName = cleanProductNameForWhatsapp(p.productName);
+                const prodLabel =
+                    p.quantity > 1
+                        ? `${cleanName} (${p.quantity} un.)`
+                        : cleanName;
+                const prodPrice = p.totalPrice.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                 });
-                const pRem = p.remainingToPay.toLocaleString('pt-BR', {
+                text += `° ${prodLabel} - R$ ${prodPrice}\n`;
+            });
+        } else if (item.productName.includes('\n')) {
+            item.productName.split('\n').forEach((line) => {
+                const cleanLine = cleanProductNameForWhatsapp(line);
+                text += `° ${cleanLine}\n`;
+            });
+        } else {
+            const cleanName = cleanProductNameForWhatsapp(item.productName);
+            const prodLabel =
+                item.quantity > 1
+                    ? `${cleanName} (${item.quantity} un.)`
+                    : cleanName;
+            const prodPrice = (
+                item.grossAmount || item.totalAmount + (item.discount || 0)
+            ).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+            text += `° ${prodLabel} - R$ ${prodPrice}\n`;
+        }
+        text += `\n`;
+
+        const grossTotal =
+            item.grossAmount || item.totalAmount + (item.discount || 0);
+        const formattedGross = grossTotal.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+        const discountVal = item.discount || 0;
+        const formattedDiscount = discountVal.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+        text += `*Total comprado: R$ ${formattedGross}*\n\n`;
+        text += `*Desconto: R$ ${formattedDiscount}*\n\n`;
+
+        if (item.payments && item.payments.length > 0) {
+            text += `💵 *Histórico de Pagamentos*\n`;
+            const sortedPayments = item.payments.slice().sort((a, b) => {
+                const dateA = new Date(a.paymentDate).getTime();
+                const dateB = new Date(b.paymentDate).getTime();
+                return dateA - dateB;
+            });
+            sortedPayments.forEach((p) => {
+                const pDateStr = formatDateDisplay(p.paymentDate);
+                const pAmountStr = p.amount.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                 });
@@ -187,10 +202,23 @@ export function ProductPaymentModal({
                     (p.paymentMethod
                         ? PAYMENT_METHOD_LABELS[p.paymentMethod]
                         : '');
-
-                text += `• Parcela ${item.payments!.length - idx} (${pDateStr}): Abatido R$ ${pAmount}${methodStr ? ` - ${methodStr}` : ''} | *A Pagar R$ ${pRem}*\n`;
+                text += `° ${pDateStr} - R$ ${pAmountStr}${methodStr ? ` - ${methodStr}` : ''}\n`;
             });
             text += `\n`;
+        }
+
+        const formattedRemaining = item.remainingAmount.toLocaleString(
+            'pt-BR',
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            }
+        );
+
+        if (item.remainingAmount > 0) {
+            text += `*Saldo a pagar: R$ ${formattedRemaining}*\n\n`;
+        } else {
+            text += `*Saldo a pagar: R$ 0,00 (Conta Quitada!)* 🎉\n\n`;
         }
 
         text += `Qualquer dúvida estou à disposição! 😊`;

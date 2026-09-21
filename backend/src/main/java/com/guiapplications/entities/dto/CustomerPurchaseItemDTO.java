@@ -21,5 +21,28 @@ public record CustomerPurchaseItemDTO(
     Boolean isPersonalUse,
     List<CustomerSaleProductDTO> products,
     String paymentMethod,
-    String paymentMethodDescription
-) {}
+    String paymentMethodDescription,
+    BigDecimal discount,
+    BigDecimal grossAmount
+) {
+    public CustomerPurchaseItemDTO(
+        UUID saleId,
+        LocalDateTime saleDate,
+        String productName,
+        Integer quantity,
+        BigDecimal unitSellingPrice,
+        BigDecimal totalAmount,
+        BigDecimal amountPaid,
+        BigDecimal remainingAmount,
+        String status,
+        String statusDescription,
+        List<SalePaymentDTO> payments,
+        String observation,
+        Boolean isPersonalUse,
+        List<CustomerSaleProductDTO> products,
+        String paymentMethod,
+        String paymentMethodDescription
+    ) {
+        this(saleId, saleDate, productName, quantity, unitSellingPrice, totalAmount, amountPaid, remainingAmount, status, statusDescription, payments, observation, isPersonalUse, products, paymentMethod, paymentMethodDescription, BigDecimal.ZERO, totalAmount);
+    }
+}
