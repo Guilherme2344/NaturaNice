@@ -139,7 +139,7 @@ export function ProductPaymentModal({
                 const cleanName = cleanProductNameForWhatsapp(p.productName);
                 const prodLabel =
                     p.quantity > 1
-                        ? `${cleanName} (${p.quantity} un.)`
+                        ? `${cleanName} - ${p.quantity} un.`
                         : cleanName;
                 const prodPrice = p.totalPrice.toLocaleString('pt-BR', {
                     minimumFractionDigits: 2,
@@ -156,7 +156,7 @@ export function ProductPaymentModal({
             const cleanName = cleanProductNameForWhatsapp(item.productName);
             const prodLabel =
                 item.quantity > 1
-                    ? `${cleanName} (${item.quantity} un.)`
+                    ? `${cleanName} - ${item.quantity} un.`
                     : cleanName;
             const prodPrice = (
                 item.grossAmount || item.totalAmount + (item.discount || 0)
@@ -218,7 +218,7 @@ export function ProductPaymentModal({
         if (item.remainingAmount > 0) {
             text += `*Saldo a pagar: R$ ${formattedRemaining}*\n\n`;
         } else {
-            text += `*Saldo a pagar: R$ 0,00 (Conta Quitada!)* 🎉\n\n`;
+            text += `*Saldo a pagar: R$ 0,00 - Conta Quitada!* 🎉\n\n`;
         }
 
         text += `Qualquer dúvida estou à disposição! 😊`;

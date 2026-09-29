@@ -138,7 +138,7 @@ export function CustomerSummaryModal({
                         );
                         const prodLabel =
                             p.quantity > 1
-                                ? `${cleanName} (${p.quantity} un.)`
+                                ? `${cleanName} - ${p.quantity} un.`
                                 : cleanName;
                         const prodPrice = p.totalPrice.toLocaleString('pt-BR', {
                             minimumFractionDigits: 2,
@@ -241,7 +241,7 @@ export function CustomerSummaryModal({
         if (summary.totalRemaining > 0) {
             text += `*Saldo a pagar: R$ ${formattedRemaining}*\n\n`;
         } else {
-            text += `*Saldo a pagar: R$ 0,00 (Conta Quitada!)* 🎉\n\n`;
+            text += `*Saldo a pagar: R$ 0,00 - Conta Quitada!* 🎉\n\n`;
         }
 
         text += `Qualquer dúvida estou à disposição! 😊`;

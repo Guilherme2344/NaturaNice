@@ -31,27 +31,34 @@ export const accentInsensitiveFilter: OptionsFilter = ({ options, search }) => {
 };
 
 /**
- * Remove sufixos indesejados como " - AGN" ou " (AGN)" para exibição limpa em mensagens do WhatsApp.
- * Exemplo: "Sabonete Tododia - AGN" -> "Sabonete Tododia"
- *          "Base Glam - AGN (1 un.)" -> "Base Glam (1 un.)"
- *          "Base Glam (AGN)" -> "Base Glam"
+ * Remove qualquer conteúdo entre parênteses (incluindo os próprios parênteses)
+ * e sufixos indesejados como " - AGN" para exibição limpa em mensagens do WhatsApp.
+ * Exemplos:
+ *   "Sabonete Tododia (AGN)" -> "Sabonete Tododia"
+ *   "Sabonete Tododia - AGN" -> "Sabonete Tododia"
+ *   "Pó compacto claro 20 (Refil)" -> "Pó compacto claro 20"
+ *   "Base Glam (2 un.)" -> "Base Glam"
  */
 export const cleanProductNameForWhatsapp = (name: string = ''): string => {
     return name
-        .replace(/\s*\(\s*AGN\s*\)/gi, '')
+        .replace(/\s*\([^)]*\)/g, '')
         .replace(/\s*[-–—]\s*AGN\b/gi, '')
+        .replace(/[()]/g, '')
         .trim();
 };
 
 /**
- * Remove o termo " (AGN)" ou " - AGN" do nome do cliente/usuário para envio pelo WhatsApp.
- * Exemplo: "Bosco (AGN)" -> "Bosco"
- *          "Bosco (agn)" -> "Bosco"
- *          "Maria Silva - AGN" -> "Maria Silva"
+ * Remove qualquer conteúdo entre parênteses (incluindo os próprios parênteses)
+ * e sufixos como " - AGN" do nome do cliente/usuário para envio pelo WhatsApp.
+ * Exemplos:
+ *   "Bosco (AGN)" -> "Bosco"
+ *   "Lúcia (Professora)" -> "Lúcia"
+ *   "Maria Silva - AGN" -> "Maria Silva"
  */
 export const cleanCustomerNameForWhatsapp = (name: string = ''): string => {
     return name
-        .replace(/\s*\(\s*AGN\s*\)/gi, '')
+        .replace(/\s*\([^)]*\)/g, '')
         .replace(/\s*[-–—]\s*AGN\b/gi, '')
+        .replace(/[()]/g, '')
         .trim();
 };
